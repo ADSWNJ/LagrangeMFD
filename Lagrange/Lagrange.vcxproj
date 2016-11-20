@@ -189,6 +189,9 @@
     <ClCompile Include="MFDPersist.cpp" />
     <ClCompile Include="ParseFunctions.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -185,14 +185,16 @@ class LagrangeUniverse
     vector<Lagrange_vdata> vdata[2];                        // Vessel 4th order integrator data (vector = number of vessels)
     Lagrange_orb_disp l_orb[2];                             // Lagrange orbit display structure (holds the plots of the bodies to plot)
 
+
+
+    double dbg[6];                                          // Debug vars
+    char buf[80];
+
+    // Public thread interface vars
     atomic<int> act;
     atomic<int> wkg;
     atomic<bool> s4i_valid;
 
-    double dbg[6];                                          // Debug vars
-
-
-    char buf[80];
 
   protected:
   private:
@@ -206,11 +208,14 @@ class LagrangeUniverse
                                                                int b2 = -1, int b2pen = 0,
                                                                int b3 = -1, int b3pen = 0);     // Sets plot lines and colors for each LP
                                          
-    // Thread interface to workers
+    // Private thread interface vars
     atomic<bool> s4i_finished;
     atomic<bool> s4i_wkill;
     mutex s4i_trafficlight[2];
     atomic<char> s4i_mstate, s4i_wstate;
+
+
+
     double dbg_last_save;                                   // used to control frequency of writing debug dump
 };
 
