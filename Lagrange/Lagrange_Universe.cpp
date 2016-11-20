@@ -22,6 +22,7 @@ using namespace std;
 
 LagrangeUniverse::LagrangeUniverse() {
 
+  s4i_canstart = false;
   for (int i = 0; i < 2; i++) {
     s4int_count[i] = 20000;
     s4int_timestep[i] = 30.0;
@@ -34,12 +35,12 @@ LagrangeUniverse::LagrangeUniverse() {
 
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
 
-  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN);           // EML1
-  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272, LU_MOON, LU_EARTH, LU_MOON, LU_SUN);            // EML2
-  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_MOON, LU_EARTH, LU_MOON, LU_SUN);           // EML3
-  defLP(&lptab[3], 3, "Sun Earth L1", 1, 0.989985982345709235260, LU_SUN, LU_SUN, LU_EARTHMOONBARY);             // SEL1
-  defLP(&lptab[4], 4, "Sun Earth L2", 2, 1.01007520001973933176, LU_SUN, LU_SUN, LU_EARTHMOONBARY);              // SEL2
-  defLP(&lptab[5], 5, "Sun Earth L3", 3, -1.00000126684308386748, LU_SUN, LU_SUN, LU_EARTHMOONBARY);             // SEL3
+  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN); // EML1
+  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272,  LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN); // EML2
+  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN); // EML3
+  defLP(&lptab[3], 3, "Sun Earth L1", 1, 0.989985982345709235260,  LU_SUN, LU_SUN, LU_EARTHMOONBARY);            // SEL1
+  defLP(&lptab[4], 4, "Sun Earth L2", 2, 1.01007520001973933176,   LU_SUN, LU_SUN, LU_EARTHMOONBARY);            // SEL2
+  defLP(&lptab[5], 5, "Sun Earth L3", 3, -1.00000126684308386748,  LU_SUN, LU_SUN, LU_EARTHMOONBARY);            // SEL3
 
   // LP Orbit plot instructions
   defOrbPlot(&lptab[0], ORB_PEN_DASHED_VIOLET, LU_EARTHMOONBARY, LU_EARTH, ORB_PEN_WHITE, LU_MOON, ORB_PEN_BRIGHT_YELLOW); 
@@ -56,14 +57,18 @@ LagrangeUniverse::LagrangeUniverse() {
   wkg = 0;
   act = 1;
   s4i_valid = false;
-
+  LP = lptab[0];
   selectLP(0);
 
   dbg_last_save = -100.0;
 
   // Initialize the thread control structures
   s4i_mstate = s4i_wstate = 'I';
+  s4i_canstart = true;
+  return;
+}
 
+LagrangeUniverse::~LagrangeUniverse() {
   return;
 }
 
@@ -108,6 +113,7 @@ void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbaryinst, int p0, char* p
 
 void LagrangeUniverse::defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, int Lnum, double a, int ref, int maj, int min, int oth1,int oth2) {
   // e.g. &lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN
+  lpdef->nxix = p0;
   lpdef->ix = p0;
   strcpy(lpdef->name, p1);
   lpdef->ref = ref;
@@ -180,21 +186,22 @@ void LagrangeUniverse::defOrbPlot(LagrangeUniverse_LP_Def *lptab, int lppen, int
 
 
 int LagrangeUniverse::selectNextLP() {
-  selectLP(LP.ix+1);
-  return LP.ix;
+  selectLP(LP.nxix+1);
+  return LP.nxix;
 }
 int LagrangeUniverse::selectPrevLP() {
-  selectLP(LP.ix-1);
-  return LP.ix;
+  selectLP(LP.nxix-1);
+  return LP.nxix;
 }
 int LagrangeUniverse::getLP() {
-  return LP.ix;
+  return LP.nxix;
 }
 
 inline QP_struct& QP_struct::operator=(const QP_struct& x) {this->P = x.P; this->Q = x.Q; return *this; }
 
 inline LagrangeUniverse::LagrangeUniverse_LP& LagrangeUniverse::LagrangeUniverse_LP::operator=(const LagrangeUniverse_LP_Def& x) {
   this->ix = x.ix;
+  this->nxix = x.ix;
   strcpy(this->name,x.name);
   this->ref = x.ref;
   this->maj = x.maj;
@@ -239,7 +246,7 @@ void LagrangeUniverse::selectLP(int i) {
   //
   if (i>=COUNT_LP) { i = 0; }
   else if (i<0) {i = COUNT_LP - 1;}
-  LP = lptab[i];
+  LP.nxix = i;
   s4i[act][0].sec = oapiGetSimTime();
   s4i[act][0].MJD = oapiGetSimMJD();
   return;
@@ -455,6 +462,7 @@ void LagrangeUniverse::threadCtrlMain() {
 void LagrangeUniverse::threadCtrlSwap(int i) {
 
   s4i_trafficlight[i].lock(); // Both boffers locked at this point, so we are clear to set act and wkg, and transfer over data
+  LP = lptab[LP.nxix];
   act = i;
   wkg = 1 - act;
   if (vdata[wkg].size() != vdata[act].size()) {  // Vessel created or destroyed in the last swap cycle 
@@ -469,7 +477,6 @@ void LagrangeUniverse::threadCtrlSwap(int i) {
   s4int_timestep[act] = s4int_timestep[wkg];
   s4i_finished = false;
   s4i_mstate = '0' + wkg;
-  s4i_valid = true;
   s4i_trafficlight[wkg].unlock(); // Release thread to fill the new wkg buffer
   return;
 }
@@ -513,6 +520,8 @@ void LagrangeUniverse::integrateUniverse() {
   
   int s_time, ms_elap;
 
+  if (!s4i_canstart || (vdata[wkg].size() == 0)) return;
+
   s_time = getMilliCount();
 
   // S4 Integrator
@@ -526,14 +535,26 @@ void LagrangeUniverse::integrateUniverse() {
   Lagrange_ves_s4i *vs4i;
   Lagrange_ves_s4i *vs4i_prev;
 
-  s4i[wkg].resize(s4int_count[wkg]);
+  try {
+    s4i[wkg].resize(s4int_count[wkg]);
+  }
+  catch (...) {
+    s4int_count[wkg] = 20000;
+    s4i[wkg].resize(s4int_count[wkg]);
+  }
 
   for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
     // Best encounter so far is now, and lp_ves will update if we get closer
-    vdata[wkg][s].vs4i.resize(s4int_count[wkg]);
-    Lagrange_ves_s4i *vs4i = &vdata[wkg][s].vs4i[0];
-    vdata[wkg][s].enc_Q = vs4i->dQ;
-    vdata[wkg][s].enc_P = vs4i->dP;
+    try {
+      vdata[wkg][s].vs4i.resize(s4int_count[wkg]);
+    }
+    catch (...) {
+      s4int_count[wkg] = 20000;
+      vdata[wkg][s].vs4i.resize(s4int_count[wkg]);
+    }
+    Lagrange_ves_s4i *vs4i0 = &vdata[wkg][s].vs4i[0];
+    vdata[wkg][s].enc_Q = vs4i0->dQ;
+    vdata[wkg][s].enc_P = vs4i0->dP;
     vdata[wkg][s].enc_ix = 0;
   }
 
@@ -727,7 +748,7 @@ void LagrangeUniverse::integrateUniverse() {
     for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
       vdata[wkg][v].orb_km.resize(ORB_PLOT_COUNT);
       vdata[wkg][v].orb_plot.resize(ORB_PLOT_COUNT);
-      vdata[wkg][v].orb_plot_body_enc.resize(ORB_PLOT_COUNT);
+      vdata[wkg][v].orb_plot_body_enc.resize(ORB_MAX_LINES);
     }
     unsigned int zd = (s4int_count[wkg] - 1) / (ORB_PLOT_COUNT - 1);
     unsigned int z = 0;
@@ -743,6 +764,7 @@ void LagrangeUniverse::integrateUniverse() {
       l_orb[wkg].orb_km[1][s].y = (s4i[wkg][z].LP.Q.z - Q_maj.y) / 1000.0;
       if (def_Q) {
         if (l_orb[wkg].orb_km[1][s].x < min_Q.x) min_Q.x = l_orb[wkg].orb_km[1][s].x;
+
         if (l_orb[wkg].orb_km[1][s].y < min_Q.y) min_Q.y = l_orb[wkg].orb_km[1][s].y;
         if (l_orb[wkg].orb_km[1][s].x > max_Q.x) max_Q.x = l_orb[wkg].orb_km[1][s].x;
         if (l_orb[wkg].orb_km[1][s].y > max_Q.y) max_Q.y = l_orb[wkg].orb_km[1][s].y;
@@ -751,12 +773,15 @@ void LagrangeUniverse::integrateUniverse() {
         def_Q = true;
       }
 
+
+
       // Vessels orbit delta from major entity (in km)
       for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
         vdata[wkg][v].orb_km[s].x = (vdata[wkg][v].vs4i[z].ves.Q.x - Q_maj.x) / 1000.0;
         vdata[wkg][v].orb_km[s].y = (vdata[wkg][v].vs4i[z].ves.Q.z - Q_maj.y) / 1000.0;
 
         if (vdata[wkg][v].orb_km[s].x < min_Q.x) min_Q.x = vdata[wkg][v].orb_km[s].x;
+
         if (vdata[wkg][v].orb_km[s].y < min_Q.y) min_Q.y = vdata[wkg][v].orb_km[s].y;
         if (vdata[wkg][v].orb_km[s].x > max_Q.x) max_Q.x = vdata[wkg][v].orb_km[s].x;
         if (vdata[wkg][v].orb_km[s].y > max_Q.y) max_Q.y = vdata[wkg][v].orb_km[s].y;
@@ -768,6 +793,7 @@ void LagrangeUniverse::integrateUniverse() {
         l_orb[wkg].orb_km[i][s].x = (s4i[wkg][z].body[LP.plotix[i]].Q.x - Q_maj.x) / 1000.0;
         l_orb[wkg].orb_km[i][s].y = (s4i[wkg][z].body[LP.plotix[i]].Q.z - Q_maj.y) / 1000.0;
         if (l_orb[wkg].orb_km[i][s].x < min_Q.x) min_Q.x = l_orb[wkg].orb_km[i][s].x;
+
         if (l_orb[wkg].orb_km[i][s].y < min_Q.y) min_Q.y = l_orb[wkg].orb_km[i][s].y;
         if (l_orb[wkg].orb_km[i][s].x > max_Q.x) max_Q.x = l_orb[wkg].orb_km[i][s].x;
         if (l_orb[wkg].orb_km[i][s].y > max_Q.y) max_Q.y = l_orb[wkg].orb_km[i][s].y;
@@ -786,6 +812,7 @@ void LagrangeUniverse::integrateUniverse() {
     halfway = min_Q.y + (max_Q.y - min_Q.y) / 2.0;
     min_Q.y = halfway - 0.5 * scale;
     max_Q.y = halfway + 0.5 * scale;
+
 
     // Convert km distances into a 0.0-1.0 scale, ready for plotting on the MFD. Note the MFD origin is top left,
     // with the y-axis going positively DOWN the window, so the y calculation is reversed (i.e. (MAX - km)/scale)
@@ -806,6 +833,12 @@ void LagrangeUniverse::integrateUniverse() {
       }
       z += zd;
     }
+
+    for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
+      vdata[wkg][v].orb_plot_origin.x = (-min_Q.x) / scale;
+      vdata[wkg][v].orb_plot_origin.y = (max_Q.y) / scale;
+    }
+
 
     // Finish up the encounter X Y plots
     for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
@@ -861,7 +894,7 @@ void LagrangeUniverse::integrateUniverse() {
           unsigned int i = 0; 
           unsigned int id = (s4int_count[wkg] - 1) / (ORB_PLOT_COUNT - 1);
           for (unsigned int s = 0; s < ORB_PLOT_COUNT; s++) {
-            fprintf(dump_s4i, "%i, %.15lf,   ", i, s4i[wkg][i].MJD);
+            fprintf(dump_s4i, "%u, %.15lf,   ", i, s4i[wkg][i].MJD);
             fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_EARTH].Q.x, s4i[wkg][i].body[LU_EARTH].Q.z, s4i[wkg][i].body[LU_EARTH].Q.y);
             fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_MOON].Q.x, s4i[wkg][i].body[LU_MOON].Q.z, s4i[wkg][i].body[LU_MOON].Q.y);
             fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_SUN].Q.x, s4i[wkg][i].body[LU_SUN].Q.z, s4i[wkg][i].body[LU_SUN].Q.y);
@@ -888,7 +921,7 @@ void LagrangeUniverse::integrateUniverse() {
         dbg_last_save = oapiGetSimTime() + 1;
       }
     }}} 
-
+  s4i_valid = true;
   return;
 }
 

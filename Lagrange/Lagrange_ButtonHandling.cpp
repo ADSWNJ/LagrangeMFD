@@ -205,7 +205,7 @@ void Lagrange::Button_TOK() {
 
 // ITR = Adjust Iteration Count
 void Lagrange::Button_ITR() {
-  sprintf(GC->LU->buf, "%d", GC->LU->s4int_count[GC->LU->act]);
+  sprintf(GC->LU->buf, "%u", GC->LU->s4int_count[GC->LU->act]);
   oapiOpenInputBox("Enter Iteration Count (e.g. 20000)", Lagrange_DialogFunc::clbkITR, GC->LU->buf, 20, LC);
   return;
 }

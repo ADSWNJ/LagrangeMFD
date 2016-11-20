@@ -13,8 +13,7 @@
 #include "Lagrange_GCore.hpp"
 #include "Lagrange_VCore.hpp"
 
-Lagrange_GCore::Lagrange_GCore(HINSTANCE h) {
-  hDLL = h;
+Lagrange_GCore::Lagrange_GCore() {
   coreSimT = 0.0;
   next_s4i_time = -100.0;
   LU = nullptr;

@@ -64,6 +64,9 @@ Lagrange_GCore *g_SC;    // points to the static persistence core
 Lagrange::Lagrange (DWORD w, DWORD h, VESSEL *vessel, UINT mfd)
 : MFD2 (w, h, vessel)
 {
+  if (g_SC == nullptr) {
+    g_SC = new Lagrange_GCore();
+  }
   GC = g_SC;
   if (GC->LU == nullptr) {
     GC->LU = new LagrangeUniverse;

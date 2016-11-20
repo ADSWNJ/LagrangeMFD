@@ -86,6 +86,7 @@ public:
   double enc_Q;                                             // Min encounter distance
   double enc_P;                                             // Min encounter dV
   int enc_ix;                                               // s4i index of min encounter
+  VECTOR2 orb_plot_origin;                                  // location of major entity on the screen 
   VECTOR2 orb_plot_ves_enc;                                 // X Y positions for the vessel at closest vessel encounter
   vector<VECTOR2> orb_plot_body_enc;                        // X Y positions for each body at closest vessel encounter
   Lagrange_vdata& operator=(const Lagrange_vdata& x);       // Helper function to assign vdata data in the swap function
@@ -108,7 +109,8 @@ struct Lagrange_orb_disp {
 class LagrangeUniverse
 {
   public:
-    LagrangeUniverse();                                     // Sets up LagrangeUnivers parameters
+    LagrangeUniverse();                                     
+    ~LagrangeUniverse();                                    
     int selectNextLP();                                     // TGT selection next LP
     int selectPrevLP();                                     // TGT selection prev LP
     void selectLP(int i);                                   // TGT selection of LP by index
@@ -139,6 +141,7 @@ class LagrangeUniverse
 
     struct LagrangeUniverse_LP_Def {
     public:
+      int nxix;                                             // Next index (propagates at the next worker thread sync)
       int ix;                                               // Index of current LP
       char name[32];                                        // Display name for each LP
       int ref;                                              // index of the refernce body for orientation
@@ -159,6 +162,7 @@ class LagrangeUniverse
 
     struct LagrangeUniverse_LP {
     public:
+      int nxix;                                             // Next index (propagates at the next worker thread sync)
       int ix;                                               // Index of current LP
       char name[32];                                        // Display name for each LP
       int ref;                                              // index of the refernce body for orientation
@@ -193,6 +197,7 @@ class LagrangeUniverse
     // Public thread interface vars
     atomic<int> act;
     atomic<int> wkg;
+    atomic<bool> s4i_canstart;
     atomic<bool> s4i_valid;
 
 

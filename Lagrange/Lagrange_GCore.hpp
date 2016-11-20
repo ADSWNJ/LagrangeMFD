@@ -35,17 +35,17 @@ class Lagrange_GCore {
     void corePreStep(double SimT,double SimDT,double mjd);
 
     // Global references ... instantiation and a link to the persistence library (running the linked lists)
-    Lagrange_GCore(HINSTANCE h);
+    Lagrange_GCore();
     ~Lagrange_GCore();
     MFDPersist P;
-    HINSTANCE hDLL;
 
     LagrangeUniverse *LU; 
+
+    double next_s4i_time;
 
   private:
     double coreSimT;
     double coreSimDT;
-    double next_s4i_time;
 };
 
 

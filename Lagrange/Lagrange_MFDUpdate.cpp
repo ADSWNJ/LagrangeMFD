@@ -65,34 +65,42 @@ bool Lagrange::DisplayOrbitMode(oapi::Sketchpad *skp) {
 //  }
 
   if (!GC->LU->s4i_valid) return true;
-  if (GC->LU->vdata[GC->LU->act][VC->vix].orb_plot.size() != ORB_PLOT_COUNT) return true;
+
+  Lagrange_vdata *lvd = &GC->LU->vdata[GC->LU->act][VC->vix];
+  Lagrange_orb_disp *lod = &GC->LU->l_orb[GC->LU->act];
+
+  if (lvd->orb_plot.size() != ORB_PLOT_COUNT) return true;
 
   // Calculates the vessel orbit
   oapi::IVECTOR2 iv[ORB_PLOT_COUNT-1];
   for (int i = 1; i < ORB_PLOT_COUNT; i++) {
-    iv[i-1].x = (long) ((double) W * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot[i].x);
-    iv[i-1].y = (long) ((double) H * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot[i].y);
+    iv[i-1].x = (long) ((double) W * lvd->orb_plot[i].x);
+    iv[i-1].y = (long) ((double) H * lvd->orb_plot[i].y);
   }
 
   skp->SetPen(pen[ORB_PEN_BRIGHT_GREEN]);
-  skp->MoveTo((long)((double)W * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot[1].x), (long)((double)H * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot[1].y));
+  skp->MoveTo((long)((double)W * lvd->orb_plot[1].x), (long)((double)H * lvd->orb_plot[1].y));
   skp->Polyline(iv, ORB_PLOT_COUNT-1);
-  enc_x = (int)((double)W * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot_ves_enc.x);
-  enc_y = (int)((double)H * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot_ves_enc.y);
+  enc_x = (int)((double)W * lvd->orb_plot_ves_enc.x);
+  enc_y = (int)((double)H * lvd->orb_plot_ves_enc.y);
   skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
 
   for (int s = 1; s < ORB_MAX_LINES; s++) {
     if (GC->LU->LP.plotix[s] == -1) break;
     for (int i = 1; i < ORB_PLOT_COUNT; i++) {
-      iv[i-1].x = (long)((double)W * GC->LU->l_orb[GC->LU->act].orb_plot[s][i].x);
-      iv[i-1].y = (long)((double)H * GC->LU->l_orb[GC->LU->act].orb_plot[s][i].y);
+      iv[i-1].x = (long)((double)W * lod->orb_plot[s][i].x);
+      iv[i-1].y = (long)((double)H * lod->orb_plot[s][i].y);
     }
     skp->SetPen(pen[GC->LU->LP.plotixpen[s]]);
-    skp->MoveTo((long)((double)W * GC->LU->l_orb[GC->LU->act].orb_plot[s][1].x), (long)((double)H * GC->LU->l_orb[GC->LU->act].orb_plot[s][1].y));
+    skp->MoveTo((long)((double)W * lod->orb_plot[s][1].x), (long)((double)H * lod->orb_plot[s][1].y));
     skp->Polyline(iv, ORB_PLOT_COUNT-1);
-    enc_x = (int)((double)W * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot_body_enc[s].x);
-    enc_y = (int)((double)H * GC->LU->vdata[GC->LU->act][VC->vix].orb_plot_body_enc[s].y);
-    skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
+
+    if (abs(lvd->orb_plot_body_enc[s].x - lvd->orb_plot_origin.x) > 0.02 || 
+        abs(lvd->orb_plot_body_enc[s].y - lvd->orb_plot_origin.y) > 0.02) {
+      enc_x = (int)((double)W * lvd->orb_plot_body_enc[s].x);
+      enc_y = (int)((double)H * lvd->orb_plot_body_enc[s].y);
+      skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
+    }
 
   }
 

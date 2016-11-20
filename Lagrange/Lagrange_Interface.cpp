@@ -32,8 +32,7 @@ static char *compdate = __DATE__;
 DLLCLBK void InitModule (HINSTANCE hDLL)
 {
   g_OrbIF = new Lagrange_Interface(hDLL);
-  g_SC = new Lagrange_GCore(hDLL);
-
+  g_SC = nullptr;
   MFDMODESPECEX spec;
   spec.name = name;
   spec.key = OAPI_KEY_L;
@@ -51,7 +50,8 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
  */
 DLLCLBK void ExitModule (HINSTANCE hDLL)
 {
-  g_SC = nullptr;
+  delete g_OrbIF;
+  g_OrbIF = nullptr;
   char buf[128];
   sprintf(buf, "   >>> %s module exited", name);
   oapiWriteLog(buf);
@@ -86,11 +86,16 @@ void Lagrange_Interface::clbkSimulationStart(RenderMode mode) {
  * clbkSimulationStart called when Orbiter returns to the launchpad or exits to desktop
  */
 void Lagrange_Interface::clbkSimulationEnd() {                                      // When we exit sim back to Launchpad, make sure we tidy things up properly
-  g_SC->P.delLC(nullptr);
-  g_SC->P.delVC(nullptr);
+  if (g_SC != nullptr) {
+    g_SC->P.delLC(nullptr);
+    g_SC->P.delVC(nullptr);
+    g_SC->LU->vdata[g_SC->LU->act].resize(0);
+    g_SC->next_s4i_time = -1.0;
+  }
   char buf[128];
   sprintf(buf, "   >>> %s module sim end", name);
   oapiWriteLog(buf);
+  //g_SC->next_s4i_time = -100.0; // Reset the main trigger in case we restart
   return;
 }
 
@@ -98,7 +103,7 @@ void Lagrange_Interface::clbkSimulationEnd() {                                  
  * clbkPreStep called before each calculation step
  */
 void Lagrange_Interface::clbkPreStep(double simt, double simdt, double mjd) {      // Called on each iteration of the calc engine (more often than the MFD Update
-  g_SC->corePreStep(simt, simdt, mjd);
+  if (g_SC) g_SC->corePreStep(simt, simdt, mjd);
   return;
 }
 
@@ -112,6 +117,15 @@ void Lagrange_Interface::clbkPreStep(double simt, double simdt, double mjd) {   
  */
 void Lagrange_Interface::clbkDeleteVessel(OBJHANDLE hVessel) {                     // Tidy up when a vessel is deleted (stops clbkPreStep calling a dead vessel)
   VESSEL *vin = oapiGetVesselInterface(hVessel);
-  g_SC->P.delLC(vin);
-  g_SC->P.delVC(vin);
+  if (g_SC) {
+    g_SC->P.delLC(vin);
+    g_SC->P.delVC(vin);
+    vector<Lagrange_vdata> *lvdv = &g_SC->LU->vdata[g_SC->LU->act];
+    for (auto it = lvdv->begin(); it < lvdv->end(); it++) {
+      if (it->v == vin) {
+        lvdv->erase(it);
+        break;
+      }
+    }
+  }
 }

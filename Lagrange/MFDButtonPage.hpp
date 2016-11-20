@@ -238,10 +238,10 @@ bool MFDButtonPage<MFDClass>::ConsumeKeyBuffered( MFDClass * mfdInstance, DWORD 
         {
             if ( m_i == j )
                 continue; // The current page was already queried
-            std::map<DWORD, MFDFunctionPtr>::const_iterator it = m_pages.at(j).m_keys.find(key);
-            if (it != m_pages.at(j).m_keys.end() )
+            std::map<DWORD, MFDFunctionPtr>::const_iterator it2 = m_pages.at(j).m_keys.find(key);
+            if (it2 != m_pages.at(j).m_keys.end() )
             {
-                (mfdInstance->*(it->second))();  // Call the function
+                (mfdInstance->*(it2->second))();  // Call the function
                 return true;
             }
         }
