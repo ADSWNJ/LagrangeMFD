@@ -24,7 +24,7 @@ static char *version = "1.0";
 static char *compdate = __DATE__;
 
 // ====================================================================================================================
-// Orbiter API interface
+// Orbiter API interface 
 
 /*
  * InitModule called when this module is selected in the launchpad
