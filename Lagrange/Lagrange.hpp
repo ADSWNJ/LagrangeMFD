@@ -65,7 +65,7 @@ public:
   void Button_PAH();
   void Button_OK();
   void Button_NotImplementedYet();
-  void Button_LT();
+  void Button_TOG();
   void Button_TOK();
   void Button_NXT();
   void Button_PRV();

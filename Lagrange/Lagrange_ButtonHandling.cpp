@@ -178,9 +178,9 @@ void Lagrange::Button_NotImplementedYet() {
   return;
 }
 
-// LT = Lagrange test
-void Lagrange::Button_LT() {
-  LagrangeUniverse LU;
+// TOG = Lagrange S4I Toggle
+void Lagrange::Button_TOG() {
+  GC->LU->threadCtrlPauseToggle();
   return;
 };
 

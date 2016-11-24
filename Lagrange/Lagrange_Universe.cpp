@@ -448,6 +448,7 @@ void LagrangeUniverse::threadCtrlMain() {
     s4i_mstate = '0';
     s4i_wkill = false;
     s4i_finished = false;
+    s4i_pause = false;
     // Lock & load worker thread
     s4i_trafficlight[1].lock(); // No writing on B
     thread s4i_worker = thread(&LagrangeUniverse::threadCtrlWorker, this);
@@ -491,6 +492,17 @@ void LagrangeUniverse::threadCtrlMain() {
   return;
 }
 
+void LagrangeUniverse::threadCtrlPauseToggle() {
+  if (s4i_pause) {
+    s4i_pause = false;
+    s4i_pauselight.unlock();
+  } else {
+    if (s4i_wstate == 'P') return; //edge-case if you try to toggle too fast
+    s4i_pauselight.lock();
+    s4i_pause = true;
+  }
+  return;
+}
 
 void LagrangeUniverse::threadCtrlWorker() {
   /*
@@ -509,6 +521,11 @@ void LagrangeUniverse::threadCtrlWorker() {
     s4i_trafficlight[0].unlock();
     s4i_finished = true;
     if (s4i_wkill) break;
+    if (s4i_pause) {
+      s4i_wstate = 'P';
+      s4i_pauselight.lock();
+      s4i_pauselight.unlock();
+    }
     s4i_wstate = 'b';
     s4i_trafficlight[1].lock();
     s4i_wstate = 'B';
@@ -875,15 +892,15 @@ void LagrangeUniverse::integrateUniverse() {
 
 
   ms_elap = getMilliSpan(s_time);
-  sprintf(oapiDebugString(), "S4I Run for time: %8.3f MJD Range: %8.3f to %8.3f, runtime: %ims", s4i[wkg][0].sec, s4i[wkg][0].MJD, s4i[wkg][s4int_count[wkg]-1].MJD, ms_elap);
+  //sprintf(oapiDebugString(), "S4I Run for time: %8.3f MJD Range: %8.3f to %8.3f, runtime: %ims", s4i[wkg][0].sec, s4i[wkg][0].MJD, s4i[wkg][s4int_count[wkg]-1].MJD, ms_elap);
 
   dbg[wkg][0] = s4i[wkg][0].sec;
   dbg[wkg][1] = s4i[wkg][0].MJD;
   dbg[wkg][2] = s4i[wkg][s4int_count[wkg] - 1].MJD;
   dbg[wkg][3] = s4int_timestep[wkg];
-  dbg[wkg][4] = ORB_PLOT_COUNT;
-  dbg[wkg][5] = s4int_count[wkg];
-  dbg[wkg][6] = ms_elap;
+  dbg[wkg][4] = ((double) ms_elap)/1000.0;
+  dbg[wkg][5] = ORB_PLOT_COUNT;
+  dbg[wkg][6] = s4int_count[wkg];
 
 
   {{{

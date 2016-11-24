@@ -93,14 +93,14 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("MOD", OAPI_KEY_I, &Lagrange::Button_MOD);
     RegisterFunction("AH", OAPI_KEY_D, &Lagrange::Button_PAH);
 
-    // Diags Mode
+    // S4I Mode
     static const MFDBUTTONMENU mnu4[] =
     {
       { "Mode Select", 0, 'M' }
     };
     RegisterPage(mnu4, sizeof(mnu4) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_I, &Lagrange::Button_MOD);
-    RegisterFunction("LT", OAPI_KEY_L, &Lagrange::Button_LT);
+    RegisterFunction("TOG", OAPI_KEY_L, &Lagrange::Button_TOG);
     RegisterFunction("ITR", OAPI_KEY_I, &Lagrange::Button_ITR);
     RegisterFunction("TSP", OAPI_KEY_I, &Lagrange::Button_TSP);
 

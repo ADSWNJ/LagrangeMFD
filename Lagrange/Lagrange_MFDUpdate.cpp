@@ -228,7 +228,7 @@ bool Lagrange::DisplayLPMode(oapi::Sketchpad *skp) {
   sprintf(buf,"Enc. Time:");
   skp->Text(Col(0), Line(l), buf, strlen(buf));
   if (GC->LU->s4i_valid) {
-    DisplayEngUnit7(buf, "%9.2f","s", s4i_e->sec - oapiGetSimTime(),0);
+    DisplayEngUnit7(buf, "%8.2f","s", s4i_e->sec - oapiGetSimTime(),0);
     skp->Text(Col(4), Line(l++), buf, strlen(buf));
   } else { l++; };
   l++;
@@ -240,23 +240,44 @@ bool Lagrange::DisplayS4IMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: S4I");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
   skp->SetTextColor(0xFFFFFF);
-  
+
   int l = 4;
   char buf[128];
+
+  switch (GC->LU->threadWorkerState()) {
+  case 'A':
+  case 'a':
+  case 'B':
+  case 'b':
+    sprintf(buf, "S4I State            Active");
+    break;
+  case 'P':
+    sprintf(buf, "S4I State            Paused");
+    break;
+  case 'K':
+    sprintf(buf, "S4I State            Killed");
+    break;
+  default:
+    sprintf(buf, "S4I State");
+  }
+
+  skp->Text(Col(0), Line(l++), buf, strlen(buf));
+  l++;
+
   char *DiagText[7] = { "S4I Run    ",
                         "MJD From   ",
                         "MJD To     ",
                         "S4I deltaT ",
+                        "Calc time  ",
                         "Orb Plot # ",
-                        "S4I Iter # ",
-                        "Calc msec  " };
+                        "S4I Iter # "};
 
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 5; i++) {
     sprintf_s(buf, 128, "%s %15.3f", DiagText[i], GC->LU->dbg[GC->LU->act][i]);
     skp->Text(Col(0), Line(l++), buf, strlen(buf));
   }
-  for (int i = 4; i < 7; i++) {
+  for (int i = 5; i < 7; i++) {
     sprintf_s(buf, 128, "%s %15.0f", DiagText[i], GC->LU->dbg[GC->LU->act][i]);
     skp->Text(Col(0), Line(l++), buf, strlen(buf));
   }

@@ -119,6 +119,8 @@ class LagrangeUniverse
     void updateUniverse();                                  // Update current positions and velocities for our LP system
     void threadCtrlMain();                                  // Main interface to worker
     void threadCtrlWorker();                                // Worker interface to main
+    void threadCtrlPauseToggle();                           // Causes the worker to freeze or unfreeze
+    char threadWorkerState() { return s4i_wstate; }         // Display worker state
     void integrateUniverse();                               // Calculate projected positions for our LP system (including vessels)
     void lp123(const int n, const int s);                   // Routine for calculating L1, L2, L3 lagrange points for the nth integration
     void lp45(const int n, const int s);                    // Routine for calculating L4, L5 lagrange points for the nth integration
@@ -197,6 +199,7 @@ class LagrangeUniverse
     // Public thread interface vars
     atomic<int> act;
     atomic<int> wkg;
+    atomic<bool> s4i_pause;
     atomic<bool> s4i_canstart;
     atomic<bool> s4i_valid;
 
@@ -217,6 +220,7 @@ class LagrangeUniverse
     atomic<bool> s4i_finished;
     atomic<bool> s4i_wkill;
     mutex s4i_trafficlight[2];
+    mutex s4i_pauselight;
     atomic<char> s4i_mstate, s4i_wstate;
 
 
