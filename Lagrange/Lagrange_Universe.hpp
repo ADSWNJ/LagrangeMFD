@@ -81,6 +81,7 @@ public:
   vector<VECTOR2> orb_plot;                                 // Line segments for plot lines for orb display for this vessel
   double cmass;                                             // Current mass
   double dmass;                                             // Delta to mass from burn (via rocket's main engine isp)
+  bool burnArmed;                                           // Tells the integrator to use this burn data
   double burnMJD;                                           // date of hypotetical or real burn
   VECTOR3 burndV;                                           // hypothetical or real burn (prograde, out, plane)
   double enc_Q;                                             // Min encounter distance
@@ -117,7 +118,6 @@ class LagrangeUniverse
     int getLP();                                            // Return LP index
     void updateUniverse();                                  // Update current positions and velocities for our LP system
     void threadCtrlMain();                                  // Main interface to worker
-    void threadCtrlSwap(int i);                             // Swap active and working buffers, and release thread again
     void threadCtrlWorker();                                // Worker interface to main
     void integrateUniverse();                               // Calculate projected positions for our LP system (including vessels)
     void lp123(const int n, const int s);                   // Routine for calculating L1, L2, L3 lagrange points for the nth integration
@@ -191,7 +191,7 @@ class LagrangeUniverse
 
 
 
-    double dbg[6];                                          // Debug vars
+    double dbg[2][7];                                       // Debug vars (wkg/act first param, diags for 2nd)
     char buf[80];
 
     // Public thread interface vars

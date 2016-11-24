@@ -28,8 +28,11 @@ Lagrange_VCore::Lagrange_VCore(VESSEL *vin, Lagrange_GCore* gcin) {
   LU->vdata[LU->act].resize(s + 1);
   LU->vdata[LU->act][s].v = v;
   LU->vdata[LU->act][s].vs4i.resize(LU->s4int_count[LU->act]);
+  LU->vdata[LU->act][s].burnArmed = false;
+  LU->vdata[LU->act][s].burnMJD = 0.0;
+  LU->vdata[LU->act][s].burndV = _V(0.0,0.0,0.0);
   vix = s;
-	return;
+  return;
 };
 
 Lagrange_VCore::~Lagrange_VCore() {

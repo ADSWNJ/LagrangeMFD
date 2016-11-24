@@ -36,7 +36,7 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
     return DisplayLPMode(skp);
     break;
   case 4:
-    return DisplayDiagMode(skp);
+    return DisplayS4IMode(skp);
     break;
   case 6:
     return DisplayTgtMode(skp);
@@ -236,16 +236,28 @@ bool Lagrange::DisplayLPMode(oapi::Sketchpad *skp) {
   return true;
 };
 
-bool Lagrange::DisplayDiagMode(oapi::Sketchpad *skp) {
-  Title(skp, "Lagrange: DIAG");
+bool Lagrange::DisplayS4IMode(oapi::Sketchpad *skp) {
+  Title(skp, "Lagrange: S4I");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
   skp->SetTextColor(0xFFFFFF);
   
   int l = 4;
   char buf[128];
+  char *DiagText[7] = { "S4I Run    ",
+                        "MJD From   ",
+                        "MJD To     ",
+                        "S4I deltaT ",
+                        "Orb Plot # ",
+                        "S4I Iter # ",
+                        "Calc msec  " };
 
-  for (int i = 0; i < 6; i++) {
-    sprintf_s(buf, 128, "D%i %12.3f", i, GC->LU->dbg[i]);
+
+  for (int i = 0; i < 4; i++) {
+    sprintf_s(buf, 128, "%s %15.3f", DiagText[i], GC->LU->dbg[GC->LU->act][i]);
+    skp->Text(Col(0), Line(l++), buf, strlen(buf));
+  }
+  for (int i = 4; i < 7; i++) {
+    sprintf_s(buf, 128, "%s %15.0f", DiagText[i], GC->LU->dbg[GC->LU->act][i]);
     skp->Text(Col(0), Line(l++), buf, strlen(buf));
   }
 

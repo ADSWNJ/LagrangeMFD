@@ -425,26 +425,25 @@ void LagrangeUniverse::lp_ves(const int s, const int i, const int w) {
   if (i == 0 && w == act) {
     VECTOR3 dbg02 = vesLP->Q;
     VECTOR3 dbg35 = vesLP->P;
-    double dbgd = 1000.0;
-    dbg[0] = dbg02.x / dbgd;
-    dbg[1] = dbg02.y / dbgd;
-    dbg[2] = dbg02.z / dbgd;
-    dbg[3] = dbg35.x;
-    dbg[4] = dbg35.y;
-    dbg[5] = dbg35.z;
   }
   if (vs4i->dQ < vdata[w][s].enc_Q) {
     vdata[w][s].enc_Q = vs4i->dQ;
     vdata[w][s].enc_P = vs4i->dP;
     vdata[w][s].enc_ix = i;
   }
-
   return;
 }
 
 
 void LagrangeUniverse::threadCtrlMain() {
-
+  /*
+  * s4i_mstate is the masteer thread's state with the data buffers
+  *            'I' we are in Initialization phase (no worker thread yet)
+  *            'A' working on data set A
+  *            'b' waiting to start data set b (index 1)
+  *            'B' working on data set B
+  *            'K' responded to kill request and exited
+  */
   if (s4i_mstate == 'I') {
     s4i_mstate = '0';
     s4i_wkill = false;
@@ -455,39 +454,52 @@ void LagrangeUniverse::threadCtrlMain() {
     s4i_worker.detach();
   }
 
-  if (s4i_finished) threadCtrlSwap(s4i_mstate - '0');
-  return;
-}
+  if (!s4i_finished) return;
+  int i = s4i_mstate - '0';
 
-void LagrangeUniverse::threadCtrlSwap(int i) {
+  s4i_trafficlight[i].lock(); // Both boffers locked at this point, worker paused, so we are clear to set act and wkg, and transfer over any data or config changes
+  /*
+   * Thread Data Buffer Swapover start
+   */
+  {
+    LP = lptab[LP.nxix];
+    act = i;          // transitioning the worker buffer to active (i.e. to displaying in the MFD) 
+    wkg = 1 - act;    // ... and get ready to update the new wkg buffers
 
-  s4i_trafficlight[i].lock(); // Both boffers locked at this point, so we are clear to set act and wkg, and transfer over data
-  LP = lptab[LP.nxix];
-  act = i;
-  wkg = 1 - act;
-  if (vdata[wkg].size() != vdata[act].size()) {  // Vessel created or destroyed in the last swap cycle 
-    vdata[act].erase(vdata[act].begin(), vdata[act].end());
-    for (auto e = vdata[wkg].begin(); e != vdata[wkg].end(); e++) {
-      vdata[act].push_back(*e);
+    if (vdata[wkg].size() != vdata[act].size()) {  // Vessel created or destroyed in the last swap cycle, so burn our last calc cycle, reset new act side to match the old act
+      vdata[act].erase(vdata[act].begin(), vdata[act].end());
+      for (auto e = vdata[wkg].begin(); e != vdata[wkg].end(); e++) {
+        vdata[act].push_back(*e);
+      }
+      s4i_valid = false;
     }
+    s4i[wkg][0].sec = oapiGetSimTime();            // Initialize the working buffers at current time and MJD
+    s4i[wkg][0].MJD = oapiGetSimMJD();
+
+    if (s4int_count[act] != s4int_count[wkg] || s4int_timestep[act] != s4int_timestep[wkg]) {  // If the iteration params changed, burn the last cycle and reset
+      s4int_count[act] = s4int_count[wkg];
+      s4int_timestep[act] = s4int_timestep[wkg];
+      s4i_valid = false;
+    }
+    s4i_finished = false;
+    s4i_mstate = '0' + wkg;
   }
-  s4i[wkg][0].sec = oapiGetSimTime();
-  s4i[wkg][0].MJD = oapiGetSimMJD();
-  s4int_count[act] = s4int_count[wkg];
-  s4int_timestep[act] = s4int_timestep[wkg];
-  s4i_finished = false;
-  s4i_mstate = '0' + wkg;
-  s4i_trafficlight[wkg].unlock(); // Release thread to fill the new wkg buffer
+  /*
+  * Thread Data Buffer Swapover end
+  */
+  s4i_trafficlight[wkg].unlock(); // Release worker to fill the new wkg buffer
   return;
 }
 
 
 void LagrangeUniverse::threadCtrlWorker() {
   /*
-  * s4i_wstate 'W' worker waiting to start data set 0
-  *            '0' working on data set 0
-  *            'X' waiting to start data set 1
-  *            '1' working on data set 1
+  * s4i_wstate is the worker thread's state with the data buffers
+  *            'a' worker waiting to start data set a (index 0)
+  *            'A' working on data set A
+  *            'b' waiting to start data set b (index 1)
+  *            'B' working on data set B
+  *            'K' responded to kill request and exited
   */
   while (true) {
     s4i_wstate = 'a';
@@ -864,6 +876,15 @@ void LagrangeUniverse::integrateUniverse() {
 
   ms_elap = getMilliSpan(s_time);
   sprintf(oapiDebugString(), "S4I Run for time: %8.3f MJD Range: %8.3f to %8.3f, runtime: %ims", s4i[wkg][0].sec, s4i[wkg][0].MJD, s4i[wkg][s4int_count[wkg]-1].MJD, ms_elap);
+
+  dbg[wkg][0] = s4i[wkg][0].sec;
+  dbg[wkg][1] = s4i[wkg][0].MJD;
+  dbg[wkg][2] = s4i[wkg][s4int_count[wkg] - 1].MJD;
+  dbg[wkg][3] = s4int_timestep[wkg];
+  dbg[wkg][4] = ORB_PLOT_COUNT;
+  dbg[wkg][5] = s4int_count[wkg];
+  dbg[wkg][6] = ms_elap;
+
 
   {{{
       if (oapiGetSimTime() > dbg_last_save + 10.0 && vdata[wkg].size()>0) {
