@@ -60,8 +60,6 @@ LagrangeUniverse::LagrangeUniverse() {
   LP = lptab[0];
   selectLP(0);
 
-  dbg_last_save = -100.0;
-
   // Initialize the thread control structures
   s4i_mstate = s4i_wstate = 'I';
   s4i_canstart = true;
@@ -591,7 +589,7 @@ void LagrangeUniverse::integrateUniverse() {
   //s4i[wkg][0].MJD = oapiGetSimMJD();
 
   { { {
-      if (oapiGetSimTime() > dbg_last_save + 10.0 && vdata[wkg].size()>0) {
+      if (!s4i_valid && vdata[wkg].size()>0) {
 
         FILE *dump_s4i;
         if (fopen_s(&dump_s4i, ".\\Config\\MFD\\Lagrange\\Diags\\SNAP.csv", "w") == 0) {
@@ -904,7 +902,7 @@ void LagrangeUniverse::integrateUniverse() {
 
 
   {{{
-      if (oapiGetSimTime() > dbg_last_save + 10.0 && vdata[wkg].size()>0) {
+      if (!s4i_valid && vdata[wkg].size()>0) {
 
         FILE *dump_s4i;
         if (fopen_s(&dump_s4i, ".\\Config\\MFD\\Lagrange\\Diags\\S4I.csv", "w") == 0) {
@@ -956,7 +954,6 @@ void LagrangeUniverse::integrateUniverse() {
           fprintf(dump_s4i, "%.1f, %.1f, %.1f, %.1f, %.1f\n", max_Q.x, min_Q.x, max_Q.y, min_Q.y, scale);
           fclose(dump_s4i);
         }
-        dbg_last_save = oapiGetSimTime() + 1;
       }
     }}} 
   s4i_valid = true;

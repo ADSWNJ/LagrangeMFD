@@ -223,9 +223,6 @@ class LagrangeUniverse
     mutex s4i_pauselight;
     atomic<char> s4i_mstate, s4i_wstate;
 
-
-
-    double dbg_last_save;                                   // used to control frequency of writing debug dump
 };
 
 VECTOR3 safe_unit(const VECTOR3 &a);
