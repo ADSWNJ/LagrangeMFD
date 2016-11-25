@@ -15,7 +15,7 @@
 // ====================================================================================================================
 // Global variables
 
-Lagrange_Interface *g_OrbIF;
+Lagrange_Interface *g_OrbIF = nullptr;
 extern Lagrange_GCore *g_SC;    // points to the static persistence core
 
 static int g_MFDmode;			// holds the mode identifier for our MFD
@@ -50,8 +50,6 @@ DLLCLBK void InitModule (HINSTANCE hDLL)
  */
 DLLCLBK void ExitModule (HINSTANCE hDLL)
 {
-  delete g_OrbIF;
-  g_OrbIF = nullptr;
   char buf[128];
   sprintf(buf, "   >>> %s module exited", name);
   oapiWriteLog(buf);

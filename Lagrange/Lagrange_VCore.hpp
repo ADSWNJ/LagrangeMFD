@@ -48,6 +48,8 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     VESSEL *v;
     int vix; // Vessel index in LU
 
+    int burnGranularity;
+    int burnVar;
 
   private:
 };

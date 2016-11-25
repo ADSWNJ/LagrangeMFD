@@ -14,6 +14,7 @@
 #include "Lagrange_DialogFunc.hpp"
 #include "Lagrange_Universe.hpp"
 #include <EnjoLib/ModuleMessagingExt.hpp>
+#include <math.h>
 
 // ==============================================================
 // MFD button hooks to Button Page library
@@ -52,50 +53,103 @@ void Lagrange::Button_MOD() {
   LC->B.SwitchPage(this, LC->mode);
   return;
 };
+// ARM = Plan Mode: Arm/Disarm the burn planning
+void Lagrange::Button_BURNARM() {
+  LagrangeUniverse *LU = VC->LU;
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  vdata->burnArmed = !vdata->burnArmed;
+}
 // MJD = Plan Mode: Date Select
 void Lagrange::Button_MJD() {
-//TODO: Complete Function
-  return Button_NotImplementedYet();
+  VC->burnVar = 0;
 }
 // PRO = Plan Mode: Prograde Var
 void Lagrange::Button_PRO() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  VC->burnVar = 1;
 }
-// OUT = Plan Mode: Date Select
-void Lagrange::Button_OUT() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
-}
-// PLC = Plan Mode: Date Select
+// PLC = Plan Mode: Plane Change Var
 void Lagrange::Button_PLC() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  VC->burnVar = 2;
 }
-// ENT = Plan Mode: Enter Value
-void Lagrange::Button_ENT() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+// OUT = Plan Mode: Outward Var
+void Lagrange::Button_OUT() {
+  VC->burnVar = 3;
 }
-// ADJ = Plan Mode: Adjust Increment Up
-void Lagrange::Button_ADJ() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
-}
-// ADM = Plan Mode: Adjust Increment Down
+// ADM = Plan Mode: Adjust Granularity Down
 void Lagrange::Button_ADM() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  VC->burnGranularity--;
+  if (VC->burnGranularity < 0) VC->burnGranularity = 8;
+}
+// ADJ = Plan Mode: Adjust Granularity Up
+void Lagrange::Button_ADJ() {
+  VC->burnGranularity++;
+  if (VC->burnGranularity > 8) VC->burnGranularity = 0;
 }
 // AUP = Plan Mode: Increment Value
 void Lagrange::Button_AUP() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  return ButtonHelper_AdjVar(+1.0);
 }
 // ADN = Plan Mode: Decrement Value
 void Lagrange::Button_ADN() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  return ButtonHelper_AdjVar(-1.0);
+}
+void Lagrange::ButtonHelper_AdjVar(double adj) {
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  if (VC->burnGranularity == 8) {
+    switch (VC->burnVar) {
+    case 0:
+      vdata->burnMJD = oapiGetSimMJD();
+      break;
+    case 1:
+      vdata->burndV.x = 0.0;
+      break;
+    case 2:
+      vdata->burndV.y = 0.0;
+      break;
+    case 3:
+      vdata->burndV.z = 0.0;
+      break;
+    }
+  } else {
+    adj *= 10.0 / pow(10.0, (double)VC->burnGranularity);
+    switch (VC->burnVar) {
+    case 0:
+      vdata->burnMJD += adj;
+      break;
+    case 1:
+      vdata->burndV.x += adj;
+      break;
+    case 2:
+      vdata->burndV.y += adj;
+      break;
+    case 3:
+      vdata->burndV.z += adj;
+      break;
+    }
+  }
+}
+
+// ENT = Plan Mode: Enter Value
+void Lagrange::Button_ENT() {
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  switch (VC->burnVar) {
+  case 0:
+    sprintf(GC->LU->buf, "%.6f", vdata->burnMJD);
+    oapiOpenInputBox("Enter Plan Burn MJD", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
+    break;
+  case 1:
+    sprintf(GC->LU->buf, "%.6f", vdata->burndV.x);
+    oapiOpenInputBox("Enter Plan Prograde Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
+    break;
+  case 2:
+    sprintf(GC->LU->buf, "%.6f", vdata->burndV.y);
+    oapiOpenInputBox("Enter Plan Plane Change Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
+    break;
+  case 3:
+    sprintf(GC->LU->buf, "%.6f", vdata->burndV.z);
+    oapiOpenInputBox("Enter Plan Outward Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
+    break;
+  }
 }
 // TGT = Orbit Mode: Select Target - e.g. Sun Earth L2
 void Lagrange::Button_TGT() {
@@ -179,7 +233,7 @@ void Lagrange::Button_NotImplementedYet() {
 }
 
 // TOG = Lagrange S4I Toggle
-void Lagrange::Button_TOG() {
+void Lagrange::Button_S4IARM() {
   GC->LU->threadCtrlPauseToggle();
   return;
 };

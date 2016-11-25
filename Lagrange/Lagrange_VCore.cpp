@@ -22,6 +22,8 @@ Lagrange_VCore::Lagrange_VCore(VESSEL *vin, Lagrange_GCore* gcin) {
 	// Vessel core constructor
   GC = gcin;
 	v = vin;
+  burnGranularity = 1;
+  burnVar = 0;
   LU = GC->LU;
   assert(LU != nullptr);
   int s = LU->vdata[LU->act].size();

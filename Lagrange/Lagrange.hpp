@@ -41,6 +41,7 @@ public:
 
   // Button Press Handlers
   void Button_MOD();
+  void Button_BURNARM();
   void Button_MJD();
   void Button_PRO();
   void Button_OUT();
@@ -65,12 +66,14 @@ public:
   void Button_PAH();
   void Button_OK();
   void Button_NotImplementedYet();
-  void Button_TOG();
+  void Button_S4IARM();
   void Button_TOK();
   void Button_NXT();
   void Button_PRV();
   void Button_ITR();
   void Button_TSP();
+
+  void Lagrange::ButtonHelper_AdjVar(double adj);
 
   const char* GetModuleName() const { return "Lagrange"; };
 
@@ -86,6 +89,9 @@ protected:
   int Line( int row );
   int Col( int pos );
   int Col2( int pos );
+  void Lagrange::SkpFormatText(oapi::Sketchpad *skp, int col, int line, const char* fmt, ...);
+  void Lagrange::SkpFmtColText(oapi::Sketchpad *skp, int col, int line, bool test, DWORD truecol, DWORD falsecol, const char* fmt, ...);
+  void Lagrange::SkpFmtEngText(oapi::Sketchpad *skp, int col, int line, const char* fmt, char* sfx, double val, int loB);
   void ShowMessage(oapi::Sketchpad *skp);
 
   oapi::Font *font;

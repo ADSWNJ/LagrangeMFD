@@ -49,3 +49,29 @@ bool Lagrange_DialogFunc::clbkTSP(void *id, char *str, void *usrdata) {
   LC->GC->LU->s4int_timestep[LC->GC->LU->act] = f;
   return true;
 }
+
+bool Lagrange_DialogFunc::clbkENT(void *id, char *str, void *usrdata) {
+  double f;
+
+  if (strlen(str) == 0) return true;
+  if (sscanf_s(str, "%lf", &f) != 1) return true;
+  Lagrange_LCore* LC = (Lagrange_LCore *)usrdata;
+  Lagrange_VCore* VC = LC->VC;
+  LagrangeUniverse* LU = LC->GC->LU;
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  switch (VC->burnVar) {
+  case 0:
+    vdata->burnMJD = f;
+    break;
+  case 1:
+    vdata->burndV.x = f;
+    break;
+  case 2:
+    vdata->burndV.y = f;
+    break;
+  case 3:
+    vdata->burndV.z = f;
+    break;
+  }
+  return true;
+}

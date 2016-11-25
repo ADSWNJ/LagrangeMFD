@@ -55,7 +55,7 @@
 // ====================================================================================================================
 // Global variables
 
-Lagrange_GCore *g_SC;    // points to the static persistence core
+Lagrange_GCore *g_SC = nullptr;    // points to the static persistence core
 
 // ====================================================================================================================
 // MFD class implementation

@@ -34,15 +34,18 @@ LagrangeUniverse::LagrangeUniverse() {
   defBary(&body[3], 3, "Earth-Moon", LU_EARTH, LU_MOON);
 
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
+  // Meanings:
+  //              Index    Name       LP#         Alpha Val           Plot Center     Major     Minor               Other   
+  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTHMOONBARY, LU_EARTH, LU_MOON,           LU_SUN);  // EML1
+  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272,  LU_EARTHMOONBARY, LU_EARTH, LU_MOON,           LU_SUN);  // EML2
+  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_EARTHMOONBARY, LU_EARTH, LU_MOON,           LU_SUN);  // EML3
+  defLP(&lptab[3], 3, "Sun Earth L1",  1, 0.989985982345709235260, LU_SUN,           LU_SUN,   LU_EARTHMOONBARY);           // SEL1
+  defLP(&lptab[4], 4, "Sun Earth L2",  2, 1.01007520001973933176,  LU_SUN,           LU_SUN,   LU_EARTHMOONBARY);           // SEL2
+  defLP(&lptab[5], 5, "Sun Earth L3",  3, -1.00000126684308386748, LU_SUN,           LU_SUN,   LU_EARTHMOONBARY);           // SEL3
 
-  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN); // EML1
-  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272,  LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN); // EML2
-  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_EARTHMOONBARY, LU_EARTH, LU_MOON, LU_SUN); // EML3
-  defLP(&lptab[3], 3, "Sun Earth L1", 1, 0.989985982345709235260,  LU_SUN, LU_SUN, LU_EARTHMOONBARY);            // SEL1
-  defLP(&lptab[4], 4, "Sun Earth L2", 2, 1.01007520001973933176,   LU_SUN, LU_SUN, LU_EARTHMOONBARY);            // SEL2
-  defLP(&lptab[5], 5, "Sun Earth L3", 3, -1.00000126684308386748,  LU_SUN, LU_SUN, LU_EARTHMOONBARY);            // SEL3
-
-  // LP Orbit plot instructions
+  // LP Orbit plot definitions
+  // Meanings:
+  //                      LP Pen                 Plot Center       Ent 1     Ent 1 Pen       Ent 2       Ent 2 Pen            
   defOrbPlot(&lptab[0], ORB_PEN_DASHED_VIOLET, LU_EARTHMOONBARY, LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW); 
   defOrbPlot(&lptab[1], ORB_PEN_DASHED_VIOLET, LU_EARTHMOONBARY, LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
   defOrbPlot(&lptab[2], ORB_PEN_DASHED_VIOLET, LU_EARTHMOONBARY, LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
@@ -435,12 +438,10 @@ void LagrangeUniverse::lp_ves(const int s, const int i, const int w) {
 
 void LagrangeUniverse::threadCtrlMain() {
   /*
-  * s4i_mstate is the masteer thread's state with the data buffers
+  * s4i_mstate is the master thread's state with the data buffers
   *            'I' we are in Initialization phase (no worker thread yet)
-  *            'A' working on data set A
-  *            'b' waiting to start data set b (index 1)
-  *            'B' working on data set B
-  *            'K' responded to kill request and exited
+  *            '0' we are active on buffer A
+  *            '1' we are active on buffer B
   */
   if (s4i_mstate == 'I') {
     s4i_mstate = '0';
@@ -456,12 +457,13 @@ void LagrangeUniverse::threadCtrlMain() {
   if (!s4i_finished) return;
   int i = s4i_mstate - '0';
 
-  s4i_trafficlight[i].lock(); // Both boffers locked at this point, worker paused, so we are clear to set act and wkg, and transfer over any data or config changes
+  s4i_trafficlight[i].lock(); // Both buffers locked at this point, worker paused, so we are clear to set act and wkg, and transfer over any data or config changes
   /*
    * Thread Data Buffer Swapover start
    */
   {
     LP = lptab[LP.nxix];
+
     act = i;          // transitioning the worker buffer to active (i.e. to displaying in the MFD) 
     wkg = 1 - act;    // ... and get ready to update the new wkg buffers
 
@@ -472,6 +474,13 @@ void LagrangeUniverse::threadCtrlMain() {
       }
       s4i_valid = false;
     }
+
+    for (unsigned int e = 0; e < vdata[act].size(); e++) {
+      vdata[act][e].burnArmed = vdata[wkg][e].burnArmed;
+      vdata[act][e].burnMJD = vdata[wkg][e].burnMJD;
+      vdata[act][e].burndV = vdata[wkg][e].burndV;
+    }
+
     s4i[wkg][0].sec = oapiGetSimTime();            // Initialize the working buffers at current time and MJD
     s4i[wkg][0].MJD = oapiGetSimMJD();
 

@@ -14,6 +14,10 @@
 #include "Lagrange_Universe.hpp"
 #include "DisplayEngUnitFunctions.h"
 #include <math.h>
+#include <stdarg.h>
+
+#define CLR_YELLOW 0x00FFFF
+#define CLR_WHITE 0xFFFFFF
 
 bool Lagrange::Update(oapi::Sketchpad *skp)
 {
@@ -48,7 +52,7 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
 bool Lagrange::DisplayOrbitMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: ORBIT");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
-  skp->SetTextColor(0xFFFFFF);
+  skp->SetTextColor(CLR_WHITE);
 
   int l = 4;
   char buf[128];
@@ -110,14 +114,32 @@ bool Lagrange::DisplayOrbitMode(oapi::Sketchpad *skp) {
 bool Lagrange::DisplayPlanMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: PLAN");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
-  skp->SetTextColor(0xFFFFFF);
+  skp->SetTextColor(CLR_WHITE);
 
   int l = 4;
-  char buf[128];
+  char *adjText[9] = { "Rough", "Coarse", "Medium", "Fine", "Super", "Ultra", "Hyper", "Micro", "Reset" };
 
-  skp->SetTextColor(0x00FFFF);
-  sprintf_s(buf, 128, "TODO: Plan Mode Info");
-  skp->Text(Col(1), Line(l++), buf, strlen(buf));
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+
+  if (vdata->burnArmed) SkpFmtColText(skp, Col(0), Line(l), true, CLR_YELLOW, CLR_WHITE, ">");
+  SkpFmtColText(skp, Col(0), Line(l++), vdata->burnArmed, CLR_YELLOW, CLR_WHITE, "  Planning Mode:  %s", vdata->burnArmed ? "Active" : "Inactive");
+  SkpFormatText(skp, Col(0), Line(l++), "  Adjustment:     %s", adjText[VC->burnGranularity]);
+  l++;
+
+  if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD();
+
+  SkpFmtColText(skp, Col(0), Line(l + VC->burnVar), true,   CLR_YELLOW, CLR_WHITE, ">");
+  SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Plan MJD:     %14.6f", vdata->burnMJD);
+  SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6f", vdata->burndV.x);
+  SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6f", vdata->burndV.y);
+  SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6f", vdata->burndV.z);
+  l++;
+
+  if (!GC->LU->s4i_valid) return true;
+
+  Lagrange_s4i *s4i_e = &GC->LU->s4i[GC->LU->act][vdata->enc_ix];
+  SkpFormatText(skp, Col(0), Line(l++), "  Enc. MJD:     %14.6f", s4i_e->MJD);
+  SkpFmtEngText(skp, Col(0), Line(l++), "  Enc. Time:    %10.2f", "s", s4i_e->sec - oapiGetSimTime(), 0);
 
   return true;
 };
@@ -125,12 +147,12 @@ bool Lagrange::DisplayPlanMode(oapi::Sketchpad *skp) {
 bool Lagrange::DisplayBurnMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: BURN");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
-  skp->SetTextColor(0xFFFFFF);
+  skp->SetTextColor(CLR_WHITE);
 
   int l = 4;
   char buf[128];
 
-  skp->SetTextColor(0x00FFFF);
+  skp->SetTextColor(CLR_YELLOW);
   sprintf_s(buf, 128, "TODO: Burn Mode Info");
   skp->Text(Col(1), Line(l++), buf, strlen(buf));
 
@@ -140,7 +162,7 @@ bool Lagrange::DisplayBurnMode(oapi::Sketchpad *skp) {
 bool Lagrange::DisplayLPMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: LP");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
-  skp->SetTextColor(0xFFFFFF);
+  skp->SetTextColor(CLR_WHITE);
 
 
   int l = 4;
@@ -239,7 +261,7 @@ bool Lagrange::DisplayLPMode(oapi::Sketchpad *skp) {
 bool Lagrange::DisplayS4IMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: S4I");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
-  skp->SetTextColor(0xFFFFFF);
+  skp->SetTextColor(CLR_WHITE);
 
   int l = 4;
   char buf[128];
@@ -297,10 +319,10 @@ bool Lagrange::DisplayTgtMode(oapi::Sketchpad *skp) {
 
   for (int i = 0; i<COUNT_LP; i++) {
     if (i == curLP) {
-      skp->SetTextColor(0x00FFFF);
+      skp->SetTextColor(CLR_YELLOW);
       sprintf_s(buf, 128, "> %s", GC->LU->lptab[i].name);
     } else {
-      skp->SetTextColor(0xFFFFFF);
+      skp->SetTextColor(CLR_WHITE);
       sprintf_s(buf, 128, "  %s", GC->LU->lptab[i].name);
     }
     skp->Text(Col(0), Line(l++), buf, strlen(buf));
@@ -399,3 +421,60 @@ int Lagrange::Col2( int pos ) {  // pos is 0-11, for 12 columns. Eg Col(6) for m
   return ret;
 };
 
+
+// MFD Format and print helper
+void Lagrange::SkpFormatText(oapi::Sketchpad *skp, int col, int line, const char* fmt, ...) {
+  char buf[128];
+  va_list args;
+  va_start(args, fmt);
+  vsprintf_s(buf, 128, fmt, args);
+  va_end(args);
+  skp->Text(col, line, buf, strlen(buf));
+}
+
+void Lagrange::SkpFmtColText(oapi::Sketchpad *skp, int col, int line, bool test, DWORD truecol, DWORD falsecol, const char* fmt, ...) {
+  skp->SetTextColor(test ? truecol : falsecol);
+  char buf[128];
+  va_list args;
+  va_start(args, fmt);
+  vsprintf_s(buf, 128, fmt, args);
+  va_end(args);
+  skp->Text(col, line, buf, strlen(buf));
+  skp->SetTextColor(falsecol);
+}
+
+void Lagrange::SkpFmtEngText(oapi::Sketchpad *skp, int col, int line, const char* fmt, char* sfx, double val, int loB) {
+  char buf[128], tmpbuf[128];
+
+  char engUnit[12] = "pnum kMGTPE";
+  double cnvVal = val;
+  int i = 4;
+
+  if (loB<-4) loB = -4;
+  if (loB>6) loB = 6;
+  loB += 4;
+
+  if (fabs(cnvVal) < 1) {
+    while ((fabs(cnvVal) < 1) && (i>loB)) {
+      i--;
+      cnvVal *= 1000;
+    }
+  } else if (fabs(cnvVal) >= 1000) {
+    while ((fabs(cnvVal) >= 1000) && (i< 10)) {
+      i++;
+      cnvVal /= 1000;
+    }
+  }
+  while (i<loB) {
+    i++;
+    cnvVal /= 1000;
+  }
+  if (engUnit[i] == ' ') {
+    sprintf_s(tmpbuf, 128, "%s%s", fmt, sfx);
+    sprintf_s(buf, 128, tmpbuf, cnvVal);
+  } else {
+    sprintf_s(tmpbuf, 128, "%s%%c%s", fmt, sfx);
+    sprintf_s(buf, 128, tmpbuf, cnvVal, engUnit[i]);
+  }
+  skp->Text(col, line, buf, strlen(buf));
+}
