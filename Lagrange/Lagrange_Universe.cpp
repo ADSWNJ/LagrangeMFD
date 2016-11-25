@@ -35,20 +35,20 @@ LagrangeUniverse::LagrangeUniverse() {
 
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
   // Meanings:
-  //              Index    Name       LP#         Alpha Val           Plot Center     Major     Minor               Other   
-  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTHMOONBARY, LU_EARTH, LU_MOON,           LU_SUN);  // EML1
-  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272,  LU_EARTHMOONBARY, LU_EARTH, LU_MOON,           LU_SUN);  // EML2
-  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_EARTHMOONBARY, LU_EARTH, LU_MOON,           LU_SUN);  // EML3
-  defLP(&lptab[3], 3, "Sun Earth L1",  1, 0.989985982345709235260, LU_SUN,           LU_SUN,   LU_EARTHMOONBARY);           // SEL1
-  defLP(&lptab[4], 4, "Sun Earth L2",  2, 1.01007520001973933176,  LU_SUN,           LU_SUN,   LU_EARTHMOONBARY);           // SEL2
-  defLP(&lptab[5], 5, "Sun Earth L3",  3, -1.00000126684308386748, LU_SUN,           LU_SUN,   LU_EARTHMOONBARY);           // SEL3
+  //              Index    Name       LP#         Alpha Val      Plot Center  Major     Minor              Other   
+  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTH, LU_EARTH, LU_MOON,           LU_SUN);  // EML1
+  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272,  LU_EARTH, LU_EARTH, LU_MOON,           LU_SUN);  // EML2
+  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_EARTH, LU_EARTH, LU_MOON,           LU_SUN);  // EML3
+  defLP(&lptab[3], 3, "Sun Earth L1",  1, 0.989985982345709235260, LU_SUN,   LU_SUN,   LU_EARTHMOONBARY);           // SEL1
+  defLP(&lptab[4], 4, "Sun Earth L2",  2, 1.01007520001973933176,  LU_SUN,   LU_SUN,   LU_EARTHMOONBARY);           // SEL2
+  defLP(&lptab[5], 5, "Sun Earth L3",  3, -1.00000126684308386748, LU_SUN,   LU_SUN,   LU_EARTHMOONBARY);           // SEL3
 
   // LP Orbit plot definitions
   // Meanings:
   //                      LP Pen                 Plot Center       Ent 1     Ent 1 Pen       Ent 2       Ent 2 Pen            
-  defOrbPlot(&lptab[0], ORB_PEN_DASHED_VIOLET, LU_EARTHMOONBARY, LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW); 
-  defOrbPlot(&lptab[1], ORB_PEN_DASHED_VIOLET, LU_EARTHMOONBARY, LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[2], ORB_PEN_DASHED_VIOLET, LU_EARTHMOONBARY, LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[0], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW); 
+  defOrbPlot(&lptab[1], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[2], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
   defOrbPlot(&lptab[3], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
   defOrbPlot(&lptab[4], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
   defOrbPlot(&lptab[5], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
@@ -597,45 +597,53 @@ void LagrangeUniverse::integrateUniverse() {
   //s4i[wkg][0].sec = oapiGetSimTime();
   //s4i[wkg][0].MJD = oapiGetSimMJD();
 
-  { { {
-      if (!s4i_valid && vdata[wkg].size()>0) {
+  {
+    if (!s4i_valid && vdata[wkg].size()>0) {
 
-        FILE *dump_s4i;
-        if (fopen_s(&dump_s4i, ".\\Config\\MFD\\Lagrange\\Diags\\SNAP.csv", "w") == 0) {
+      FILE *dump_s4i;
+      if (fopen_s(&dump_s4i, ".\\Config\\MFD\\Lagrange\\Diags\\SNAP.csv", "w") == 0) {
 
-          fprintf(dump_s4i, "\"\"--MJD\"\n");
-          fprintf(dump_s4i, "%.15lf\n", s4i[wkg][0].MJD);
-          fprintf(dump_s4i, "\n");
-          fprintf(dump_s4i, "\"\"-- State vectors of Earth\"\n");
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_EARTH].Q.x, s4i[wkg][0].body[LU_EARTH].Q.z, s4i[wkg][0].body[LU_EARTH].Q.y);
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_EARTH].P.x, s4i[wkg][0].body[LU_EARTH].P.z, s4i[wkg][0].body[LU_EARTH].P.y);
-          fprintf(dump_s4i, "\n");
-          fprintf(dump_s4i, "\"\"-- State vectors of Moon\"\n");
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_MOON].Q.x, s4i[wkg][0].body[LU_MOON].Q.z, s4i[wkg][0].body[LU_MOON].Q.y);
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_MOON].P.x, s4i[wkg][0].body[LU_MOON].P.z, s4i[wkg][0].body[LU_MOON].P.y);
-          fprintf(dump_s4i, "\n");
-          fprintf(dump_s4i, "\"\"-- State vectors of Sun\"\n");
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_SUN].Q.x, s4i[wkg][0].body[LU_SUN].Q.z, s4i[wkg][0].body[LU_SUN].Q.y);
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_SUN].P.x, s4i[wkg][0].body[LU_SUN].P.z, s4i[wkg][0].body[LU_SUN].P.y);
-          fprintf(dump_s4i, "\n");
-          fprintf(dump_s4i, "\"\"-- State vectors of Vessel\"\n");
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.Q.x, vdata[wkg][0].vs4i[0].ves.Q.z, vdata[wkg][0].vs4i[0].ves.Q.y);
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.P.x, vdata[wkg][0].vs4i[0].ves.P.z, vdata[wkg][0].vs4i[0].ves.P.y);
-          fprintf(dump_s4i, "\n\n");
+        fprintf(dump_s4i, "\"\"--MJD\"\n");
+        fprintf(dump_s4i, "%.15lf\n", s4i[wkg][0].MJD);
+        fprintf(dump_s4i, "\n");
+        fprintf(dump_s4i, "\"\"-- State vectors of Earth\"\n");
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_EARTH].Q.x, s4i[wkg][0].body[LU_EARTH].Q.z, s4i[wkg][0].body[LU_EARTH].Q.y);
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_EARTH].P.x, s4i[wkg][0].body[LU_EARTH].P.z, s4i[wkg][0].body[LU_EARTH].P.y);
+        fprintf(dump_s4i, "\n");
+        fprintf(dump_s4i, "\"\"-- State vectors of Moon\"\n");
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_MOON].Q.x, s4i[wkg][0].body[LU_MOON].Q.z, s4i[wkg][0].body[LU_MOON].Q.y);
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_MOON].P.x, s4i[wkg][0].body[LU_MOON].P.z, s4i[wkg][0].body[LU_MOON].P.y);
+        fprintf(dump_s4i, "\n");
+        fprintf(dump_s4i, "\"\"-- State vectors of Sun\"\n");
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_SUN].Q.x, s4i[wkg][0].body[LU_SUN].Q.z, s4i[wkg][0].body[LU_SUN].Q.y);
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_SUN].P.x, s4i[wkg][0].body[LU_SUN].P.z, s4i[wkg][0].body[LU_SUN].P.y);
+        fprintf(dump_s4i, "\n");
+        fprintf(dump_s4i, "\"\"-- State vectors of Vessel\"\n");
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.Q.x, vdata[wkg][0].vs4i[0].ves.Q.z, vdata[wkg][0].vs4i[0].ves.Q.y);
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.P.x, vdata[wkg][0].vs4i[0].ves.P.z, vdata[wkg][0].vs4i[0].ves.P.y);
+        fprintf(dump_s4i, "\n\n");
 
-          fclose(dump_s4i);
-        }
+        fclose(dump_s4i);
       }
-    }}}
-
+    }
+  }
 
 
   for (unsigned int cur=1; cur<s4int_count[wkg]; cur++) {
     // S4 Integrator main loop
     int i, j, k;
+    double nextdt = dt;
+    double nextMJD = s4i[wkg][prev].MJD + dt / (24.0*60.0*60.0);
 
-    s4i[wkg][cur].sec = s4i[wkg][prev].sec + dt;
-    s4i[wkg][cur].MJD = s4i[wkg][prev].MJD + dt/(24.0*60.0*60.0);
+    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+      if (vdata[wkg][s].burnArmed && vdata[wkg][s].burnMJD < nextMJD) {
+        nextMJD = vdata[wkg][s].burnMJD;
+        nextdt = (nextMJD - s4i[wkg][prev].MJD) * (24.0 * 60.0 * 60.0);
+      }
+    }
+
+    s4i[wkg][cur].sec = s4i[wkg][prev].sec + nextdt;
+    s4i[wkg][cur].MJD = nextMJD;
 //double __dbgM = s4i[wkg][cur].MJD;
 //VECTOR3 __dbgF;
 //VECTOR3 __dbgP;
@@ -741,6 +749,25 @@ void LagrangeUniverse::integrateUniverse() {
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       vs4i = &vdata[wkg][s].vs4i[cur];
       vs4i->ves.Q += vs4i->ves.P * (0.5 * (w0)* dt);
+    }
+
+    // Step 3d Impulse Step: integrate plan mode burn
+    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+      if (vdata[wkg][s].burnArmed && abs(nextMJD - vdata[wkg][s].burnMJD) < 1E-06) {
+        // Convert Prograde/Plane/Outer into global coords
+        vs4i = &vdata[wkg][s].vs4i[cur];
+        VECTOR3 vesDQmaj = vs4i->ves.Q - s4i[wkg][cur].body[LP.ref].Q;
+        VECTOR3 vesDPmaj = vs4i->ves.P - s4i[wkg][cur].body[LP.ref].P;
+        VECTOR3 vesCross = crossp(vesDQmaj, vesDPmaj);
+        VECTOR3 proHat = vesDPmaj / length(vesDPmaj);
+        VECTOR3 plaHat = vesCross / length(vesCross);
+        VECTOR3 outHat = crossp(proHat, plaHat);
+        VECTOR3 impulse;
+        impulse.x = vdata[wkg][s].burndV.x * proHat.x  + vdata[wkg][s].burndV.y * proHat.y + vdata[wkg][s].burndV.z * proHat.z;
+        impulse.y = vdata[wkg][s].burndV.x * outHat.x + vdata[wkg][s].burndV.y * outHat.y + vdata[wkg][s].burndV.z * outHat.z;
+        impulse.z = vdata[wkg][s].burndV.x * plaHat.x + vdata[wkg][s].burndV.y * plaHat.y + vdata[wkg][s].burndV.z * plaHat.z;
+        vs4i->ves.P += impulse;
+      }
     }
 
     //Barycenter update step
