@@ -76,6 +76,7 @@ struct Lagrange_ves_s4i {                                   // Important data fo
 class Lagrange_vdata {                                      // Main vessel data structure (act/wkg)
 public:
   VESSEL *v;                                                // Allows us to get the vessel mass
+  int block_scan;                                           // Either 0, 1, 2. 0 = scan for minimum enc dist. 1 or 2 ... not enough points yet.
   vector<Lagrange_ves_s4i> vs4i;                            // Vessel plots (vector = number of steps)
   vector<VECTOR2> orb_km;                                   // Distance in km from center of the major entity in this LP system
   vector<VECTOR2> orb_plot;                                 // Line segments for plot lines for orb display for this vessel
@@ -91,7 +92,6 @@ public:
   VECTOR2 orb_plot_ves_enc;                                 // X Y positions for the vessel at closest vessel encounter
   vector<VECTOR2> orb_plot_body_enc;                        // X Y positions for each body at closest vessel encounter
   Lagrange_vdata& operator=(const Lagrange_vdata& x);       // Helper function to assign vdata data in the swap function
-
 };
 
 

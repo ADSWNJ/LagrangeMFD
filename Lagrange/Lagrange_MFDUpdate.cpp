@@ -250,8 +250,14 @@ bool Lagrange::DisplayLPMode(oapi::Sketchpad *skp) {
   sprintf(buf,"Enc. Time:");
   skp->Text(Col(0), Line(l), buf, strlen(buf));
   if (GC->LU->s4i_valid) {
-    DisplayEngUnit7(buf, "%8.2f","s", s4i_e->sec - oapiGetSimTime(),0);
-    skp->Text(Col(4), Line(l++), buf, strlen(buf));
+    DisplayEngUnit7(buf, "%14.8f","s", s4i_e->sec,0);
+    skp->Text(Col(3), Line(l++), buf, strlen(buf));
+  } else { l++; };
+  sprintf(buf, "Enc. dTime:");
+  skp->Text(Col(0), Line(l), buf, strlen(buf));
+  if (GC->LU->s4i_valid) {
+    DisplayEngUnit7(buf, "%14.8f", "s", s4i_e->sec - oapiGetSimTime(), 0);
+    skp->Text(Col(3), Line(l++), buf, strlen(buf));
   } else { l++; };
   l++;
 
