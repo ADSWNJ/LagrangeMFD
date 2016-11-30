@@ -63,13 +63,14 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("ARM", OAPI_KEY_A, &Lagrange::Button_BURNARM);
     RegisterFunction("MJD", OAPI_KEY_D, &Lagrange::Button_MJD);
     RegisterFunction("PRO", OAPI_KEY_F, &Lagrange::Button_PRO);
-    RegisterFunction("PLC", OAPI_KEY_P, &Lagrange::Button_PLC);   
-    RegisterFunction("OUT", OAPI_KEY_O, &Lagrange::Button_OUT);
+    RegisterFunction("TDV", OAPI_KEY_F, &Lagrange::Button_TDV);
+    RegisterFunction("LDV", OAPI_KEY_F, &Lagrange::Button_LDV);
     RegisterFunction("ADJ", OAPI_KEY_1, &Lagrange::Button_ADJ);
-    RegisterFunction("-AJ", OAPI_KEY_2, &Lagrange::Button_ADM);
     RegisterFunction("++",  OAPI_KEY_3, &Lagrange::Button_AUP);
     RegisterFunction("--",  OAPI_KEY_4, &Lagrange::Button_ADN);
     RegisterFunction("ENT", OAPI_KEY_E, &Lagrange::Button_ENT);
+    RegisterFunction("PLC", OAPI_KEY_P, &Lagrange::Button_PLC);
+    RegisterFunction("OUT", OAPI_KEY_O, &Lagrange::Button_OUT);
 
     // Burn Mode
     static const MFDBUTTONMENU mnu2[] =

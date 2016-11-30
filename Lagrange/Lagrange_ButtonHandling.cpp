@@ -75,6 +75,16 @@ void Lagrange::Button_PLC() {
 void Lagrange::Button_OUT() {
   VC->burnVar = 3;
 }
+// TDV = Plan Mode: Total DV
+void Lagrange::Button_TDV() {
+  VC->burnVar = 4;
+}
+// LDV = Plan Mode: Lock/Unlock DV
+void Lagrange::Button_LDV() {
+  VC->burnTdV_lock = !VC->burnTdV_lock;
+}
+
+
 // ADM = Plan Mode: Adjust Granularity Down
 void Lagrange::Button_ADM() {
   VC->burnGranularity--;
@@ -95,6 +105,8 @@ void Lagrange::Button_ADN() {
 }
 void Lagrange::ButtonHelper_AdjVar(double adj) {
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  double TdV = length(vdata->burndV);
+  double ratio;
   if (VC->burnGranularity == 8) {
     switch (VC->burnVar) {
     case 0:
@@ -108,6 +120,9 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
       break;
     case 3:
       vdata->burndV.z = 0.0;
+      break;
+    case 4:
+      vdata->burndV = _V(0.0, 0.0, 0.0);
       break;
     }
   } else {
@@ -125,6 +140,47 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
     case 3:
       vdata->burndV.z += adj;
       break;
+    case 4:
+      ratio = (TdV + adj) / TdV;
+      vdata->burndV *= ratio;
+    }
+  }
+  if (VC->burnTdV_lock) {
+    switch (VC->burnVar) {
+    case 0:
+      break;
+    case 1:
+      if (vdata->burndV.x < TdV) {
+        ratio = sqrt(TdV * TdV - vdata->burndV.x * vdata->burndV.x) / sqrt(vdata->burndV.y * vdata->burndV.y + vdata->burndV.z * vdata->burndV.z);
+        vdata->burndV.y *= ratio;
+        vdata->burndV.z *= ratio;
+      } else {
+        vdata->burndV.y = 0.0;
+        vdata->burndV.z = 0.0;
+      }
+      break;
+    case 2:
+      if (vdata->burndV.y < TdV) {
+        ratio = sqrt(TdV * TdV - vdata->burndV.y * vdata->burndV.y) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.z * vdata->burndV.z);
+        vdata->burndV.x *= ratio;
+        vdata->burndV.z *= ratio;
+      } else {
+        vdata->burndV.x = 0.0;
+        vdata->burndV.z = 0.0;
+      }
+      break;
+    case 3:
+      if (vdata->burndV.z < TdV) {
+        ratio = sqrt(TdV * TdV - vdata->burndV.z * vdata->burndV.z) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.y * vdata->burndV.y);
+        vdata->burndV.x *= ratio;
+        vdata->burndV.y *= ratio;
+      } else {
+        vdata->burndV.x = 0.0;
+        vdata->burndV.y = 0.0;
+      }
+      break;
+    case 4:
+      break;
     }
   }
 }
@@ -132,6 +188,8 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
 // ENT = Plan Mode: Enter Value
 void Lagrange::Button_ENT() {
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  double TdV = length(vdata->burndV);
+
   switch (VC->burnVar) {
   case 0:
     sprintf(GC->LU->buf, "%.6f", vdata->burnMJD);
@@ -148,6 +206,10 @@ void Lagrange::Button_ENT() {
   case 3:
     sprintf(GC->LU->buf, "%.6f", vdata->burndV.z);
     oapiOpenInputBox("Enter Plan Outward Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
+    break;
+  case 4:
+    sprintf(GC->LU->buf, "%.6f", TdV);
+    oapiOpenInputBox("Enter Plan Total Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   }
 }

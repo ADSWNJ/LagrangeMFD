@@ -43,6 +43,8 @@ public:
   void Button_MOD();
   void Button_BURNARM();
   void Button_MJD();
+  void Button_TDV();
+  void Button_LDV();
   void Button_PRO();
   void Button_OUT();
   void Button_PLC();

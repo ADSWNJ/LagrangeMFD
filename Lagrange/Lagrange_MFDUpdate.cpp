@@ -133,7 +133,11 @@ bool Lagrange::DisplayPlanMode(oapi::Sketchpad *skp) {
   SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6f", vdata->burndV.x);
   SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6f", vdata->burndV.y);
   SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6f", vdata->burndV.z);
-  l++;
+  SkpFmtColText(skp, Col(0), Line(l), (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV:     %14.6f", length(vdata->burndV));
+  if (VC->burnTdV_lock) {
+    SkpFormatText(skp, Col(5), Line(l), "(lock)");
+  }
+  l+=2;
 
   if (!GC->LU->s4i_valid) return true;
 

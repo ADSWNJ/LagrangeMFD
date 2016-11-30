@@ -50,6 +50,7 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
 
     int burnGranularity;
     int burnVar;
+    bool burnTdV_lock;
 
   private:
 };

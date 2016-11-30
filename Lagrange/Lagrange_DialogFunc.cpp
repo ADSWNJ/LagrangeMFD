@@ -59,6 +59,9 @@ bool Lagrange_DialogFunc::clbkENT(void *id, char *str, void *usrdata) {
   Lagrange_VCore* VC = LC->VC;
   LagrangeUniverse* LU = LC->GC->LU;
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  double TdV = length(vdata->burndV);
+  double ratio;
+
   switch (VC->burnVar) {
   case 0:
     vdata->burnMJD = f;
@@ -72,6 +75,51 @@ bool Lagrange_DialogFunc::clbkENT(void *id, char *str, void *usrdata) {
   case 3:
     vdata->burndV.z = f;
     break;
+  case 4:
+    if (TdV > 0.0) {
+      vdata->burndV *= f / TdV;
+    } else {
+      vdata->burndV = _V(f,0.0,0.0);
+    }
+    break;
+  }
+  if (VC->burnTdV_lock) {
+    switch (VC->burnVar) {
+    case 0:
+      break;
+    case 1:
+      if (vdata->burndV.x < TdV) {
+        ratio = sqrt(TdV * TdV - vdata->burndV.x * vdata->burndV.x) / sqrt(vdata->burndV.y * vdata->burndV.y + vdata->burndV.z * vdata->burndV.z);
+        vdata->burndV.y *= ratio;
+        vdata->burndV.z *= ratio;
+      } else {
+        vdata->burndV.y = 0.0;
+        vdata->burndV.z = 0.0;
+      }
+      break;
+    case 2:
+      if (vdata->burndV.y < TdV) {
+        ratio = sqrt(TdV * TdV - vdata->burndV.y * vdata->burndV.y) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.z * vdata->burndV.z);
+        vdata->burndV.x *= ratio;
+        vdata->burndV.z *= ratio;
+      } else {
+        vdata->burndV.x = 0.0;
+        vdata->burndV.z = 0.0;
+      }
+      break;
+    case 3:
+      if (vdata->burndV.z < TdV) {
+        ratio = sqrt(TdV * TdV - vdata->burndV.z * vdata->burndV.z) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.y * vdata->burndV.y);
+        vdata->burndV.x *= ratio;
+        vdata->burndV.y *= ratio;
+      } else {
+        vdata->burndV.x = 0.0;
+        vdata->burndV.y = 0.0;
+      }
+      break;
+    case 4:
+      break;
+    }
   }
   return true;
 }
