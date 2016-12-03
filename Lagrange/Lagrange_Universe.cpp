@@ -32,7 +32,7 @@ LagrangeUniverse::LagrangeUniverse() {
   defBody(&body[0], 0, "Sun");
   defBody(&body[1], 1, "Earth");
   defBody(&body[2], 2, "Moon");
-  defBary(&body[3], 3, "Earth-Moon", LU_EARTH, LU_MOON);
+  defBary(&body[3], 3, "E-M Bary", LU_EARTH, LU_MOON);
 
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
   // Meanings:
@@ -100,16 +100,16 @@ void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   return;
 }
 
-void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbaryinst, int p0, char* p1, int maj, int min) {
+void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, char* p1, int maj, int min) {
   // Initialize each barycenter
-  pbaryinst->ix = p0;
-  strcpy(pbaryinst->name, p1);
-  pbaryinst->mass = body[maj].mass + body[min].mass;
-  pbaryinst->mu = pbaryinst->mass * GGRAV;
-  pbaryinst->isBary = true;
-  pbaryinst->b_e[0] = maj;
-  pbaryinst->b_e[1] = min;
-  pbaryinst->b_e[2] = -1;
+  pbodyinst->ix = p0;
+  strcpy(pbodyinst->name, p1);
+  pbodyinst->mass = body[maj].mass + body[min].mass;
+  pbodyinst->mu = pbodyinst->mass * GGRAV;
+  pbodyinst->isBary = true;
+  pbodyinst->b_e[0] = maj;
+  pbodyinst->b_e[1] = min;
+  pbodyinst->b_e[2] = -1;
   return;
 }
 
@@ -405,7 +405,7 @@ void LagrangeUniverse::lp_ves(const int s, const int i, const int w) {
 
 
   // Find two vectors in the plane of our minor body ... take the radius vector and the velocity vector
-  mref = s4i[w][i].body[LP.ref];
+  mref = s4i[w][i].body[vdata[w][s].refEnt];
   Rt = ves->Q - mref.Q;
   Vt = ves->P - mref.P;
 
@@ -480,6 +480,7 @@ void LagrangeUniverse::threadCtrlMain() {
       vdata[act][e].burnArmed = vdata[wkg][e].burnArmed;
       vdata[act][e].burnMJD = vdata[wkg][e].burnMJD;
       vdata[act][e].burndV = vdata[wkg][e].burndV;
+      vdata[act][e].refEnt = vdata[wkg][e].refEnt;
     }
 
     s4i[wkg][0].sec = oapiGetSimTime();            // Initialize the working buffers at current time and MJD
@@ -760,8 +761,8 @@ void LagrangeUniverse::integrateUniverse() {
       if (vdata[wkg][s].burnArmed && abs(nextMJD - vdata[wkg][s].burnMJD) < 1E-06) {
         // Convert Prograde/Plane/Outer into global coords
         vs4i = &vdata[wkg][s].vs4i[cur];
-        VECTOR3 vesDQmaj = vs4i->ves.Q - s4i[wkg][cur].body[LP.ref].Q;
-        VECTOR3 vesDPmaj = vs4i->ves.P - s4i[wkg][cur].body[LP.ref].P;
+        VECTOR3 vesDQmaj = vs4i->ves.Q - s4i[wkg][cur].body[vdata[wkg][s].refEnt].Q;
+        VECTOR3 vesDPmaj = vs4i->ves.P - s4i[wkg][cur].body[vdata[wkg][s].refEnt].P;
         VECTOR3 vesCross = crossp(vesDQmaj, vesDPmaj);
         VECTOR3 proHat = vesDPmaj / length(vesDPmaj);
         VECTOR3 plaHat = vesCross / length(vesCross);
@@ -863,8 +864,8 @@ void LagrangeUniverse::integrateUniverse() {
     // scan the Q values to generate relatives to the major body (in km)
     for (unsigned int s = 0; s < ORB_PLOT_COUNT; s++) {
       VECTOR2 Q_maj;
-      Q_maj.x = s4i[wkg][z].body[LP.plotix[0]].Q.x;
-      Q_maj.y = s4i[wkg][z].body[LP.plotix[0]].Q.z;
+      Q_maj.x = s4i[wkg][z].body[vdata[wkg][0].refEnt].Q.x;
+      Q_maj.y = s4i[wkg][z].body[vdata[wkg][0].refEnt].Q.z;
       
       // LP orbit delta from major entity (in km)
       l_orb[wkg].orb_km[1][s].x = (s4i[wkg][z].LP.Q.x - Q_maj.x) / 1000.0;

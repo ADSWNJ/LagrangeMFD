@@ -34,6 +34,7 @@ Lagrange_VCore::Lagrange_VCore(VESSEL *vin, Lagrange_GCore* gcin) {
   LU->vdata[LU->act][s].burnArmed = false;
   LU->vdata[LU->act][s].burnMJD = 0.0;
   LU->vdata[LU->act][s].burndV = _V(0.0,0.0,0.0);
+  LU->vdata[LU->act][s].refEnt = LU->LP.ref;
   vix = s;
   return;
 };

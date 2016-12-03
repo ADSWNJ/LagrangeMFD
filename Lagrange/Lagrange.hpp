@@ -36,6 +36,7 @@ public:
   bool DisplayBurnMode(oapi::Sketchpad *skp);
   bool DisplayLPMode(oapi::Sketchpad *skp);
   bool DisplayS4IMode(oapi::Sketchpad *skp);
+  bool DisplayFrmMode(oapi::Sketchpad *skp);
   bool DisplayTgtMode(oapi::Sketchpad *skp);
   bool DisplayMessageMode(oapi::Sketchpad *skp);
 

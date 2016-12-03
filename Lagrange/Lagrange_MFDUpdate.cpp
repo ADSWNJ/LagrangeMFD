@@ -42,6 +42,9 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
   case 4:
     return DisplayS4IMode(skp);
     break;
+  case 5:
+    return DisplayFrmMode(skp);
+    break;
   case 6:
     return DisplayTgtMode(skp);
     break;
@@ -54,12 +57,12 @@ bool Lagrange::DisplayOrbitMode(oapi::Sketchpad *skp) {
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
   skp->SetTextColor(CLR_WHITE);
 
-  int l = 4;
+  int l = 3;
   char buf[128];
   int circrad = (int)(W / 120);
   int enc_x, enc_y;
 
-  sprintf_s(buf, 128, "LP: %s", GC->LU->LP.name);
+  sprintf_s(buf, 128, "LP: %s (FRM: %s)", GC->LU->LP.name, GC->LU->body[GC->LU->vdata[GC->LU->act][VC->vix].refEnt].name); 
   skp->Text(Col(0), Line(l++), buf, strlen(buf));
 
 //  for (int i = 0; i < 10; i++) {
@@ -167,7 +170,6 @@ bool Lagrange::DisplayLPMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: LP");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
   skp->SetTextColor(CLR_WHITE);
-
 
   int l = 4;
   char buf[256];
@@ -319,9 +321,33 @@ bool Lagrange::DisplayS4IMode(oapi::Sketchpad *skp) {
   return true;
 };
 
+bool Lagrange::DisplayFrmMode(oapi::Sketchpad *skp) {
+  Title(skp, "Lagrange: FRM");
+  skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
+  skp->SetTextColor(CLR_WHITE);
+
+  int l = 4;
+  char buf[128];
+  int curRef = GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
+
+  for (int i = 0; i<COUNT_BODY; i++) {
+    if (i == curRef) {
+      skp->SetTextColor(CLR_YELLOW);
+      sprintf_s(buf, 128, "> %s", GC->LU->body[i].name);
+    } else {
+      skp->SetTextColor(CLR_WHITE);
+      sprintf_s(buf, 128, "  %s", GC->LU->body[i].name);
+    }
+    skp->Text(Col(0), Line(l++), buf, strlen(buf));
+  }
+
+  return true;
+};
+
 bool Lagrange::DisplayTgtMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange: TGT");
   skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
+  skp->SetTextColor(CLR_WHITE);
 
   int l = 4;
   char buf[128];
@@ -341,8 +367,11 @@ bool Lagrange::DisplayTgtMode(oapi::Sketchpad *skp) {
   return true;
 };
 
+
 bool Lagrange::DisplayMessageMode(oapi::Sketchpad *skp) {
   Title(skp, "Lagrange MFD");
+  skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
+  skp->SetTextColor(CLR_WHITE);
   ShowMessage(skp);
   return true;
 };

@@ -50,13 +50,14 @@ Lagrange_Buttons::Lagrange_Buttons()
       { "Arm/Disarm Plan", 0, 'A' },
       { "Set Burn MJD", 0, 'D' },
       { "Set Prograde", 0, 'F' },
-      { "Set Plane Change", 0, 'P' },
-      { "Set Outward", 0, 'O' },
+      { "Set Total Delta-V", 0, 'T' },
+      { "Lock Total Delta-V", 0, 'L' },
       { "Increase Increment", 0, 'U' },
-      { "Reduce Increment", 0, 'D' },
       { "Increment Value", 0, '+' },
       { "Decrement Value", 0, '-' },
       { "Enter Value", 0, 'E' },
+      { "Set Plane Change", 0, 'P' },
+      { "Set Outward", 0, 'O' }
     };
     RegisterPage(mnu1, sizeof(mnu1) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
@@ -118,7 +119,7 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterPage(mnu5, sizeof(mnu5) / sizeof(MFDBUTTONMENU));
     RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_OK);
 
-   // Target Mode
+   // Target or Frame Mode
     static const MFDBUTTONMENU mnu6[] =
     {
       { "OK", 0, 'K' },

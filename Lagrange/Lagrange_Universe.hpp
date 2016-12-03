@@ -88,6 +88,7 @@ public:
   double enc_Q;                                             // Min encounter distance
   double enc_P;                                             // Min encounter dV
   int enc_ix;                                               // s4i index of min encounter
+  int refEnt;                                           // entity code for the frame reference for orbits and burns
   VECTOR2 orb_plot_origin;                                  // location of major entity on the screen 
   VECTOR2 orb_plot_ves_enc;                                 // X Y positions for the vessel at closest vessel encounter
   vector<VECTOR2> orb_plot_body_enc;                        // X Y positions for each body at closest vessel encounter

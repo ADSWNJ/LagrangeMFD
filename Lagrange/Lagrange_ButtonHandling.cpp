@@ -217,14 +217,13 @@ void Lagrange::Button_ENT() {
 void Lagrange::Button_TGT() {
   LC->mode = 6;
   LC->B.SwitchPage(this, LC->mode);
-//  sprintf_s(VC->targetText, 128, "%s %s %s", VC->cel[0].name, VC->cel[1].name, VC->LPname);
-//  oapiOpenInputBox("Enter Lagrangian point target: e.g. Sun Earth L2", Lagrange_DialogFunc::clbkTGT, VC->targetText, 40, LC);
   return;
 }
 // FRM = Orbit Mode: Select Frame - i.e. EQU / ECL
 void Lagrange::Button_FRM() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  LC->mode = 5;
+  LC->B.SwitchPage(this, 6);
+  return;
 }
 // PRJ = Orbit Mode: Select Projection
 void Lagrange::Button_PRJ() {
@@ -302,13 +301,25 @@ void Lagrange::Button_S4IARM() {
 
 // NXT = Lagrange Next Target
 void Lagrange::Button_NXT() {
-  GC->LU->selectNextLP();
+  if (LC->mode == 6) {
+    GC->LU->selectNextLP();
+  } else {
+    int *prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
+    (*prefEnt)++;
+    if (*prefEnt == COUNT_BODY) *prefEnt = 0;
+  }
   return;
 };
 
 // PRV = Lagrange Prev Target
 void Lagrange::Button_PRV() {
-  GC->LU->selectPrevLP();
+  if (LC->mode == 6) {
+    GC->LU->selectPrevLP();
+  } else {
+    int *prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
+    (*prefEnt)--;
+    if (*prefEnt < 0) *prefEnt = COUNT_BODY - 1;
+  }
   return;
 };
 
