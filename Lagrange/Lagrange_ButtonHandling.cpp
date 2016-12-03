@@ -58,6 +58,9 @@ void Lagrange::Button_BURNARM() {
   LagrangeUniverse *LU = VC->LU;
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
   vdata->burnArmed = !vdata->burnArmed;
+  if (vdata->burnArmed) {
+    vdata->burnMJD = oapiGetSimMJD() + (1 / (10 * 60 * 24)); // bump initial MJD 10 mins in the future
+  }
 }
 // MJD = Plan Mode: Date Select
 void Lagrange::Button_MJD() {

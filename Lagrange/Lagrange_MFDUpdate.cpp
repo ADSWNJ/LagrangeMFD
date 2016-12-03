@@ -129,7 +129,7 @@ bool Lagrange::DisplayPlanMode(oapi::Sketchpad *skp) {
   SkpFormatText(skp, Col(0), Line(l++), "  Adjustment:     %s", adjText[VC->burnGranularity]);
   l++;
 
-  if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD();
+  if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD() + (1 / (10 * 60 * 24));
 
   SkpFmtColText(skp, Col(0), Line(l + VC->burnVar), true,   CLR_YELLOW, CLR_WHITE, ">");
   SkpFmtColText(skp, Col(0), Line(l++), (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Plan MJD:     %14.6f", vdata->burnMJD);
