@@ -633,6 +633,8 @@ void LagrangeUniverse::integrateUniverse() {
   }
 
   int interpolation_chop = 1;
+  unsigned int last_regix = 0;
+  unsigned int last_encix = 0;
   
   for (unsigned int cur=1; cur<s4int_count[wkg]; cur++) {
     // S4 Integrator main loop
@@ -814,12 +816,41 @@ void LagrangeUniverse::integrateUniverse() {
 
         if (EDM2 >= EDM1 && EDM1 <= EDM0) {  // We have found an inversion of the curve
           if (interpolation_chop < 1024) {
+            if (interpolation_chop == 1) {
+              last_regix = cur - 2;
+            }
             interpolation_chop *= 2;  // Double the resolution (up to max of 256)
             vdata[wkg][s].block_scan = 1;
             rewind = true;
             break;
           } else {
             interpolation_chop = 1; // Release the pressure ... we have enough accuracy now on the search
+            last_encix = cur - 1;
+            // Now we need to move the encounter to last_regix+1. However, if we have any burns inbetween then make sure we keep those lines
+            last_regix++; // Now points to first insert point
+            unsigned int k = last_regix;
+            bool intervening_burn = false;
+            while (k < last_encix) {
+              for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
+                if (vdata[wkg][c].burnArmed && abs(s4i[wkg][k].MJD - vdata[wkg][c].burnMJD) < 1E-06) {
+                  intervening_burn = true;
+                  break;
+                }
+              }
+              if (intervening_burn) {
+                break;
+              }
+              k++;
+            }
+            // fix up map now, so either the intervening burn or the encounter comes after the last regular delta-time
+            s4i[wkg][last_regix] = s4i[wkg][k];
+            for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
+              vdata[wkg][c].vs4i[last_regix] = vdata[wkg][c].vs4i[k];
+              vdata[wkg][c].block_scan = 2;
+            }
+            cur = last_regix;
+            prev = cur -1;
+            break;
           }
         }
       }
