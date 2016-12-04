@@ -32,7 +32,7 @@ LagrangeUniverse::LagrangeUniverse() {
   defBody(&body[0], 0, "Sun");
   defBody(&body[1], 1, "Earth");
   defBody(&body[2], 2, "Moon");
-  defBary(&body[3], 3, "E-M Bary", LU_EARTH, LU_MOON);
+  defBary(&body[3], 3, "E-M B", LU_EARTH, LU_MOON);
 
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
   // Meanings:

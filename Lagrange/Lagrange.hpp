@@ -31,14 +31,14 @@ public:
   bool ConsumeButton (int bt, int event);
   
   bool Update (oapi::Sketchpad *skp);
-  bool DisplayOrbitMode(oapi::Sketchpad *skp);
-  bool DisplayPlanMode(oapi::Sketchpad *skp);
-  bool DisplayBurnMode(oapi::Sketchpad *skp);
-  bool DisplayLPMode(oapi::Sketchpad *skp);
-  bool DisplayS4IMode(oapi::Sketchpad *skp);
-  bool DisplayFrmMode(oapi::Sketchpad *skp);
-  bool DisplayTgtMode(oapi::Sketchpad *skp);
-  bool DisplayMessageMode(oapi::Sketchpad *skp);
+  bool DisplayOrbitMode();
+  bool DisplayPlanMode();
+  bool DisplayBurnMode();
+  bool DisplayLPMode();
+  bool DisplayS4IMode();
+  bool DisplayFrmMode();
+  bool DisplayTgtMode();
+  bool DisplayMessageMode();
 
   // Button Press Handlers
   void Button_MOD();
@@ -76,7 +76,7 @@ public:
   void Button_ITR();
   void Button_TSP();
 
-  void Lagrange::ButtonHelper_AdjVar(double adj);
+  void ButtonHelper_AdjVar(double adj);
 
   const char* GetModuleName() const { return "Lagrange"; };
 
@@ -89,13 +89,15 @@ protected:
   Lagrange_LCore* LC;
   Lagrange_VCore* VC;
 
-  int Line( int row );
-  int Col( int pos );
-  int Col2( int pos );
-  void Lagrange::SkpFormatText(oapi::Sketchpad *skp, int col, int line, const char* fmt, ...);
-  void Lagrange::SkpFmtColText(oapi::Sketchpad *skp, int col, int line, bool test, DWORD truecol, DWORD falsecol, const char* fmt, ...);
-  void Lagrange::SkpFmtEngText(oapi::Sketchpad *skp, int col, int line, const char* fmt, char* sfx, double val, int loB);
-  void ShowMessage(oapi::Sketchpad *skp);
+  int _Line(const int row );
+  int _Col(const int pos );
+  int _Col2(const int pos );
+  void skpFormatText(const int col, const int line, const char* fmt, ...);
+  void skpFmtColText(const int col, const int line, const bool test, const DWORD truecol, const DWORD falsecol, const char* fmt, ...);
+  void skpFmtEngText(const int col, const int line, const char* fmt, const char* sfx, const double val);
+  void skpTitle(const char* title);
+  void skpColor(DWORD col);
+  void showMessage();
 
   oapi::Font *font;
   oapi::Pen *pen[12];

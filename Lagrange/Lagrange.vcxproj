@@ -184,6 +184,7 @@
     <ClCompile Include="Lagrange_Interface.cpp" />
     <ClCompile Include="Lagrange_LCore.cpp" />
     <ClCompile Include="Lagrange_MFDUpdate.cpp" />
+    <ClCompile Include="Lagrange_SketchpadFunctions.cpp" />
     <ClCompile Include="Lagrange_Universe.cpp" />
     <ClCompile Include="Lagrange_VCore.cpp" />
     <ClCompile Include="MFDPersist.cpp" />

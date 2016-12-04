@@ -101,6 +101,7 @@ Lagrange::Lagrange (DWORD w, DWORD h, VESSEL *vessel, UINT mfd)
   pen[10] = oapiCreatePen(1, 1, 0x00FF00); // BRIGHT GREEN
   pen[11] = oapiCreatePen(1, 1, 0x00FFFF); // BRIGHT YELLOW
 
+
   return;
 }
 

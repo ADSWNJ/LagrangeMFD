@@ -46,6 +46,13 @@ class Lagrange_LCore {
     bool okMessagePage;
     string Message;
     int mode;
+
+    oapi::Sketchpad *skp; // points to local sketchpad for this MFD and vessel
+    int skpLoB;           // Lowest precision for skp eng numnber formatting
+    char skpBuf[128];     // Formatting buffer for MFD updates
+    char skpFmtBuf[128];  // Formatting buffer for MFD updates
+    int skpColPix;        // X-offset pixel (top left origin)
+    int skpLinePix;       // Y offsel pixel (top left origin)
 };
 
 
