@@ -42,7 +42,7 @@ using namespace std;
 #define ORB_PEN_BRIGHT_GREEN 10
 #define ORB_PEN_BRIGHT_YELLOW 11
 
-#define COUNT_LP 6
+#define COUNT_LP 10
 #define COUNT_BODY 4
 
 #define LU_SUN 0

@@ -37,12 +37,16 @@ LagrangeUniverse::LagrangeUniverse() {
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
   // Meanings:
   //              Index    Name       LP#         Alpha Val      Plot Center  Major     Minor              Other   
-  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTH, LU_EARTH, LU_MOON,           LU_SUN);  // EML1
-  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272,  LU_EARTH, LU_EARTH, LU_MOON,           LU_SUN);  // EML2
-  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_EARTH, LU_EARTH, LU_MOON,           LU_SUN);  // EML3
-  defLP(&lptab[3], 3, "Sun Earth L1",  1, 0.989985982345709235260, LU_SUN,   LU_SUN,   LU_EARTHMOONBARY);           // SEL1
-  defLP(&lptab[4], 4, "Sun Earth L2",  2, 1.01007520001973933176,  LU_SUN,   LU_SUN,   LU_EARTHMOONBARY);           // SEL2
-  defLP(&lptab[5], 5, "Sun Earth L3",  3, -1.00000126684308386748, LU_SUN,   LU_SUN,   LU_EARTHMOONBARY);           // SEL3
+  defLP(&lptab[0], 0, "Earth Moon L1", 1, 0.836915194872059889706, LU_EARTH, LU_EARTH, LU_MOON, LU_SUN);  // EML1
+  defLP(&lptab[1], 1, "Earth Moon L2", 2, 1.15568211143362165272,  LU_EARTH, LU_EARTH, LU_MOON, LU_SUN);  // EML2
+  defLP(&lptab[2], 2, "Earth Moon L3", 3, -1.00506263995930385239, LU_EARTH, LU_EARTH, LU_MOON, LU_SUN);  // EML3
+  defLP(&lptab[3], 3, "Earth Moon L4", 4, 0.0,                     LU_EARTH, LU_EARTH, LU_MOON, LU_SUN);  // EML4
+  defLP(&lptab[4], 4, "Earth Moon L5", 5, 0.0,                     LU_EARTH, LU_EARTH, LU_MOON, LU_SUN);  // EML5
+  defLP(&lptab[5], 5, "Sun Earth L1",  1, 0.989985982345709235260, LU_SUN,   LU_SUN,   LU_EARTHMOONBARY); // SEL1
+  defLP(&lptab[6], 6, "Sun Earth L2",  2, 1.01007520001973933176,  LU_SUN,   LU_SUN,   LU_EARTHMOONBARY); // SEL2
+  defLP(&lptab[7], 7, "Sun Earth L3",  3, -1.00000126684308386748, LU_SUN,   LU_SUN,   LU_EARTHMOONBARY); // SEL3
+  defLP(&lptab[8], 8, "Sun Earth L4",  4, 0.0,                     LU_SUN,   LU_SUN, LU_EARTHMOONBARY);   // SEL4
+  defLP(&lptab[9], 9, "Sun Earth L5",  5, 0.0,                     LU_SUN,   LU_SUN, LU_EARTHMOONBARY);   // SEL5
 
   // LP Orbit plot definitions
   // Meanings:
@@ -50,9 +54,13 @@ LagrangeUniverse::LagrangeUniverse() {
   defOrbPlot(&lptab[0], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW); 
   defOrbPlot(&lptab[1], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
   defOrbPlot(&lptab[2], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[3], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[4], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[5], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE,   LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[3], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[4], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[5], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[6], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[7], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[8], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  defOrbPlot(&lptab[9], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_WHITE, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
 
   for (int i = 0; i < 2; i++) {
     s4i[i].resize(s4int_count[0]);
@@ -293,7 +301,6 @@ void LagrangeUniverse::updateUniverse() {
 }
 
 void LagrangeUniverse::lp123(const int n, const int s) {
-  //findLP( QP_struct *vesLP, QP_struct *gblLP, QP_struct *e1, QP_struct *e2, double *dQ, double *dP) {
   //
   // Finds L1-L3 Lagrange Points for the currently selected LP
   //
@@ -379,8 +386,62 @@ void LagrangeUniverse::lp123(const int n, const int s) {
 }
 
 void LagrangeUniverse::lp45(const int n, const int s) {
-/// TODO TODO code for LP4 and LP5
-  return;
+  //
+  // Finds L4-L5 Lagrange Points for the currently selected LP at timestep n (e.g. 0-20000), using working set s (e.g. 0 or 1)
+  //
+  // Return LP Q and P in global frame on gblLP and vessel-relative in vesLP
+  //
+  // Algorithm credit: Keith "Keithth G" Gelling: see http://www.orbiter-forum.com/showthread.php?t=36110
+  //
+
+  struct QP_struct dex, m1, m2;
+  VECTOR3 com, cov, r, v, e, xHat, yHat, zHat;
+  double  vsq, rln, rdotv, gm, ecc, a, nu, k1, k2, k3, k4, cnu, snu, mu1, mu2;
+
+  double sign = (LP.Lnum == 4) ? 1.0 : -1.0;
+
+  m1 = s4i[s][n].body[LP.maj];    // current Q & P values for the major reference
+  m2 = s4i[s][n].body[LP.min];    // current Q & P values for the minr reference
+
+  gm = LP.gm;                     // GM1 + GM2
+  mu1 = LP.mu1;                   // GM1/gm
+  mu2 = LP.mu2;                   // GM2/gm
+
+  com = (m1.Q * mu1) + (m2.Q * mu2);
+  cov = (m1.P * mu1) + (m2.P * mu2);
+
+  r = m2.Q - m1.Q;
+  v = m2.P - m1.P;
+
+  vsq = dotp(v, v);
+  rln = length(r);
+  rdotv = dotp(r, v);
+
+  e = (r *(vsq / gm)) - (v *(rdotv / gm)) - (r / rln);
+  ecc = length(e);
+  a = gm / (2.0*gm / rln - vsq);
+  nu = acos(dotp(e, r) / (ecc * rln));
+  if (dotp(r, v) < 0) nu = 2.0 * PI - nu;
+
+  k1 = a * (1.0 - ecc * ecc);
+  k2 = sqrt(gm / k1);
+  cnu = cos(nu);
+  snu = sin(nu);
+  k3 = 1.0 + ecc * cnu;
+  k4 = sqrt(3) / 2;
+
+  dex.Q.x = (k1 / k3) * ((0.5 - mu2)*cnu - sign*k4*snu);
+  dex.Q.y = (k1 / k3) * ((0.5 - mu2)*snu + sign*k4*cnu);
+  dex.P.x = -k2 * (k4*(ecc + cnu) + sign*(0.5 - mu2)*snu);
+  dex.P.y = -k2 * (k4*snu - sign*(0.5-mu2)*(ecc+cnu));
+
+  xHat = safe_unit(e);                          // unit vector of e
+  zHat = unit(safe_crossp(r, v));               // unit vector of r x v
+  yHat = unit(safe_crossp(zHat, xHat));         // unit vector of zhat x xhat
+
+  s4i[s][n].LP.Q = (xHat * dex.Q.x) + (yHat * dex.Q.y) + com;
+  s4i[s][n].LP.P = (xHat * dex.P.x) + (yHat * dex.P.y) + cov;
+
 }
 
 void LagrangeUniverse::lp_ves(const int s, const int i, const int w) {
@@ -828,11 +889,11 @@ void LagrangeUniverse::integrateUniverse() {
             last_encix = cur - 1;
             // Now we need to move the encounter to last_regix+1. However, if we have any burns inbetween then make sure we keep those lines
             last_regix++; // Now points to first insert point
-            unsigned int k = last_regix;
+            unsigned int kk = last_regix;
             bool intervening_burn = false;
-            while (k < last_encix) {
+            while (kk < last_encix) {
               for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
-                if (vdata[wkg][c].burnArmed && abs(s4i[wkg][k].MJD - vdata[wkg][c].burnMJD) < 1E-06) {
+                if (vdata[wkg][c].burnArmed && abs(s4i[wkg][kk].MJD - vdata[wkg][c].burnMJD) < 1E-06) {
                   intervening_burn = true;
                   break;
                 }
@@ -840,12 +901,12 @@ void LagrangeUniverse::integrateUniverse() {
               if (intervening_burn) {
                 break;
               }
-              k++;
+              kk++;
             }
             // fix up map now, so either the intervening burn or the encounter comes after the last regular delta-time
-            s4i[wkg][last_regix] = s4i[wkg][k];
+            s4i[wkg][last_regix] = s4i[wkg][kk];
             for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
-              vdata[wkg][c].vs4i[last_regix] = vdata[wkg][c].vs4i[k];
+              vdata[wkg][c].vs4i[last_regix] = vdata[wkg][c].vs4i[kk];
               vdata[wkg][c].block_scan = 2;
             }
             cur = last_regix;
