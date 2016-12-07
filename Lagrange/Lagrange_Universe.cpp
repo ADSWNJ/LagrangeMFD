@@ -432,8 +432,8 @@ void LagrangeUniverse::lp45(const int n, const int s) {
 
   dex.Q.x = (k1 / k3) * ((0.5 - mu2)*cnu - sign*k4*snu);
   dex.Q.y = (k1 / k3) * ((0.5 - mu2)*snu + sign*k4*cnu);
-  dex.P.x = -k2 * (k4*(ecc + cnu) + sign*(0.5 - mu2)*snu);
-  dex.P.y = -k2 * (k4*snu - sign*(0.5-mu2)*(ecc+cnu));
+  dex.P.x = -sign * k2 * (k4*(ecc + cnu) + sign*(0.5 - mu2)*snu);
+  dex.P.y = -sign * k2 * (k4*snu - sign*(0.5-mu2)*(ecc+cnu));
 
   xHat = safe_unit(e);                          // unit vector of e
   zHat = unit(safe_crossp(r, v));               // unit vector of r x v
