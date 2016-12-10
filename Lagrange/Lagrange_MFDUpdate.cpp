@@ -197,7 +197,14 @@ bool Lagrange::DisplayLPMode() {
     skpFormatText(0, rl++, "Enc. MJD:");
     skpFormatText(0, rl++, "Enc. Time:");
     skpFormatText(0, rl++, "Enc. dTime:");
-    rl -= 3;
+    if (vdata->enc_typ == -1) {
+      skpFormatText(0, rl++, "Enc. Type:               Before Scan");
+    } else if (vdata->enc_typ == 1) {
+      skpFormatText(0, rl++, "Enc. Type:               After Scan");
+    } else {
+      skpFormatText(0, rl++, "Enc. Type:               During Scan");
+    }
+    rl -= 4;
     skpFormatText(4, rl++, "%10.4f", s4i_e->MJD);
     skpFmtEngText(4, rl++, "%10.4f", "s", s4i_e->sec);
     skpFmtEngText(4, rl++, "%10.4f", "s", s4i_e->sec - oapiGetSimTime());

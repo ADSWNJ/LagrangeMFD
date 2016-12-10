@@ -365,3 +365,17 @@ void Lagrange::Button_DME() {
   GC->LU->dmp_enc = true;
 }
 
+// PMT = Put me There
+void Lagrange::Button_PMT() {
+  VESSELSTATUS vs;
+  VESSEL* v = VC->v;
+  LagrangeUniverse* LU = GC->LU;
+  v->GetStatus(vs);
+  vs.rbody = LU->body[LU->LP.ref].hObj;
+  vs.rpos = LU->s4i[LU->act][0].LP.Q - LU->s4i[LU->act][0].body[LU->LP.ref].Q;
+  vs.rvel = LU->s4i[LU->act][0].LP.P - LU->s4i[LU->act][0].body[LU->LP.ref].P;
+  vs.vrot = _V(0.0, 0.0, 0.0);
+  vs.arot = _V(0.0, 0.0, 0.0);
+  v->DefSetState(&vs);
+}
+

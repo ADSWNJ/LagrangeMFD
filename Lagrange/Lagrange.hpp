@@ -73,6 +73,7 @@ public:
   void Button_TOK();
   void Button_NXT();
   void Button_PRV();
+  void Button_PMT();
   void Button_ITR();
   void Button_TSP();
   void Button_WT();

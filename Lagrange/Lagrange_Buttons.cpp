@@ -131,11 +131,13 @@ Lagrange_Buttons::Lagrange_Buttons()
       { "OK", 0, 'K' },
       { "NXT",0, 'N' },  
       { "PRV",0, 'P' },  
+      { "PMT",0, 'X' },
     };
     RegisterPage(mnu6, sizeof(mnu6) / sizeof(MFDBUTTONMENU));
     RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_TOK);
     RegisterFunction("PRV", OAPI_KEY_P, &Lagrange::Button_PRV);
     RegisterFunction("NXT", OAPI_KEY_N, &Lagrange::Button_NXT);
+    RegisterFunction("PMT", OAPI_KEY_N, &Lagrange::Button_PMT);
     return;
 }
 

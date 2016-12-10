@@ -86,8 +86,9 @@ public:
   VECTOR3 burndV;                                           // hypothetical or real burn (prograde, out, plane)
   double enc_Q;                                             // Min encounter distance
   double enc_P;                                             // Min encounter dV
+  int enc_typ;                                              // -1 if constantly growing encounter, +1 if constantly decreasing, 0 if enc found
   int enc_ix;                                               // s4i index of min encounter
-  int refEnt;                                           // entity code for the frame reference for orbits and burns
+  int refEnt;                                               // entity code for the frame reference for orbits and burns
   VECTOR2 orb_plot_origin;                                  // location of major entity on the screen 
   VECTOR2 orb_plot_ves_enc;                                 // X Y positions for the vessel at closest vessel encounter
   vector<VECTOR2> orb_plot_body_enc;                        // X Y positions for each body at closest vessel encounter
@@ -167,7 +168,7 @@ class LagrangeUniverse
       int nxix;                                             // Next index (propagates at the next worker thread sync)
       int ix;                                               // Index of current LP
       char name[32];                                        // Display name for each LP
-      int ref;                                              // index of the refernce body for orientation
+      int ref;                                              // index of the reference body for orientation
       int maj;                                              // index of the major body for this LP
       int min;                                              // index of the min body for this LP
       int Lnum;                                             // Lagrange number (1-5)

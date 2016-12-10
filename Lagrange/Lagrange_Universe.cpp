@@ -1128,7 +1128,20 @@ void LagrangeUniverse::integrateUniverse() {
     // Finish up the encounter X Y plots
     for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
       int enc_ix = vdata[wkg][v].enc_ix;
-      if (enc_ix == -1) continue;
+      if (enc_ix == -1) {
+        if (vdata[wkg][v].vs4i[0].dQ < vdata[wkg][v].vs4i[s4int_count[wkg] - 1].dQ) {
+          enc_ix = 0;
+          vdata[wkg][v].enc_typ = -1;
+        } else {
+          enc_ix = s4int_count[wkg] - 1;
+          vdata[wkg][v].enc_typ = 1;
+        }
+        vdata[wkg][v].enc_ix = enc_ix;
+        vdata[wkg][v].enc_Q = vdata[wkg][v].vs4i[enc_ix].dQ;
+        vdata[wkg][v].enc_P = vdata[wkg][v].vs4i[enc_ix].dP;
+      } else {
+        vdata[wkg][v].enc_typ = 0;
+      };
       VECTOR2 Q_maj;
       Q_maj.x = s4i[wkg][enc_ix].body[LP.plotix[0]].Q.x;
       Q_maj.y = s4i[wkg][enc_ix].body[LP.plotix[0]].Q.z;
