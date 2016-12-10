@@ -26,7 +26,6 @@ using namespace std;
 #include "orbitersdk.h"
 
 #define S4INT_ENTITIES 5
-#define S4INT_REFRESH 0.0
 #define ORB_PLOT_COUNT 1000
 #define ORB_MAX_LINES 4
 #define ORB_PEN_WHITE 0
@@ -193,9 +192,11 @@ class LagrangeUniverse
     Lagrange_orb_disp l_orb[2];                             // Lagrange orbit display structure (holds the plots of the bodies to plot)
 
 
+    double s4int_refresh;                                   // wait time between s4i runs
 
     double dbg[2][7];                                       // Debug vars (wkg/act first param, diags for 2nd)
     char buf[80];
+    double next_s4i_time;
 
     // Public thread interface vars
     atomic<int> act;
@@ -203,6 +204,9 @@ class LagrangeUniverse
     atomic<bool> s4i_pause;
     atomic<bool> s4i_canstart;
     atomic<bool> s4i_valid;
+    atomic<bool> s4i_waitrel;
+    atomic<bool> dmp_log;
+    atomic<bool> dmp_enc;
 
 
   protected:

@@ -15,7 +15,6 @@
 
 Lagrange_GCore::Lagrange_GCore() {
   coreSimT = 0.0;
-  next_s4i_time = -100.0;
   LU = nullptr;
   return;
 }
@@ -50,9 +49,5 @@ void Lagrange_GCore::corePreStep(double simT,double simDT,double mjd) {
     VC->corePreStep(coreSimT, coreSimDT, mjd);
   }
 
-  // Once in a while, call the thread controller to drive the universe s4i integration
-  if (oapiGetSysTime() > next_s4i_time) {
-    next_s4i_time = oapiGetSysTime() + S4INT_REFRESH;
-    LU->threadCtrlMain();
-  }
+  LU->threadCtrlMain();
 }

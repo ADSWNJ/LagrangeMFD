@@ -88,7 +88,7 @@ void Lagrange_Interface::clbkSimulationEnd() {                                  
     g_SC->P.delLC(nullptr);
     g_SC->P.delVC(nullptr);
     g_SC->LU->vdata[g_SC->LU->act].resize(0);
-    g_SC->next_s4i_time = -1.0;
+    g_SC->LU->next_s4i_time = -100.0;
   }
   char buf[128];
   sprintf(buf, "   >>> %s module sim end", name);

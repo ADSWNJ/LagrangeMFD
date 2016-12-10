@@ -17,6 +17,7 @@ using namespace std;
 #include <sys/timeb.h>
 #include <cassert>
 #include <thread>
+#include <limits>
 #include "orbitersdk.h"
 #include "Lagrange_Universe.hpp"
 
@@ -69,8 +70,13 @@ LagrangeUniverse::LagrangeUniverse() {
   wkg = 0;
   act = 1;
   s4i_valid = false;
+  s4i_waitrel = false;
+  next_s4i_time = -100.0;
   LP = lptab[0];
   selectLP(0);
+  s4int_refresh = 0.0;
+  dmp_enc = false;
+  dmp_log = false;
 
   // Initialize the thread control structures
   s4i_mstate = s4i_wstate = 'I';
@@ -489,11 +495,11 @@ void LagrangeUniverse::lp_ves(const int s, const int i, const int w) {
     VECTOR3 dbg02 = vesLP->Q;
     VECTOR3 dbg35 = vesLP->P;
   }
-  if (vs4i->dQ < vdata[w][s].enc_Q) {
-    vdata[w][s].enc_Q = vs4i->dQ;
-    vdata[w][s].enc_P = vs4i->dP;
-    vdata[w][s].enc_ix = i;
-  }
+//  if (vs4i->dQ < vdata[w][s].enc_Q) {
+//    vdata[w][s].enc_Q = vs4i->dQ;
+//    vdata[w][s].enc_P = vs4i->dP;
+//    vdata[w][s].enc_ix = i;
+//  }
   return;
 }
 
@@ -514,6 +520,16 @@ void LagrangeUniverse::threadCtrlMain() {
     s4i_trafficlight[1].lock(); // No writing on B
     thread s4i_worker = thread(&LagrangeUniverse::threadCtrlWorker, this);
     s4i_worker.detach();
+  }
+  double nowTime = oapiGetSysTime();
+
+  if (s4i_waitrel) {
+    if (nowTime >= next_s4i_time) {
+      next_s4i_time = nowTime + s4int_refresh;
+      s4i_trafficlight[wkg].unlock(); // Release worker to fill the new wkg buffer
+      s4i_waitrel = false;
+      return;
+    }
   }
 
   if (!s4i_finished) return;
@@ -558,7 +574,15 @@ void LagrangeUniverse::threadCtrlMain() {
   /*
   * Thread Data Buffer Swapover end
   */
-  s4i_trafficlight[wkg].unlock(); // Release worker to fill the new wkg buffer
+
+  if (nowTime >= next_s4i_time) {
+    next_s4i_time = nowTime + s4int_refresh;
+    s4i_trafficlight[wkg].unlock(); // Release worker to fill the new wkg buffer
+    s4i_waitrel = false;
+  } else {
+    s4i_waitrel = true;
+  }
+
   return;
 }
 
@@ -624,6 +648,15 @@ void LagrangeUniverse::integrateUniverse() {
 
   s_time = getMilliCount();
 
+  bool _dmp_log = dmp_log;
+  bool _dmp_enc = dmp_enc;
+  if (vdata[wkg].size() == 0) {
+    _dmp_log = false;
+    _dmp_enc = false;
+  }
+
+  FILE *dump_enc = NULL;
+
   // S4 Integrator
   double dt, w0, w1;
   int prev = 0;
@@ -653,17 +686,17 @@ void LagrangeUniverse::integrateUniverse() {
       vdata[wkg][s].vs4i.resize(s4int_count[wkg]);
     }
     Lagrange_ves_s4i *vs4i0 = &vdata[wkg][s].vs4i[0];
-    vdata[wkg][s].enc_Q = vs4i0->dQ;
-    vdata[wkg][s].enc_P = vs4i0->dP;
-    vdata[wkg][s].enc_ix = 0;
-    vdata[wkg][s].block_scan = 1;
+    vdata[wkg][s].enc_Q = DBL_MAX;
+    vdata[wkg][s].enc_P = DBL_MAX;
+    vdata[wkg][s].enc_ix = -1;
+    vdata[wkg][s].block_scan = 2;
   }
 
   //s4i[wkg][0].sec = oapiGetSimTime();
   //s4i[wkg][0].MJD = oapiGetSimMJD();
 
   {
-    if (!s4i_valid && vdata[wkg].size()>0) {
+    if (_dmp_log) {
 
       FILE *dump_s4i;
       if (fopen_s(&dump_s4i, ".\\Config\\MFD\\Lagrange\\Diags\\SNAP.csv", "w") == 0) {
@@ -692,6 +725,16 @@ void LagrangeUniverse::integrateUniverse() {
       }
     }
   }
+  {
+    if (_dmp_enc) {
+
+      if (fopen_s(&dump_enc, ".\\Config\\MFD\\Lagrange\\Diags\\ENC.csv", "w") != 0) {
+        _dmp_enc = false;
+      } else {
+        fprintf(dump_enc, "Reason, Chop, CSec, VIx, Ix1, Ix2, Ix3, Sec1, Sec2, Sec3, Dis1, Dis2, Dis3\n");
+      }
+    }
+  }
 
   int interpolation_chop = 1;
   unsigned int last_regix = 0;
@@ -702,15 +745,17 @@ void LagrangeUniverse::integrateUniverse() {
     int i, j, k;
     double nextdt = dt / (double) interpolation_chop;
     double nextMJD = s4i[wkg][prev].MJD + nextdt / (24.0*60.0*60.0);
+    double nextsec = s4i[wkg][prev].sec + nextdt;
 
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       if (vdata[wkg][s].burnArmed && vdata[wkg][s].burnMJD > s4i[wkg][prev].MJD && vdata[wkg][s].burnMJD <= nextMJD) {
         nextMJD = vdata[wkg][s].burnMJD;
         nextdt = (nextMJD - s4i[wkg][prev].MJD) * (24.0 * 60.0 * 60.0);
+        nextsec = s4i[wkg][prev].sec + nextdt;
       }
     }
 
-    s4i[wkg][cur].sec = s4i[wkg][prev].sec + nextdt;
+    s4i[wkg][cur].sec = nextsec;
     s4i[wkg][cur].MJD = nextMJD;
 //double __dbgM = s4i[wkg][cur].MJD;
 //VECTOR3 __dbgF;
@@ -875,17 +920,35 @@ void LagrangeUniverse::integrateUniverse() {
         double SECM1 = s4i[wkg][cur - 1].sec;
         double SECM0 = s4i[wkg][cur - 0].sec;
 
-        if (EDM2 >= EDM1 && EDM1 <= EDM0) {  // We have found an inversion of the curve
-          if (interpolation_chop < 1024) {
+        bool minDeltaRange = abs(EDM1 - EDM0) < 1e-5;
+
+        if ((EDM2 >= EDM1 && EDM1 <= EDM0) ||
+          (interpolation_chop > 64 && minDeltaRange)) {  // We have found an inversion of the curve
+          if (interpolation_chop < 1024 && !minDeltaRange) {
             if (interpolation_chop == 1) {
               last_regix = cur - 2;
             }
+            if (_dmp_enc) {
+              fprintf(dump_enc, "HUNT, %d, %.15lf, %d, ", interpolation_chop, dt / (double)interpolation_chop, s);
+              fprintf(dump_enc, "%d, %d, %d, ",           cur - 2, cur - 1, cur);
+              fprintf(dump_enc, "%.15f, %.15f, %.15f, ",  s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec );
+              fprintf(dump_enc, "%.15f, %.15f, %.15f\n",  EDM2, EDM1, EDM0);
+            }
+
             interpolation_chop *= 2;  // Double the resolution (up to max of 256)
             vdata[wkg][s].block_scan = 1;
             rewind = true;
             break;
           } else {
+            if (_dmp_enc) {
+              fprintf(dump_enc, "HUNT, %d, %.15lf, %d, ", interpolation_chop, dt / (double)interpolation_chop, s);
+              fprintf(dump_enc, "%d, %d, %d, ", cur - 2, cur - 1, cur);
+              fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
+              fprintf(dump_enc, "%.15f, %.15f, %.15f\n", EDM2, EDM1, EDM0);
+              if (_dmp_enc) fprintf(dump_enc, "END\n");
+            }
             interpolation_chop = 1; // Release the pressure ... we have enough accuracy now on the search
+            vdata[wkg][s].block_scan = 2;
             last_encix = cur - 1;
             // Now we need to move the encounter to last_regix+1. However, if we have any burns inbetween then make sure we keep those lines
             last_regix++; // Now points to first insert point
@@ -895,6 +958,7 @@ void LagrangeUniverse::integrateUniverse() {
               for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
                 if (vdata[wkg][c].burnArmed && abs(s4i[wkg][kk].MJD - vdata[wkg][c].burnMJD) < 1E-06) {
                   intervening_burn = true;
+                  if (_dmp_enc) fprintf(dump_enc, "BURN,,,%d,,,%d,,,%.6lf\n", s, kk, s4i[wkg][kk].sec);
                   break;
                 }
               }
@@ -907,10 +971,30 @@ void LagrangeUniverse::integrateUniverse() {
             s4i[wkg][last_regix] = s4i[wkg][kk];
             for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
               vdata[wkg][c].vs4i[last_regix] = vdata[wkg][c].vs4i[kk];
-              vdata[wkg][c].block_scan = 2;
+
+              if (vdata[wkg][c].vs4i[last_regix].dQ < vdata[wkg][c].enc_Q) {
+                vdata[wkg][c].enc_Q = vdata[wkg][c].vs4i[last_regix].dQ;
+                vdata[wkg][c].enc_P = vdata[wkg][c].vs4i[last_regix].dP;
+                vdata[wkg][c].enc_ix = last_regix;
+                vdata[wkg][c].block_scan = 2;
+                if (_dmp_enc) {
+                  fprintf(dump_enc, "BESTENC, , , %d, ", c);
+                  fprintf(dump_enc, ", , %d, ", last_regix);
+                  fprintf(dump_enc, ", , %.15f, ", s4i[wkg][last_regix].sec);
+                  fprintf(dump_enc, ", , %.15f\n", vdata[wkg][c].enc_Q);
+                }
+              }
+
             }
             cur = last_regix;
-            prev = cur -1;
+            prev = cur - 1;
+
+            if (_dmp_enc) {
+              fprintf(dump_enc, "FIXUP, , , , ");
+              fprintf(dump_enc, "%d, %d, %d, ", cur - 2, cur - 1, cur);
+              fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
+              fprintf(dump_enc, ", , \n");
+            }
             break;
           }
         }
@@ -933,6 +1017,7 @@ void LagrangeUniverse::integrateUniverse() {
 
     prev++;
   }
+
 
   // Generate the orb_plots
   VECTOR2 max_Q, min_Q;
@@ -1043,6 +1128,7 @@ void LagrangeUniverse::integrateUniverse() {
     // Finish up the encounter X Y plots
     for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
       int enc_ix = vdata[wkg][v].enc_ix;
+      if (enc_ix == -1) continue;
       VECTOR2 Q_maj;
       Q_maj.x = s4i[wkg][enc_ix].body[LP.plotix[0]].Q.x;
       Q_maj.y = s4i[wkg][enc_ix].body[LP.plotix[0]].Q.z;
@@ -1074,62 +1160,66 @@ void LagrangeUniverse::integrateUniverse() {
   dbg[wkg][6] = s4int_count[wkg];
 
 
-  {{{
-      if (!s4i_valid && vdata[wkg].size()>0) {
+  {
+    if (_dmp_log) {
 
-        FILE *dump_s4i;
-        if (fopen_s(&dump_s4i, ".\\Config\\MFD\\Lagrange\\Diags\\S4I.csv", "w") == 0) {
+      FILE *dump_s4i;
+      if (fopen_s(&dump_s4i, ".\\Config\\MFD\\Lagrange\\Diags\\S4I.csv", "w") == 0) {
 
-          fprintf(dump_s4i, "INDEX, MJD, "
-                            "E - QX, E - QY, E - QZ, "
-                            "M - QX, M - QY, M - QZ, "
-                            "S - QX, S - QY, S - QZ, "
-                            "V - QX, V - QY, V - QZ, "
-                            "E - PX, E - PY, E - PZ, "
-                            "M - PX, M - PY, M - PZ, "
-                            "S - PX, S - PY, S - PZ, "
-                            "V - PX, V - PY, V - PZ, "
-                            "I - PX, I - PY, I - PZ, "
-                            "LPg - QX, LPg - QY, LPg - QZ, "
-                            "LPg - PX, LPg - PY, LPg - PZ, "
-                            "Vr - QX, Vr - QY, "
-                            "Mr - QX, Mr - QY, "
-                            "LPr - QX, LPr - QY, "
-                            "Vrlp - QX, Vrlp - QY, Vrlp - QZ, "
-                            "Vrlp - PX, Vrlp - PY, Vrpl - PZ, "
-                            "Vrlp - dQ, Vrlp - dP"
-                  "\n");
+        fprintf(dump_s4i, "INDEX, MJD, T, dT, "
+                          "E - QX, E - QY, E - QZ, "
+                          "M - QX, M - QY, M - QZ, "
+                          "S - QX, S - QY, S - QZ, "
+                          "V - QX, V - QY, V - QZ, "
+                          "E - PX, E - PY, E - PZ, "
+                          "M - PX, M - PY, M - PZ, "
+                          "S - PX, S - PY, S - PZ, "
+                          "V - PX, V - PY, V - PZ, "
+                          "I - PX, I - PY, I - PZ, "
+                          "LPg - QX, LPg - QY, LPg - QZ, "
+                          "LPg - PX, LPg - PY, LPg - PZ, "
+                          //"Vr - QX, Vr - QY, "
+                          //"Mr - QX, Mr - QY, "
+                          //"LPr - QX, LPr - QY, "
+                          "Vrlp - QX, Vrlp - QY, Vrlp - QZ, "
+                          "Vrlp - PX, Vrlp - PY, Vrpl - PZ, "
+                          "Vrlp - dQ, Vrlp - dP"
+                "\n");
 
-          unsigned int i = 0; 
-          unsigned int id = (s4int_count[wkg] - 1) / (ORB_PLOT_COUNT - 1);
-          for (unsigned int s = 0; s < ORB_PLOT_COUNT; s++) {
-            fprintf(dump_s4i, "%u, %.15lf,   ", i, s4i[wkg][i].MJD);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_EARTH].Q.x, s4i[wkg][i].body[LU_EARTH].Q.z, s4i[wkg][i].body[LU_EARTH].Q.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_MOON].Q.x, s4i[wkg][i].body[LU_MOON].Q.z, s4i[wkg][i].body[LU_MOON].Q.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_SUN].Q.x, s4i[wkg][i].body[LU_SUN].Q.z, s4i[wkg][i].body[LU_SUN].Q.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].ves.Q.x, vdata[wkg][0].vs4i[i].ves.Q.z, vdata[wkg][0].vs4i[i].ves.Q.y); // ves Q
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_EARTH].P.x, s4i[wkg][i].body[LU_EARTH].P.z, s4i[wkg][i].body[LU_EARTH].P.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_MOON].P.x, s4i[wkg][i].body[LU_MOON].P.z, s4i[wkg][i].body[LU_MOON].P.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_SUN].P.x, s4i[wkg][i].body[LU_SUN].P.z, s4i[wkg][i].body[LU_SUN].P.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].ves.P.x, vdata[wkg][0].vs4i[i].ves.P.z, vdata[wkg][0].vs4i[i].ves.P.y); // ves P
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", 0.0, 0.0, 0.0); // impulse
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].LP.Q.x, s4i[wkg][i].LP.Q.z, s4i[wkg][i].LP.Q.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].LP.P.x, s4i[wkg][i].LP.P.z, s4i[wkg][i].LP.P.y);
-            fprintf(dump_s4i, "%.15lf, %.15lf,   ",         vdata[wkg][0].orb_km[s].x, vdata[wkg][0].orb_km[s].y);
-            fprintf(dump_s4i, "%.15lf, %.15lf,   ",         l_orb[wkg].orb_km[2][s].x, l_orb[wkg].orb_km[2][s].y);
-            fprintf(dump_s4i, "%.15lf, %.15lf,   ",         l_orb[wkg].orb_km[1][s].x, l_orb[wkg].orb_km[1][s].y);
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].vesLP.Q.x, vdata[wkg][0].vs4i[i].vesLP.Q.z, vdata[wkg][0].vs4i[i].vesLP.Q.y); // ves Q
-            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].vesLP.P.x, vdata[wkg][0].vs4i[i].vesLP.P.z, vdata[wkg][0].vs4i[i].vesLP.P.y); // ves P
-            fprintf(dump_s4i, "%.15lf, %.15lf\n", vdata[wkg][0].vs4i[i].dQ, vdata[wkg][0].vs4i[i].dP);
-            i += id;
-          }
-          fprintf(dump_s4i, "\nMaxX, MinX, MaxY, MinY, Scale\n");
-          fprintf(dump_s4i, "%.1f, %.1f, %.1f, %.1f, %.1f\n", max_Q.x, min_Q.x, max_Q.y, min_Q.y, scale);
-          fclose(dump_s4i);
+        for (unsigned int i = 0; i < s4int_count[wkg]; i++) {
+          fprintf(dump_s4i, "%u, %.15lf, %.6lf, %.6lf, ", i, s4i[wkg][i].MJD, s4i[wkg][i].sec, (i>0)? s4i[wkg][i].sec- s4i[wkg][i-1].sec: s4i[wkg][i].sec);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_EARTH].Q.x, s4i[wkg][i].body[LU_EARTH].Q.z, s4i[wkg][i].body[LU_EARTH].Q.y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_MOON].Q.x, s4i[wkg][i].body[LU_MOON].Q.z, s4i[wkg][i].body[LU_MOON].Q.y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_SUN].Q.x, s4i[wkg][i].body[LU_SUN].Q.z, s4i[wkg][i].body[LU_SUN].Q.y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].ves.Q.x, vdata[wkg][0].vs4i[i].ves.Q.z, vdata[wkg][0].vs4i[i].ves.Q.y); // ves Q
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_EARTH].P.x, s4i[wkg][i].body[LU_EARTH].P.z, s4i[wkg][i].body[LU_EARTH].P.y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_MOON].P.x, s4i[wkg][i].body[LU_MOON].P.z, s4i[wkg][i].body[LU_MOON].P.y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_SUN].P.x, s4i[wkg][i].body[LU_SUN].P.z, s4i[wkg][i].body[LU_SUN].P.y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].ves.P.x, vdata[wkg][0].vs4i[i].ves.P.z, vdata[wkg][0].vs4i[i].ves.P.y); // ves P
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", 0.0, 0.0, 0.0); // impulse
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].LP.Q.x, s4i[wkg][i].LP.Q.z, s4i[wkg][i].LP.Q.y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].LP.P.x, s4i[wkg][i].LP.P.z, s4i[wkg][i].LP.P.y);
+//          fprintf(dump_s4i, "%.15lf, %.15lf,   ",         vdata[wkg][0].orb_km[s].x, vdata[wkg][0].orb_km[s].y);
+//          fprintf(dump_s4i, "%.15lf, %.15lf,   ",         l_orb[wkg].orb_km[2][s].x, l_orb[wkg].orb_km[2][s].y);
+//          fprintf(dump_s4i, "%.15lf, %.15lf,   ",         l_orb[wkg].orb_km[1][s].x, l_orb[wkg].orb_km[1][s].y);
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].vesLP.Q.x, vdata[wkg][0].vs4i[i].vesLP.Q.z, vdata[wkg][0].vs4i[i].vesLP.Q.y); // ves Q
+          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].vesLP.P.x, vdata[wkg][0].vs4i[i].vesLP.P.z, vdata[wkg][0].vs4i[i].vesLP.P.y); // ves P
+          fprintf(dump_s4i, "%.15lf, %.15lf\n", vdata[wkg][0].vs4i[i].dQ, vdata[wkg][0].vs4i[i].dP);
         }
+        fprintf(dump_s4i, "\n\nMaxX, MinX, MaxY, MinY, Scale\n");
+        fprintf(dump_s4i, "%.1f, %.1f, %.1f, %.1f, %.1f\n", max_Q.x, min_Q.x, max_Q.y, min_Q.y, scale);
       }
-    }}} 
+      fclose(dump_s4i);
+    }
+  } 
   s4i_valid = true;
+  if (_dmp_log) {
+    dmp_log = false;
+  }
+  if (_dmp_enc) {
+    fclose(dump_enc);
+    dmp_enc = false;
+  }
   return;
 }
 

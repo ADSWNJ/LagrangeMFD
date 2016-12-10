@@ -76,9 +76,12 @@ bool Lagrange::DisplayOrbitMode() {
   LC->skp->SetPen(pen[ORB_PEN_BRIGHT_GREEN]);
   LC->skp->MoveTo((long)((double)W * lvd->orb_plot[1].x), (long)((double)H * lvd->orb_plot[1].y));
   LC->skp->Polyline(iv, ORB_PLOT_COUNT-1);
-  enc_x = (int)((double)W * lvd->orb_plot_ves_enc.x);
-  enc_y = (int)((double)H * lvd->orb_plot_ves_enc.y);
-  LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
+
+  if (lvd->enc_ix >= 0) {
+    enc_x = (int)((double)W * lvd->orb_plot_ves_enc.x);
+    enc_y = (int)((double)H * lvd->orb_plot_ves_enc.y);
+    LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
+  }
 
   for (int s = 1; s < ORB_MAX_LINES; s++) {
     if (LP->plotix[s] == -1) break;
@@ -90,12 +93,14 @@ bool Lagrange::DisplayOrbitMode() {
     LC->skp->MoveTo((long)((double)W * lod->orb_plot[s][1].x), (long)((double)H * lod->orb_plot[s][1].y));
     LC->skp->Polyline(iv, ORB_PLOT_COUNT-1);
 
-    if (abs(lvd->orb_plot_body_enc[s].x - lvd->orb_plot_origin.x) > 0.02 || 
+    if (lvd->enc_ix >= 0) {
+      if (abs(lvd->orb_plot_body_enc[s].x - lvd->orb_plot_origin.x) > 0.02 ||
         abs(lvd->orb_plot_body_enc[s].y - lvd->orb_plot_origin.y) > 0.02) {
-      enc_x = (int)((double)W * lvd->orb_plot_body_enc[s].x);
-      enc_y = (int)((double)H * lvd->orb_plot_body_enc[s].y);
-      LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
-    }
+        enc_x = (int)((double)W * lvd->orb_plot_body_enc[s].x);
+        enc_y = (int)((double)H * lvd->orb_plot_body_enc[s].y);
+        LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
+      }
+    }     
 
   }
   return true;
@@ -123,7 +128,7 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtColText(0, l,   (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV:     %14.6f", length(vdata->burndV));
   if (VC->burnTdV_lock) skpFormatText(5,l, "(lock)");
   l+=2;
-  if (!GC->LU->s4i_valid) return true;
+  if (!GC->LU->s4i_valid || vdata->enc_ix < 0) return true;
 
   Lagrange_s4i *s4i_e = &GC->LU->s4i[GC->LU->act][vdata->enc_ix];
   skpFormatText(0, l++, "  Enc. MJD:     %14.6f", s4i_e->MJD);
@@ -147,10 +152,10 @@ bool Lagrange::DisplayLPMode() {
   Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
   QP_struct *ves = &vs4i->ves;
   QP_struct *vesLP = &vs4i->vesLP;
-  Lagrange_ves_s4i *vs4i_e = &vdata->vs4i[vdata->enc_ix];
+  Lagrange_ves_s4i *vs4i_e = (vdata->enc_ix >= 0) ? &vdata->vs4i[vdata->enc_ix] : nullptr;
   QP_struct *ves_e = &vs4i_e->ves;
   QP_struct *vesLP_e = &vs4i_e->vesLP;
-  Lagrange_s4i *s4i_e = &GC->LU->s4i[GC->LU->act][vdata->enc_ix];
+  Lagrange_s4i *s4i_e = (vdata->enc_ix >= 0) ? &GC->LU->s4i[GC->LU->act][vdata->enc_ix] : nullptr;
   LC->skpLoB = 1;
 
   skpFormatText(0, l++, "LP: %s", GC->LU->LP.name);
@@ -172,7 +177,7 @@ bool Lagrange::DisplayLPMode() {
   skpFmtEngText(0, l++, "TOTAL:     %8.3f", "m/s", vs4i->dP);
 
   l++;
-  if (GC->LU->s4i_valid) {
+  if (GC->LU->s4i_valid && vdata->enc_ix >= 0) {
     LC->skpLoB = 1;
     skpFormatText(4, rl++, "Enc. Pos.");
     skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->Q.x);

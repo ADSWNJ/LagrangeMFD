@@ -41,7 +41,6 @@ class Lagrange_GCore {
 
     LagrangeUniverse *LU; 
 
-    double next_s4i_time;
 
   private:
     double coreSimT;

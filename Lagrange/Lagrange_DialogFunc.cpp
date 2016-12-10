@@ -50,6 +50,17 @@ bool Lagrange_DialogFunc::clbkTSP(void *id, char *str, void *usrdata) {
   return true;
 }
 
+bool Lagrange_DialogFunc::clbkWT(void *id, char *str, void *usrdata) {
+  float f;
+
+  if (strlen(str) == 0) return true;
+  if (sscanf_s(str, "%f", &f) != 1) return true;
+  if (f < 0.0) return false;
+  Lagrange_LCore* LC = (Lagrange_LCore *)usrdata;
+  LC->GC->LU->s4int_refresh = f;
+  return true;
+}
+
 bool Lagrange_DialogFunc::clbkENT(void *id, char *str, void *usrdata) {
   double f;
 

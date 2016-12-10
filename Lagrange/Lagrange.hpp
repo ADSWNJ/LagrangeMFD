@@ -75,6 +75,9 @@ public:
   void Button_PRV();
   void Button_ITR();
   void Button_TSP();
+  void Button_WT();
+  void Button_DML();
+  void Button_DME();
 
   void ButtonHelper_AdjVar(double adj);
 
