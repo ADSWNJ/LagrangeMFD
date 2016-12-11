@@ -557,6 +557,32 @@ void LagrangeUniverse::threadCtrlMain() {
       vdata[act][e].burnMJD = vdata[wkg][e].burnMJD;
       vdata[act][e].burndV = vdata[wkg][e].burndV;
       vdata[act][e].refEnt = vdata[wkg][e].refEnt;
+
+      bool mmext; 
+      int fromTransX;
+      if (vdata[wkg][e].burnArmed) {
+        mmext = ModMsgPut("Eject date", vdata[wkg][e].burnMJD, vdata[wkg][e].v);
+        mmext = ModMsgPut("Prograde vel.", vdata[wkg][e].burndV.x, vdata[wkg][e].v);
+        mmext = ModMsgPut("Outward vel", vdata[wkg][e].burndV.y, vdata[wkg][e].v);
+        mmext = ModMsgPut("Ch. plane vel.", vdata[wkg][e].burndV.z, vdata[wkg][e].v);
+      } else {
+        mmext = ModMsgPut("Eject date", 0.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("Prograde vel.", 0.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("Outward vel", 0.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("Ch. plane vel.", 0.0, vdata[wkg][e].v);
+      }
+      mmext = EnjoLib::ModuleMessagingExt().ModMsgGet("TransX", "CurrentBodyIndex", &fromTransX, vdata[wkg][e].v);
+      if (mmext) {
+        vdata[act][e].TransX_CurrentBodyIndex = (OBJHANDLE)fromTransX;
+      } else {
+        vdata[act][e].TransX_CurrentBodyIndex = false;
+      }
+      mmext = EnjoLib::ModuleMessagingExt().ModMsgGet("TransX", "PlanMajorIndex", &fromTransX, vdata[wkg][e].v);
+      if (mmext) {
+        vdata[act][e].TransX_PlanMajorIndex = (OBJHANDLE)fromTransX;
+      } else {
+        vdata[act][e].TransX_PlanMajorIndex = false;
+      }
     }
 
     s4i[wkg][0].sec = oapiGetSimTime();            // Initialize the working buffers at current time and MJD
@@ -910,8 +936,8 @@ void LagrangeUniverse::integrateUniverse() {
               last_regix = cur - 2;
             }
             if (_dmp_enc) {
-              fprintf(dump_enc, "HUNT, %d, %.15lf, %d, ", interpolation_chop, dt / (double)interpolation_chop, s);
-              fprintf(dump_enc, "%d, %d, %d, ",           cur - 2, cur - 1, cur);
+              fprintf(dump_enc, "HUNT, %d, %.15lf, %u, ", interpolation_chop, dt / (double)interpolation_chop, s);
+              fprintf(dump_enc, "%u, %u, %u, ",           cur - 2, cur - 1, cur);
               fprintf(dump_enc, "%.15f, %.15f, %.15f, ",  s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec );
               fprintf(dump_enc, "%.15f, %.15f, %.15f\n",  EDM2, EDM1, EDM0);
             }
@@ -922,8 +948,8 @@ void LagrangeUniverse::integrateUniverse() {
             break;
           } else {
             if (_dmp_enc) {
-              fprintf(dump_enc, "HUNT, %d, %.15lf, %d, ", interpolation_chop, dt / (double)interpolation_chop, s);
-              fprintf(dump_enc, "%d, %d, %d, ", cur - 2, cur - 1, cur);
+              fprintf(dump_enc, "HUNT, %d, %.15lf, %u, ", interpolation_chop, dt / (double)interpolation_chop, s);
+              fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
               fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
               fprintf(dump_enc, "%.15f, %.15f, %.15f\n", EDM2, EDM1, EDM0);
               if (_dmp_enc) fprintf(dump_enc, "END\n");
@@ -939,7 +965,7 @@ void LagrangeUniverse::integrateUniverse() {
               for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
                 if (vdata[wkg][c].burnArmed && abs(s4i[wkg][kk].MJD - vdata[wkg][c].burnMJD) < 1E-06) {
                   intervening_burn = true;
-                  if (_dmp_enc) fprintf(dump_enc, "BURN,,,%d,,,%d,,,%.6lf\n", s, kk, s4i[wkg][kk].sec);
+                  if (_dmp_enc) fprintf(dump_enc, "BURN,,,%u,,,%u,,,%.6lf\n", s, kk, s4i[wkg][kk].sec);
                   break;
                 }
               }
@@ -959,8 +985,8 @@ void LagrangeUniverse::integrateUniverse() {
                 vdata[wkg][c].enc_ix = last_regix;
                 vdata[wkg][c].block_scan = 2;
                 if (_dmp_enc) {
-                  fprintf(dump_enc, "BESTENC, , , %d, ", c);
-                  fprintf(dump_enc, ", , %d, ", last_regix);
+                  fprintf(dump_enc, "BESTENC, , , %u, ", c);
+                  fprintf(dump_enc, ", , %u, ", last_regix);
                   fprintf(dump_enc, ", , %.15f, ", s4i[wkg][last_regix].sec);
                   fprintf(dump_enc, ", , %.15f\n", vdata[wkg][c].enc_Q);
                 }
@@ -972,7 +998,7 @@ void LagrangeUniverse::integrateUniverse() {
 
             if (_dmp_enc) {
               fprintf(dump_enc, "FIXUP, , , , ");
-              fprintf(dump_enc, "%d, %d, %d, ", cur - 2, cur - 1, cur);
+              fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
               fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
               fprintf(dump_enc, ", , \n");
             }

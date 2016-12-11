@@ -122,6 +122,7 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
   char *line;
   char *val;
   int p_i1, p_i2;
+  unsigned int p_ui1, p_ui2;
   double p_d1, p_d2, p_d3, p_d4;
   int act = GC->LU->act;
   int mfd = this->LC->m;
@@ -138,8 +139,8 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
     if (!_stricmp(line, "END_MFD")) {
       break;
     } else if (!_stricmp(line, "LA_MFD")) {
-      if (sscanf(val, "%d %d", &p_i1, &p_i2) == 2) {
-        if (this->LC->m == p_i1) this->LC->mode = p_i2;
+      if (sscanf(val, "%u %d", &p_ui1, &p_i2) == 2) {
+        if (this->LC->m == p_ui1) this->LC->mode = p_i2;
       }
     } else if (!_stricmp(line, "LP")) {
       for (unsigned int i = 0; i < COUNT_LP; i++) {
@@ -149,9 +150,9 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
         }
       }   
     } else if (!_stricmp(line, "S4I")) {
-      if (sscanf(val, "%d %d %lf %lf", &p_i1, &p_i2, &p_d1, &p_d2) == 4) {
+      if (sscanf(val, "%d %u %lf %lf", &p_i1, &p_ui2, &p_d1, &p_d2) == 4) {
         GC->LU->s4i_pause = (p_i1 == 0);
-        GC->LU->s4int_count[act] = p_i2;
+        GC->LU->s4int_count[act] = p_ui2;
         GC->LU->s4int_timestep[act] = p_d1;
         GC->LU->s4int_refresh = p_d2;
       }
@@ -192,10 +193,10 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
 void Lagrange::WriteStatus(FILEHANDLE scn) const {
   char buf[128];
   int act = GC->LU->act;
-  sprintf(buf, "%d %d", this->LC->m, this->LC->mode);
+  sprintf(buf, "%u %d", this->LC->m, this->LC->mode);
   oapiWriteScenario_string(scn, "LA_MFD", buf);
   oapiWriteScenario_string(scn,"LP",GC->LU->LP.name);
-  sprintf(buf, "%d %d %lf %lf ", GC->LU->s4i_pause ? 0 : 1, GC->LU->s4int_count[act], GC->LU->s4int_timestep[act], GC->LU->s4int_refresh);
+  sprintf(buf, "%d %u %lf %lf ", GC->LU->s4i_pause ? 0 : 1, GC->LU->s4int_count[act], GC->LU->s4int_timestep[act], GC->LU->s4int_refresh);
   oapiWriteScenario_string(scn, "S4I", buf);
   for (unsigned int i = 0; i < GC->LU->vdata[act].size(); i++) {
     Lagrange_vdata *lvd = &(GC->LU->vdata[act][i]);

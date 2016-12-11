@@ -24,6 +24,8 @@ using namespace std;
 #include <mutex>
 #include <atomic>
 #include "orbitersdk.h"
+#include "EnjoLib/ModuleMessagingExtPut.hpp"
+#include "EnjoLib/ModuleMessagingExt.hpp"
 
 #define S4INT_ENTITIES 5
 #define ORB_PLOT_COUNT 1000
@@ -88,6 +90,8 @@ public:
   double burnMJD;                                           // date of hypotetical or real burn
   VECTOR3 burndV;                                           // hypothetical or real burn in TransX frame (prograde, out, plane)
   VECTOR3 burndVg;                                          // burn in global frame
+  OBJHANDLE TransX_CurrentBodyIndex;                        // From TransX
+  OBJHANDLE TransX_PlanMajorIndex;                          // From TransX
   int burn_ix;                                              // index for burn
   double enc_Q;                                             // Min encounter distance
   double enc_P;                                             // Min encounter dV
@@ -113,9 +117,10 @@ struct Lagrange_orb_disp {
   vector<VECTOR2> orb_plot[ORB_MAX_LINES];                  // Line segments for plot lines for orb display in fraction of H / W (0 = MAJ, 1 = MIN, 2 = LP)
 };
 
-class LagrangeUniverse
+class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
 {
   public:
+    const char* ModuleMessagingGetModuleName() const { return "LagrangeMFD"; }
     LagrangeUniverse();                                     
     ~LagrangeUniverse();                                    
     int selectNextLP();                                     // TGT selection next LP

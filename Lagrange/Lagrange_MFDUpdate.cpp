@@ -153,8 +153,8 @@ bool Lagrange::DisplayLPMode() {
   QP_struct *ves = &vs4i->ves;
   QP_struct *vesLP = &vs4i->vesLP;
   Lagrange_ves_s4i *vs4i_e = (vdata->enc_ix >= 0) ? &vdata->vs4i[vdata->enc_ix] : nullptr;
-  QP_struct *ves_e = &vs4i_e->ves;
-  QP_struct *vesLP_e = &vs4i_e->vesLP;
+  QP_struct *ves_e = (vs4i_e) ? &vs4i_e->ves : nullptr;
+  QP_struct *vesLP_e = (vs4i_e) ? &vs4i_e->vesLP : nullptr;
   Lagrange_s4i *s4i_e = (vdata->enc_ix >= 0) ? &GC->LU->s4i[GC->LU->act][vdata->enc_ix] : nullptr;
   LC->skpLoB = 1;
 
@@ -177,7 +177,7 @@ bool Lagrange::DisplayLPMode() {
   skpFmtEngText(0, l++, "TOTAL:     %8.3f", "m/s", vs4i->dP);
 
   l++;
-  if (GC->LU->s4i_valid && vdata->enc_ix >= 0) {
+  if (GC->LU->s4i_valid && vdata->enc_ix >= 0 && vesLP_e) {
     LC->skpLoB = 1;
     skpFormatText(4, rl++, "Enc. Pos.");
     skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->Q.x);
