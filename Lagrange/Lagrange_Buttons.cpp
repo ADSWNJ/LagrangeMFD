@@ -125,19 +125,31 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterPage(mnu5, sizeof(mnu5) / sizeof(MFDBUTTONMENU));
     RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_OK);
 
-   // Target or Frame Mode
+   // Target Mode
     static const MFDBUTTONMENU mnu6[] =
     {
       { "OK", 0, 'K' },
-      { "NXT",0, 'N' },  
-      { "PRV",0, 'P' },  
-      { "PMT",0, 'X' },
+      { "Previous",0, 'P' },
+      { "Next",0, 'N' },
+      { "Put Me There",0, 'X' },
     };
     RegisterPage(mnu6, sizeof(mnu6) / sizeof(MFDBUTTONMENU));
     RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_TOK);
     RegisterFunction("PRV", OAPI_KEY_P, &Lagrange::Button_PRV);
     RegisterFunction("NXT", OAPI_KEY_N, &Lagrange::Button_NXT);
     RegisterFunction("PMT", OAPI_KEY_N, &Lagrange::Button_PMT);
+
+    // Frame Mode
+    static const MFDBUTTONMENU mnu7[] =
+    {
+      { "OK", 0, 'K' },
+      { "Previous",0, 'P' },
+      { "Next",0, 'N' }
+    };
+    RegisterPage(mnu7, sizeof(mnu7) / sizeof(MFDBUTTONMENU));
+    RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_TOK);
+    RegisterFunction("PRV", OAPI_KEY_P, &Lagrange::Button_PRV);
+    RegisterFunction("NXT", OAPI_KEY_N, &Lagrange::Button_NXT);
     return;
 }
 

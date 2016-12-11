@@ -248,8 +248,7 @@ inline Lagrange_vdata& Lagrange_vdata::operator=(const Lagrange_vdata& x) {
   this->v = x.v;
   if (this->vs4i.size() != x.vs4i.size()) this->vs4i.resize(x.vs4i.size());
   this->vs4i[0] = x.vs4i[0];
-  this->cmass = x.cmass;
-  this->dmass = x.dmass;
+  this->curMass = x.curMass;
   this->burnMJD = x.burnMJD;
   this->burndV = x.burndV;
   this->enc_ix = 0;
@@ -359,9 +358,9 @@ void LagrangeUniverse::lp123(const int n, const int s) {
 	//		'xHat'	- a unit vector pointing in the direction to M2's orbital periapsis
 	//		'zHat'	- a unit vector point normal to the M2's orbital plane
 	//		'yHat'	- the third unit vector to complete the trio
-  xHat = safe_unit(e);
-  zHat = unit(safe_crossp(r, v));
-  yHat = unit(safe_crossp(zHat, xHat));
+  xHat = unit_s(e);
+  zHat = unit(crossp_s(r, v));
+  yHat = unit(crossp_s(zHat, xHat));
 
   //pre-calc more intermediate vlaues
   k1 = a * (1.0 - ecc * ecc);
@@ -441,9 +440,9 @@ void LagrangeUniverse::lp45(const int n, const int s) {
   dex.P.x = -sign * k2 * (k4*(ecc + cnu) + sign*(0.5 - mu2)*snu);
   dex.P.y = -sign * k2 * (k4*snu - sign*(0.5-mu2)*(ecc+cnu));
 
-  xHat = safe_unit(e);                          // unit vector of e
-  zHat = unit(safe_crossp(r, v));               // unit vector of r x v
-  yHat = unit(safe_crossp(zHat, xHat));         // unit vector of zhat x xhat
+  xHat = unit_s(e);                          // unit vector of e
+  zHat = unit(crossp_s(r, v));               // unit vector of r x v
+  yHat = unit(crossp_s(zHat, xHat));         // unit vector of zhat x xhat
 
   s4i[s][n].LP.Q = (xHat * dex.Q.x) + (yHat * dex.Q.y) + com;
   s4i[s][n].LP.P = (xHat * dex.P.x) + (yHat * dex.P.y) + cov;
@@ -478,9 +477,9 @@ void LagrangeUniverse::lp_ves(const int s, const int i, const int w) {
 
 
   //transform relative pos/vel into TransX-style prograde, plane change, inner coords
-  XtHat = safe_unit(Vt);
-  YtHat = unit(safe_crossp(Vt, Rt));
-  ZtHat = unit(safe_crossp(XtHat, YtHat));
+  XtHat = unit_s(Vt);
+  YtHat = unit(crossp_s(Vt, Rt));
+  ZtHat = unit(crossp_s(XtHat, YtHat));
 
   vesLP->Q.x = dotp(rel.Q, XtHat);
   vesLP->Q.y = dotp(-rel.Q, YtHat);
@@ -677,7 +676,6 @@ void LagrangeUniverse::integrateUniverse() {
   }
 
   for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-    // Best encounter so far is now, and lp_ves will update if we get closer
     try {
       vdata[wkg][s].vs4i.resize(s4int_count[wkg]);
     }
@@ -688,12 +686,9 @@ void LagrangeUniverse::integrateUniverse() {
     Lagrange_ves_s4i *vs4i0 = &vdata[wkg][s].vs4i[0];
     vdata[wkg][s].enc_Q = DBL_MAX;
     vdata[wkg][s].enc_P = DBL_MAX;
-    vdata[wkg][s].enc_ix = -1;
+    vdata[wkg][s].enc_ix = -1;    // if -1 by end of scan, then either the encounter is before or after our scan
     vdata[wkg][s].block_scan = 2;
   }
-
-  //s4i[wkg][0].sec = oapiGetSimTime();
-  //s4i[wkg][0].MJD = oapiGetSimMJD();
 
   {
     if (_dmp_log) {
@@ -757,17 +752,11 @@ void LagrangeUniverse::integrateUniverse() {
 
     s4i[wkg][cur].sec = nextsec;
     s4i[wkg][cur].MJD = nextMJD;
-//double __dbgM = s4i[wkg][cur].MJD;
-//VECTOR3 __dbgF;
-//VECTOR3 __dbgP;
-//VECTOR3 __dbgQ;
 
     // Step 1a, rolling forward from prev
     for (i = 0; LP.bodyIx[i] != -1; i++) {
       ent = LP.bodyIx[i];
-//__dbgP = s4i[wkg][prev].body[ent].P;
       s4i[wkg][cur].body[ent].P = s4i[wkg][prev].body[ent].P;
-//__dbgQ = s4i[wkg][prev].body[ent].Q + s4i[wkg][cur].body[ent].P  * (0.5 * w0 * nextdt);
       s4i[wkg][cur].body[ent].Q = s4i[wkg][prev].body[ent].Q + s4i[wkg][cur].body[ent].P  * (0.5 * w0 * nextdt);
     }
 
@@ -782,24 +771,19 @@ void LagrangeUniverse::integrateUniverse() {
     //Step 1b
     for (i = 0; LP.bodyIx[i] != -1; i++) {
       ent = LP.bodyIx[i];
-//__dbgF = s4iforce(ent, cur);
       s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w0 * nextdt);
-//__dbgP = s4i[wkg][cur].body[ent].P;
     }
 
     //Step 1b Vessel Calc
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       vs4i = &vdata[wkg][s].vs4i[cur];
-//__dbgF = s4iforce_ves(s, cur);
       vs4i->ves.P += s4iforce_ves(s, cur) * (w0 * nextdt);
     }
 
     //Step 1c, 2a
     for (i = 0; LP.bodyIx[i] != -1; i++) {
       ent = LP.bodyIx[i];
-//__dbgQ = s4i[wkg][cur].body[ent].P * (0.5 * (w0 + w1) * nextdt);
       s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w0 + w1) * nextdt);
-//__dbgQ = s4i[wkg][cur].body[ent].Q;
     }
 
     //Step 1c, 2a Vessel Calc
@@ -811,24 +795,19 @@ void LagrangeUniverse::integrateUniverse() {
     //Step 2b
     for (i = 0; LP.bodyIx[i] != -1; i++) {
       ent = LP.bodyIx[i];
-//__dbgF = s4iforce(ent, cur);
       s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w1 * nextdt);
-//__dbgP = s4i[wkg][cur].body[ent].P;
     }
 
     //Step 2b Vessel Calc
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       vs4i = &vdata[wkg][s].vs4i[cur];
-//__dbgF = s4iforce_ves(s, cur);
       vs4i->ves.P += s4iforce_ves(s, cur) * (w1 * nextdt);
     }
 
     //Step 2c, 3a
     for (i = 0; LP.bodyIx[i] != -1; i++) {
       ent = LP.bodyIx[i];
-//__dbgQ = s4i[wkg][cur].body[ent].P * (0.5 * (w1 + w0) * nextdt);
       s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w1 + w0) * nextdt);
-//__dbgQ = s4i[wkg][cur].body[ent].Q;
     }
 
     //Step 2c, 3a Vessel Calc
@@ -840,15 +819,12 @@ void LagrangeUniverse::integrateUniverse() {
     //Step 3b
     for (i = 0; LP.bodyIx[i] != -1; i++) {
       ent = LP.bodyIx[i];
-//__dbgF = s4iforce(ent, cur) * (w0 * nextdt);
       s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w0 * nextdt);
-//__dbgP = s4i[wkg][cur].body[ent].P;
     }
 
     //Step 3b Vessel Calc
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       vs4i = &vdata[wkg][s].vs4i[cur];
-//__dbgF = s4iforce_ves(s, cur);
       vs4i->ves.P += s4iforce_ves(s, cur) * (w0 * nextdt);
     }
 
@@ -867,6 +843,7 @@ void LagrangeUniverse::integrateUniverse() {
     // Step 3d Impulse Step: integrate plan mode burn
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       if (vdata[wkg][s].burnArmed && abs(nextMJD - vdata[wkg][s].burnMJD) < 1E-06) {
+
         // Convert Prograde/Plane/Outer into global coords
         vs4i = &vdata[wkg][s].vs4i[cur];
         VECTOR3 vesDQmaj = vs4i->ves.Q - s4i[wkg][cur].body[vdata[wkg][s].refEnt].Q;
@@ -880,6 +857,11 @@ void LagrangeUniverse::integrateUniverse() {
         impulse.y = vdata[wkg][s].burndV.x * proHat.y + vdata[wkg][s].burndV.y * outHat.y + vdata[wkg][s].burndV.z * plaHat.y;
         impulse.z = vdata[wkg][s].burndV.x * proHat.z + vdata[wkg][s].burndV.y * outHat.z + vdata[wkg][s].burndV.z * plaHat.z;
         vs4i->ves.P += impulse;
+        vdata[wkg][s].burndVg = impulse;
+        vdata[wkg][s].burn_ix = cur;
+        vdata[wkg][s].deltaMass = vdata[wkg][s].curMass - (vdata[wkg][s].curMass / exp(length(impulse)/ vdata[wkg][s].mainExVel0));
+        vdata[wkg][s].burnDuration = vdata[wkg][s].deltaMass * vdata[wkg][s].mainExVel0 / vdata[wkg][s].mainThrust;
+
       }
     }
 
@@ -907,9 +889,8 @@ void LagrangeUniverse::integrateUniverse() {
       lp_ves(s, cur, wkg);
     }
 
-    bool rewind = false; 
-
     // Look for encounter points (where we need to binary chop interpolate into the encounters)
+    bool rewind = false;
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       if (!vdata[wkg][s].block_scan) { // Look at last 2 data points to see if we are at an encounter 
         double EDM2 = length(vdata[wkg][s].vs4i[cur - 2].vesLP.Q);
@@ -935,7 +916,7 @@ void LagrangeUniverse::integrateUniverse() {
               fprintf(dump_enc, "%.15f, %.15f, %.15f\n",  EDM2, EDM1, EDM0);
             }
 
-            interpolation_chop *= 2;  // Double the resolution (up to max of 256)
+            interpolation_chop *= 2;  // Double the resolution (up to max of 1024)
             vdata[wkg][s].block_scan = 1;
             rewind = true;
             break;
@@ -951,7 +932,7 @@ void LagrangeUniverse::integrateUniverse() {
             vdata[wkg][s].block_scan = 2;
             last_encix = cur - 1;
             // Now we need to move the encounter to last_regix+1. However, if we have any burns inbetween then make sure we keep those lines
-            last_regix++; // Now points to first insert point
+            last_regix++; // Now pointing to first insert point
             unsigned int kk = last_regix;
             bool intervening_burn = false;
             while (kk < last_encix) {
@@ -1008,7 +989,6 @@ void LagrangeUniverse::integrateUniverse() {
       continue;
     }
 
-    // This entry is committed. Decrement the blocks
     for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
       if (vdata[wkg][s].block_scan) {
         vdata[wkg][s].block_scan--;
@@ -1209,7 +1189,11 @@ void LagrangeUniverse::integrateUniverse() {
           fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_MOON].P.x, s4i[wkg][i].body[LU_MOON].P.z, s4i[wkg][i].body[LU_MOON].P.y);
           fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].body[LU_SUN].P.x, s4i[wkg][i].body[LU_SUN].P.z, s4i[wkg][i].body[LU_SUN].P.y);
           fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].vs4i[i].ves.P.x, vdata[wkg][0].vs4i[i].ves.P.z, vdata[wkg][0].vs4i[i].ves.P.y); // ves P
-          fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", 0.0, 0.0, 0.0); // impulse
+          if (i != vdata[wkg][0].burn_ix) {
+            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", 0.0, 0.0, 0.0);
+          } else {
+            fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", vdata[wkg][0].burndVg.x, vdata[wkg][0].burndVg.y, vdata[wkg][0].burndVg.z); // impulse
+          }
           fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].LP.Q.x, s4i[wkg][i].LP.Q.z, s4i[wkg][i].LP.Q.y);
           fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf,   ", s4i[wkg][i].LP.P.x, s4i[wkg][i].LP.P.z, s4i[wkg][i].LP.P.y);
 //          fprintf(dump_s4i, "%.15lf, %.15lf,   ",         vdata[wkg][0].orb_km[s].x, vdata[wkg][0].orb_km[s].y);
@@ -1286,12 +1270,12 @@ inline VECTOR3 LagrangeUniverse::s4iforce_ves(const int s, const int i) {
 }
 
 
-inline VECTOR3 safe_unit (const VECTOR3 &a)
+inline VECTOR3 unit_s (const VECTOR3 &a)
 {
   if (abs(a.x)>1e-9 || abs(a.y)>1e-9 || abs(a.z)>1e-9) return a / length(a);
   return a;
 }
-inline VECTOR3 safe_crossp (const VECTOR3 &a, const VECTOR3 &b)
+inline VECTOR3 crossp_s (const VECTOR3 &a, const VECTOR3 &b)
 {
   if (abs(a.y*b.z - b.y*a.z)>1e-9 || abs(a.z*b.x - b.z*a.x)>1e-9 || abs(a.x*b.y - b.x*a.y)>1e-9) return _V(a.y*b.z - b.y*a.z, a.z*b.x - b.z*a.x, a.x*b.y - b.x*a.y);
   VECTOR3 c = b + _V(0.6, 0.8, 0.0); // Collinear vectors: add a 1.0m length bias in the X-Y plane to force a non-zero cross product

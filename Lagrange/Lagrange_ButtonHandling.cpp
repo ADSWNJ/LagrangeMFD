@@ -224,8 +224,8 @@ void Lagrange::Button_TGT() {
 }
 // FRM = Orbit Mode: Select Frame - i.e. EQU / ECL
 void Lagrange::Button_FRM() {
-  LC->mode = 5;
-  LC->B.SwitchPage(this, 6);
+  LC->mode = 7;
+  LC->B.SwitchPage(this, LC->mode);
   return;
 }
 // PRJ = Orbit Mode: Select Projection

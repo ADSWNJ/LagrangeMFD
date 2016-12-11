@@ -36,6 +36,21 @@ Lagrange_VCore::Lagrange_VCore(VESSEL *vin, Lagrange_GCore* gcin) {
   LU->vdata[LU->act][s].burndV = _V(0.0,0.0,0.0);
   LU->vdata[LU->act][s].refEnt = LU->LP.ref;
   vix = s;
+
+  // Figure out the delta mass per +1m/s of dV
+  THGROUP_HANDLE thg = v->GetThrusterGroupHandle(THGROUP_MAIN);
+  DWORD thgc = v->GetGroupThrusterCount(thg);
+  double mainThrust = 0.0;
+  double mainISP0 = 0.0;
+  for (unsigned int i = 0; i < thgc; i++) {
+    THRUSTER_HANDLE th = v->GetGroupThruster(thg, i);
+    mainThrust += v->GetThrusterMax0(th);
+    mainISP0 += v->GetThrusterIsp0(th);
+  }
+  mainISP0 /= thgc;
+  LU->vdata[LU->act][s].mainThrust = mainThrust;
+  LU->vdata[LU->act][s].mainExVel0 = mainISP0;
+  LU->vdata[LU->act][s].curMass = v->GetMass();
   return;
 };
 
@@ -56,7 +71,7 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
   v->GetGlobalPos(LU->vdata[LU->act][vix].vs4i[0].ves.Q);
   v->GetGlobalVel(LU->vdata[LU->act][vix].vs4i[0].ves.P);
 
-  LU->vdata[LU->act][vix].vs4i[0].mass = LU->vdata[LU->act][vix].cmass = v->GetMass();
+  LU->vdata[LU->act][vix].vs4i[0].mass = LU->vdata[LU->act][vix].curMass = v->GetMass();
   if (LU->s4i_valid) {
     LU->lp_ves(vix, 0, LU->act);
   }

@@ -35,10 +35,10 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
     return DisplayLPMode(); break;
   case 4:
     return DisplayS4IMode(); break;
-  case 5:
-    return DisplayFrmMode(); break;
   case 6:
     return DisplayTgtMode(); break;
+  case 7:
+    return DisplayFrmMode(); break;
   }
   return true;
 };
@@ -209,6 +209,10 @@ bool Lagrange::DisplayLPMode() {
     skpFmtEngText(4, rl++, "%10.4f", "s", s4i_e->sec);
     skpFmtEngText(4, rl++, "%10.4f", "s", s4i_e->sec - oapiGetSimTime());
   }
+
+  rl++;
+  double vm = VC->v->GetMass();
+  skpFormatText(0, rl++, "Mass: %10.6f", vm);
   return true;
 };
 

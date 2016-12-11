@@ -79,11 +79,16 @@ public:
   vector<Lagrange_ves_s4i> vs4i;                            // Vessel plots (vector = number of steps)
   vector<VECTOR2> orb_km;                                   // Distance in km from center of the major entity in this LP system
   vector<VECTOR2> orb_plot;                                 // Line segments for plot lines for orb display for this vessel
-  double cmass;                                             // Current mass
-  double dmass;                                             // Delta to mass from burn (via rocket's main engine isp)
+  double curMass;                                           // Current mass
+  double deltaMass;                                             // Delta to mass from burn (via rocket's main engine isp)
+  double mainThrust;                                        // Vessel main thrust (in N)
+  double mainExVel0;                                        // Vessel vacuum exhaust velocity in m/s (confusingly called ISP in API) 
+  double burnDuration;                                      // Burn duration on main engines
   bool burnArmed;                                           // Tells the integrator to use this burn data
   double burnMJD;                                           // date of hypotetical or real burn
-  VECTOR3 burndV;                                           // hypothetical or real burn (prograde, out, plane)
+  VECTOR3 burndV;                                           // hypothetical or real burn in TransX frame (prograde, out, plane)
+  VECTOR3 burndVg;                                          // burn in global frame
+  int burn_ix;                                              // index for burn
   double enc_Q;                                             // Min encounter distance
   double enc_P;                                             // Min encounter dV
   int enc_typ;                                              // -1 if constantly growing encounter, +1 if constantly decreasing, 0 if enc found
@@ -231,9 +236,9 @@ class LagrangeUniverse
 
 };
 
-VECTOR3 safe_unit(const VECTOR3 &a);
+VECTOR3 unit_s(const VECTOR3 &a);
 
-VECTOR3 safe_crossp (const VECTOR3 &a, const VECTOR3 &b);
+VECTOR3 crossp_s (const VECTOR3 &a, const VECTOR3 &b);
 
 
 #endif // _LAGRANGE_UNIVERSE

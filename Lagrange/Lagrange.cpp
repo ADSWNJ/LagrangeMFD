@@ -123,6 +123,32 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
 }
 
 void Lagrange::WriteStatus(FILEHANDLE scn) const {
+  char buf[128];
+  char nbuf[128];
+  int act = GC->LU->act;
+  sprintf(buf, "%d", this->LC->m);
+  oapiWriteScenario_string(scn, "LA_MODE", buf);
+  oapiWriteScenario_string(scn,"LP",GC->LU->LP.name);
+  oapiWriteScenario_string(scn, "S4I_ARM", GC->LU->s4i_pause? "FALSE" : "TRUE");
+  sprintf(buf, "%d", GC->LU->s4int_count[act]);
+  oapiWriteScenario_string(scn, "S4I_ITR", buf);
+  sprintf(buf, "%lf", GC->LU->s4int_timestep[act]);
+  oapiWriteScenario_string(scn, "S4I_TSP", buf);
+  sprintf(buf, "%lf", GC->LU->s4int_refresh);
+  oapiWriteScenario_string(scn, "S4I_WT", buf);
+  for (unsigned int i = 0; i < GC->LU->vdata[act].size(); i++) {
+    Lagrange_vdata *lvd = &(GC->LU->vdata[act][i]);
+    sprintf(nbuf, "V%02d_NAME", i);
+    oapiWriteScenario_string(scn, nbuf, lvd->v->GetName());
+    sprintf(nbuf, "V%02d_PLAN_ARM", i);
+    oapiWriteScenario_string(scn, nbuf, lvd->burnArmed ? "TRUE" : "FALSE");
+    sprintf(nbuf, "V%02d_PLAN_BURN_MJD", i);
+    sprintf(buf, "%lf", lvd->burnMJD);
+    oapiWriteScenario_string(scn, nbuf, buf);
+    sprintf(nbuf, "V%02d_PLAN_BURN_DV", i);
+    sprintf(buf, "%lf %lf %lf", lvd->burndV.x, lvd->burndV.y, lvd->burndV.z);
+    oapiWriteScenario_string(scn, nbuf, buf);
+  }
   return;
 }
 
