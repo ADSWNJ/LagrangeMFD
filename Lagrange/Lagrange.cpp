@@ -119,35 +119,89 @@ Lagrange::~Lagrange ()
 // ====================================================================================================================
 // Save/load from .scn functions
 void Lagrange::ReadStatus(FILEHANDLE scn) {
+  char *line;
+  char *val;
+  int p_i1, p_i2;
+  double p_d1, p_d2, p_d3, p_d4;
+  int act = GC->LU->act;
+  int mfd = this->LC->m;
+  OBJHANDLE ohv = nullptr;
+  VESSEL* vv = nullptr;
+  Lagrange_VCore *VC_v = nullptr;
+  Lagrange_LCore *LC_v = nullptr;
+
+  while (oapiReadScenario_nextline(scn, line)) {
+    val = line;
+    while (*val != '\0' && *val != ' ' && *val != '\t') val++; // strip any leading whitespace
+    if (*val != '\0') *val++ = '\0';                             // line now points to the tag
+    while (*val == ' ' || *val == '\t') val++;                  // strip leading whitespace on the value
+    if (!_stricmp(line, "END_MFD")) {
+      break;
+    } else if (!_stricmp(line, "LA_MFD")) {
+      if (sscanf(val, "%d %d", &p_i1, &p_i2) == 2) {
+        if (this->LC->m == p_i1) this->LC->mode = p_i2;
+      }
+    } else if (!_stricmp(line, "LP")) {
+      for (unsigned int i = 0; i < COUNT_LP; i++) {
+        if (!_stricmp(val, GC->LU->lptab[i].name)) {
+          GC->LU->selectLP(i);
+          break;
+        }
+      }   
+    } else if (!_stricmp(line, "S4I")) {
+      if (sscanf(val, "%d %d %lf %lf", &p_i1, &p_i2, &p_d1, &p_d2) == 4) {
+        GC->LU->s4i_pause = (p_i1 == 0);
+        GC->LU->s4int_count[act] = p_i2;
+        GC->LU->s4int_timestep[act] = p_d1;
+        GC->LU->s4int_refresh = p_d2;
+      }
+    } else if (!_stricmp(line, "VESSEL")) {
+      ohv = oapiGetVesselByName(val);
+      if (ohv) {
+        vv = oapiGetVesselInterface(ohv);
+        VC_v = (Lagrange_VCore*)GC->P.findVC(vv);		      // Locate our vessel core
+        if (!VC_v) {
+          VC_v = new Lagrange_VCore(vv, GC);		          // ... if missing, initialize it.
+          GC->P.addVC(vv, VC_v);
+        }
+
+        LC_v = (Lagrange_LCore*)GC->P.findLC(vv, mfd);	  // Locate our local (vessl+MFD position) core
+        if (!LC_v) {
+          LC_v = new Lagrange_LCore(vv, mfd, GC);		      // ... if missing, initialize it.
+          GC->P.addLC(vv, mfd, LC_v);
+        }
+      }
+    } else if (!_stricmp(line, "PLAN")) {
+      if (vv && sscanf(val, "%d %d %lf %lf %lf %lf", &p_i1, &p_i2, &p_d1, &p_d2, &p_d3, &p_d4) == 6) {
+        for (unsigned int i = 0; i < GC->LU->vdata[act].size(); i++) {
+          Lagrange_vdata *lvd = &(GC->LU->vdata[act][i]);
+          if (lvd->v == vv) {
+            lvd->burnArmed = (p_i1 == 1);
+            lvd->burnMJD = p_d1;
+            lvd->burndV.x = p_d2;
+            lvd->burndV.y = p_d3;
+            lvd->burndV.z = p_d4;
+          }
+        }
+      }
+    }
+  }
   return;
 }
 
 void Lagrange::WriteStatus(FILEHANDLE scn) const {
   char buf[128];
-  char nbuf[128];
   int act = GC->LU->act;
-  sprintf(buf, "%d", this->LC->m);
-  oapiWriteScenario_string(scn, "LA_MODE", buf);
+  sprintf(buf, "%d %d", this->LC->m, this->LC->mode);
+  oapiWriteScenario_string(scn, "LA_MFD", buf);
   oapiWriteScenario_string(scn,"LP",GC->LU->LP.name);
-  oapiWriteScenario_string(scn, "S4I_ARM", GC->LU->s4i_pause? "FALSE" : "TRUE");
-  sprintf(buf, "%d", GC->LU->s4int_count[act]);
-  oapiWriteScenario_string(scn, "S4I_ITR", buf);
-  sprintf(buf, "%lf", GC->LU->s4int_timestep[act]);
-  oapiWriteScenario_string(scn, "S4I_TSP", buf);
-  sprintf(buf, "%lf", GC->LU->s4int_refresh);
-  oapiWriteScenario_string(scn, "S4I_WT", buf);
+  sprintf(buf, "%d %d %lf %lf ", GC->LU->s4i_pause ? 0 : 1, GC->LU->s4int_count[act], GC->LU->s4int_timestep[act], GC->LU->s4int_refresh);
+  oapiWriteScenario_string(scn, "S4I", buf);
   for (unsigned int i = 0; i < GC->LU->vdata[act].size(); i++) {
     Lagrange_vdata *lvd = &(GC->LU->vdata[act][i]);
-    sprintf(nbuf, "V%02d_NAME", i);
-    oapiWriteScenario_string(scn, nbuf, lvd->v->GetName());
-    sprintf(nbuf, "V%02d_PLAN_ARM", i);
-    oapiWriteScenario_string(scn, nbuf, lvd->burnArmed ? "TRUE" : "FALSE");
-    sprintf(nbuf, "V%02d_PLAN_BURN_MJD", i);
-    sprintf(buf, "%lf", lvd->burnMJD);
-    oapiWriteScenario_string(scn, nbuf, buf);
-    sprintf(nbuf, "V%02d_PLAN_BURN_DV", i);
-    sprintf(buf, "%lf %lf %lf", lvd->burndV.x, lvd->burndV.y, lvd->burndV.z);
-    oapiWriteScenario_string(scn, nbuf, buf);
+    oapiWriteScenario_string(scn, "VESSEL", lvd->v->GetName());
+    sprintf(buf, "%d %lf %lf %lf %lf", lvd->burnArmed ? 1 : 0, lvd->burnMJD, lvd->burndV.x, lvd->burndV.y, lvd->burndV.z);
+    oapiWriteScenario_string(scn, "PLAN", buf);
   }
   return;
 }
