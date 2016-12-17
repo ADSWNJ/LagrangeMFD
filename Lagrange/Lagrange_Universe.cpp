@@ -561,15 +561,19 @@ void LagrangeUniverse::threadCtrlMain() {
       bool mmext; 
       int fromTransX;
       if (vdata[wkg][e].burnArmed) {
-        mmext = ModMsgPut("Eject date", vdata[wkg][e].burnMJD, vdata[wkg][e].v);
+        mmext = ModMsgPut("Man. date", vdata[wkg][e].burnMJD, vdata[wkg][e].v);
         mmext = ModMsgPut("Prograde vel.", vdata[wkg][e].burndV.x, vdata[wkg][e].v);
-        mmext = ModMsgPut("Outward vel", vdata[wkg][e].burndV.y, vdata[wkg][e].v);
+        mmext = ModMsgPut("Outward vel.", vdata[wkg][e].burndV.y, vdata[wkg][e].v);
         mmext = ModMsgPut("Ch. plane vel.", vdata[wkg][e].burndV.z, vdata[wkg][e].v);
+        mmext = ModMsgPut("InstantaneousBurnTime", (vdata[wkg][e].burnMJD - oapiGetSimMJD())*24.0*60.0*60.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("TargetVelocity", vdata[wkg][e].burndV, vdata[wkg][e].v);
       } else {
-        mmext = ModMsgPut("Eject date", 0.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("Man. date", 0.0, vdata[wkg][e].v);
         mmext = ModMsgPut("Prograde vel.", 0.0, vdata[wkg][e].v);
-        mmext = ModMsgPut("Outward vel", 0.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("Outward vel.", 0.0, vdata[wkg][e].v);
         mmext = ModMsgPut("Ch. plane vel.", 0.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("InstantaneousBurnTime", 0.0, vdata[wkg][e].v);
+        mmext = ModMsgPut("TargetVelocity", _V(0.0,0.0,0.0), vdata[wkg][e].v);
       }
       mmext = EnjoLib::ModuleMessagingExt().ModMsgGet("TransX", "CurrentBodyIndex", &fromTransX, vdata[wkg][e].v);
       if (mmext) {
