@@ -140,7 +140,10 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
       break;
     } else if (!_stricmp(line, "LA_MFD")) {
       if (sscanf(val, "%u %d", &p_ui1, &p_i2) == 2) {
-        if (this->LC->m == p_ui1) this->LC->mode = p_i2;
+        if (this->LC->m == p_ui1) {
+          this->LC->mode = p_i2;
+          LC->B.SwitchPage(this, this->LC->mode);
+        }
       }
     } else if (!_stricmp(line, "LP")) {
       for (unsigned int i = 0; i < COUNT_LP; i++) {
@@ -173,7 +176,7 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
         }
       }
     } else if (!_stricmp(line, "PLAN")) {
-      if (vv && sscanf(val, "%d %d %lf %lf %lf %lf", &p_i1, &p_i2, &p_d1, &p_d2, &p_d3, &p_d4) == 6) {
+      if (vv && sscanf(val, "%d %lf %lf %lf %lf", &p_i1, &p_d1, &p_d2, &p_d3, &p_d4) == 5) {
         for (unsigned int i = 0; i < GC->LU->vdata[act].size(); i++) {
           Lagrange_vdata *lvd = &(GC->LU->vdata[act][i]);
           if (lvd->v == vv) {
