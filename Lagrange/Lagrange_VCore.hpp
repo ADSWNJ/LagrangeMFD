@@ -23,6 +23,7 @@
 #include <EnjoLib/ModuleMessagingExtBase.hpp>
 #include <EnjoLib/ModuleMessagingExtPut.hpp>
 #include <EnjoLib/ModuleMessagingExt.hpp>
+#include <Orbiter/AutopilotRotation.hpp>
 using namespace std;
 
 #ifndef _LAGRANGE_VCORE_H
@@ -53,6 +54,7 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     bool burnTdV_lock;
 
   private:
+    AutopilotRotation ap;
 };
 
 

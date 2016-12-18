@@ -120,8 +120,9 @@ bool Lagrange::DisplayPlanMode() {
   l++;
 
   if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD() + (1 / (10 * 60 * 24));
-  skpFmtColText(0, l + VC->burnVar, true,   CLR_YELLOW, CLR_WHITE, ">");
-  skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Plan MJD:     %14.6f", vdata->burnMJD);
+  skpFmtColText(0, VC->burnVar==0? l : l + 1 + VC->burnVar, true,   CLR_YELLOW, CLR_WHITE, ">");
+  skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
+  skpFmtEngText(0, l++, " (Burn Point):  %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
   skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6f", vdata->burndV.x);
   skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6f", vdata->burndV.y);
   skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6f", vdata->burndV.z);
@@ -130,9 +131,28 @@ bool Lagrange::DisplayPlanMode() {
   l+=2;
   if (!GC->LU->s4i_valid || vdata->enc_ix < 0) return true;
 
+  Lagrange_ves_s4i *vs4i_e = (vdata->enc_ix >= 0) ? &vdata->vs4i[vdata->enc_ix] : nullptr;
+  if (!vs4i_e) return true;
+
   Lagrange_s4i *s4i_e = &GC->LU->s4i[GC->LU->act][vdata->enc_ix];
+  QP_struct *vesLP_e = (vs4i_e) ? &vs4i_e->vesLP : nullptr;
+  
   skpFormatText(0, l++, "  Enc. MJD:     %14.6f", s4i_e->MJD);
   skpFmtEngText(0, l++, "  Enc. Time:    %10.2f", "s", s4i_e->sec - oapiGetSimTime());
+  l++;
+  int rl = l;
+  skpFormatText(0, l++, "       Enc. Pos.");
+
+  skpFmtEngText(0, l++, "  Pro:%8.3f", "m", vesLP_e->Q.x);
+  skpFmtEngText(0, l++, "  PlC:%8.3f", "m", vesLP_e->Q.y);
+  skpFmtEngText(0, l++, "  Out:%8.3f", "m", vesLP_e->Q.z);
+  skpFmtEngText(0, l++, "  TOT:%8.3f", "m", vs4i_e->dQ);
+  skpFormatText(3, rl++, " Enc. dVel.");
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.x);
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.y);
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.z);
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vs4i_e->dP);
+
   return true;
 };
 

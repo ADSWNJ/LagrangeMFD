@@ -77,5 +77,14 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
   if (LU->s4i_valid) {
     LU->lp_ves(vix, 0, LU->act);
   }
+
+  if (LU->vdata[LU->act][vix].burnArmed) {
+    double burnTimer = (LU->vdata[LU->act][vix].burnMJD - mjd) * 24.0 * 60.0 * 60.0;
+    if (burnTimer >= 0.0 && burnTimer < 300.0) {
+      ap.SetTargetVector(LU->vdata[LU->act][vix].burndV);
+      ap.Update(SimDT);
+    }
+  }
+
   return;
 }

@@ -28,7 +28,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v140_xp</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -76,6 +76,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>O:\Github\Lagrange\lib;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -83,7 +84,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+    <IncludePath>O:\Github\Lagrange\lib;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -128,7 +130,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>true</BufferSecurityCheck>
-      <EnablePREfast>true</EnablePREfast>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -167,6 +169,25 @@
     <ClInclude Include="Lagrange_LCore.hpp" />
     <ClInclude Include="Lagrange_Universe.hpp" />
     <ClInclude Include="Lagrange_VCore.hpp" />
+    <ClInclude Include="lib\Math\GreatCircleAdvMath.hpp" />
+    <ClInclude Include="lib\Math\GreatCircleMath.hpp" />
+    <ClInclude Include="lib\Math\SpaceMath.hpp" />
+    <ClInclude Include="lib\Math\VectorMath.hpp" />
+    <ClInclude Include="lib\Orbiter\AngularAcc.hpp" />
+    <ClInclude Include="lib\Orbiter\AutopilotRotation.hpp" />
+    <ClInclude Include="lib\Orbiter\SpaceMathOrbiter.hpp" />
+    <ClInclude Include="lib\Orbiter\SystemsConverterOrbiter.hpp" />
+    <ClInclude Include="lib\Orbiter\VesselCapabilities.hpp" />
+    <ClInclude Include="lib\PID\DerivatorDiscrete.hpp" />
+    <ClInclude Include="lib\PID\IntegratorDiscrete.hpp" />
+    <ClInclude Include="lib\PID\PID.hpp" />
+    <ClInclude Include="lib\Systems\Geo.hpp" />
+    <ClInclude Include="lib\Systems\Point.hpp" />
+    <ClInclude Include="lib\Systems\Spherical.hpp" />
+    <ClInclude Include="lib\Systems\Systems.hpp" />
+    <ClInclude Include="lib\Systems\SystemsConverter.hpp" />
+    <ClInclude Include="lib\Systems\ThreeSphericals.hpp" />
+    <ClInclude Include="lib\Systems\Vect3.hpp" />
     <ClInclude Include="MFDButtonPage.hpp" />
     <ClInclude Include="MFDPersist.hpp" />
     <ClInclude Include="ParseFunctions.h" />
@@ -187,6 +208,24 @@
     <ClCompile Include="Lagrange_SketchpadFunctions.cpp" />
     <ClCompile Include="Lagrange_Universe.cpp" />
     <ClCompile Include="Lagrange_VCore.cpp" />
+    <ClCompile Include="lib\Math\GreatCircleAdvMath.cpp" />
+    <ClCompile Include="lib\Math\GreatCircleMath.cpp" />
+    <ClCompile Include="lib\Math\SpaceMath.cpp" />
+    <ClCompile Include="lib\Math\VectorMath.cpp" />
+    <ClCompile Include="lib\Orbiter\AngularAcc.cpp" />
+    <ClCompile Include="lib\Orbiter\AutopilotRotation.cpp" />
+    <ClCompile Include="lib\Orbiter\SpaceMathOrbiter.cpp" />
+    <ClCompile Include="lib\Orbiter\SystemsConverterOrbiter.cpp" />
+    <ClCompile Include="lib\Orbiter\VesselCapabilities.cpp" />
+    <ClCompile Include="lib\PID\DerivatorDiscrete.cpp" />
+    <ClCompile Include="lib\PID\IntegratorDiscrete.cpp" />
+    <ClCompile Include="lib\PID\PID.cpp" />
+    <ClCompile Include="lib\Systems\Geo.cpp" />
+    <ClCompile Include="lib\Systems\Point.cpp" />
+    <ClCompile Include="lib\Systems\Spherical.cpp" />
+    <ClCompile Include="lib\Systems\SystemsConverter.cpp" />
+    <ClCompile Include="lib\Systems\ThreeSphericals.cpp" />
+    <ClCompile Include="lib\Systems\Vect3.cpp" />
     <ClCompile Include="MFDPersist.cpp" />
     <ClCompile Include="ParseFunctions.cpp" />
   </ItemGroup>
