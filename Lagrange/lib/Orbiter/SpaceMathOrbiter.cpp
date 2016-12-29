@@ -130,17 +130,69 @@ void SpaceMathOrbiter::getinvrotmatrix(VECTOR3 arot, MATRIX3 *invrotmatrix) cons
 
 VECTOR3 SpaceMathOrbiter::GetRotationToTarget(VESSEL * vessel, const VECTOR3 & target) const
 {
-    VECTOR3 trtarget;
+  VECTOR3 trtarget;
 	VESSELSTATUS status;
-    vessel->GetStatus(status);
+  vessel->GetStatus(status);
 	VECTOR3 arot=status.arot;
 	MATRIX3 rotmatrix;
 	getinvrotmatrix(arot,&rotmatrix);
 	trtarget = mul(rotmatrix, target);
-
 	return trtarget;
 }
+/*
+VECTOR3 SpaceMathOrbiter::GetRotationToTarget(const VECTOR3 & target, const VECTOR3 & targetUp) const
+{
+  double ang_g = atan2(-targetUp.x, targetUp.y);
+  MATRIX3 rot_g = _M(cos(ang_g), -sin(ang_g), 0.0,
+                     sin(ang_g),  cos(ang_g), 0.0,
+                     0.0,         0.0,        1.0);
+  VECTOR3 tgt2;
+  VECTOR3 tgtUp2;
+  tgt2 = mul(rot_g, target);
+  tgtUp2 = mul(rot_g, targetUp);
 
+  double ang_a = atan2(-tgtUp2.z, tgtUp2.y);
+  MATRIX3 rot_a = _M(1.0, 0.0,         0.0, 
+                     0.0, cos(ang_a), -sin(ang_a),
+                     0.0, sin(ang_a),  cos(ang_a));
+  VECTOR3 tgt3;
+  VECTOR3 tgtUp3;
+  tgt3 = mul(rot_g, tgt2);
+  tgtUp3 = mul(rot_g, tgtUp2);
+
+  double ang_b = atan2(tgt3.x, tgt3.z);
+  return _V(ang_a, ang_b, ang_g);
+}
+*/
+
+VECTOR3 SpaceMathOrbiter::GetRotationToTarget(const VECTOR3 & target, VECTOR3 *targetFwd, VECTOR3 *targetUp) const
+{
+  VECTOR3 tgtFwd = *targetFwd;
+  VECTOR3 tgtUp = *targetUp;
+
+  double ang_g = atan2(tgtUp.x, tgtUp.y);
+  MATRIX3 rot_g = _M(cos(ang_g), -sin(ang_g), 0.0,
+                     sin(ang_g),  cos(ang_g), 0.0,
+                        0.0,         0.0,     1.0);
+  VECTOR3 tgt2 = mul(rot_g, tgtFwd);
+  VECTOR3 tgtUp2 = mul(rot_g, tgtUp);
+
+  double ang_a = atan2(-target.y, target.z);
+  MATRIX3 rot_a = _M(1.0,   0.0,         0.0,
+                     0.0, cos(ang_a), -sin(ang_a),
+                     0.0, sin(ang_a),  cos(ang_a));
+  VECTOR3 tgt3 = mul(rot_a, tgt2);
+  VECTOR3 tgtUp3 = mul(rot_a, tgtUp2);
+
+  double ang_b = atan2(-target.x, target.z);
+  MATRIX3 rot_b = _M(cos(ang_b), 0.0, -sin(ang_b),
+                        0.0,     1.0,     0.0,
+                     sin(ang_b), 0.0,  cos(ang_b));
+  *targetFwd = mul(rot_b, tgt3);
+  *targetUp = mul(rot_b, tgtUp3);
+
+  return _V(ang_a, ang_b, ang_g);
+}
 double SpaceMathOrbiter::GetHeadBearing( const VESSEL * v ) const
 {
 	VECTOR3 globalrot;
@@ -163,13 +215,13 @@ double SpaceMathOrbiter::GetHeadBearing( const VESSEL * v ) const
 	// Take account for the vessel's longitude and the planet's rotation
 	double planetRotation = oapiGetPlanetCurrentRotation(refbody) + lng;
 	MATRIX3 planetrot = {cos(planetRotation), 0, sin(planetRotation),
-						 0,					  1, 0,
-						 -sin(planetRotation),0, cos(planetRotation)};
+						           0,					          1, 0,
+						          -sin(planetRotation), 0, cos(planetRotation)};
 	head = mul(planetrot, head);
 	// Take account for the planet's latitude
 	MATRIX3 latRot = {cos(lat), sin(lat), 0,
-					 -sin(lat), cos(lat), 0,
-					  0,		0,		  1};
+					         -sin(lat), cos(lat), 0,
+					                 0,	0,        1};
 	head = mul(latRot, head);
 	// The vector head now represents a vector pointing from arse to head as if the vessel was positioned at lat = 0, lng = 0
 	// in the body's own frame of reference.
@@ -209,3 +261,62 @@ void SpaceMathOrbiter::Crt2Pol (VECTOR3 &pos) const
 }
 
 
+void SpaceMathOrbiter::GetTransXTarget(const VESSEL *v, const OBJHANDLE hRefBody, const VECTOR3 & target, VECTOR3 *trX_zhat, VECTOR3 *trX_yhat, VECTOR3 *trX_tgt)
+{
+  // Find TransX style coord system axes in ship coords
+  VECTOR3 rpos;
+  VECTOR3 gvel;
+  VECTOR3 gPos;
+  v->GetRelativePos(hRefBody, rpos);
+  v->GetGlobalVel(gvel);
+  v->GetGlobalPos(gPos);
+
+  VECTOR3 gPro = unit(gvel);
+  VECTOR3 gPlc = unit(crossp(gvel, rpos));
+  VECTOR3 gOut = unit(crossp(gPlc, gPro));
+  VECTOR3 gTgt = gPro * target.x + gPlc * target.y + gOut * target.z;
+  v->Global2Local(gPro + gPos, *trX_zhat);
+  v->Global2Local(gPlc + gPos, *trX_yhat);
+  v->Global2Local(gTgt + gPos, *trX_tgt);
+}
+
+VECTOR3 SpaceMathOrbiter::GetTransXRot(VESSEL *v, VECTOR3 &vec, VECTOR3 & trX_out, VECTOR3  & trX_plc, VECTOR3 & trX_pro, VECTOR3 *upVec) const
+{
+
+  // first find rotation matrix to normalize my trX frame of reference
+  MATRIX3 rot_m;
+
+  VECTOR3 ang;
+  VECTOR3 rPosTgt;
+  VECTOR3 rPosTgtFwd;
+  VECTOR3 rPosTgtUp;
+  VECTOR3 gPos;
+  VECTOR3 gPosTgt;
+  VECTOR3 gPosTgtUp;
+  VECTOR3 lPosTgt;
+  VECTOR3 lPosTgtUp;
+
+  // Determine new up vector based on rotation of target vector
+  rPosTgt = unit(vec);
+  rPosTgtFwd = trX_pro * length(vec);
+  rPosTgtUp = trX_plc;
+  ang.x = acos(dotp(rPosTgt, trX_out));
+  ang.y = acos(dotp(rPosTgt, trX_plc));
+  ang.z = acos(dotp(rPosTgt, trX_pro));
+
+  getinvrotmatrix(ang, &rot_m);
+  rPosTgt = mul(rot_m, rPosTgtFwd);
+  rPosTgtUp = mul(rot_m, trX_plc);
+
+
+  v->GetGlobalPos(gPos);
+  gPosTgt = gPos + rPosTgt;
+  gPosTgtUp = gPos + rPosTgtUp;
+  v->Global2Local(gPosTgt, lPosTgt);
+  v->Global2Local(gPosTgtUp, lPosTgtUp);
+
+  ang.x = atan2(lPosTgt.y, lPosTgt.z);
+  ang.y = atan2(lPosTgt.x, lPosTgt.z);
+  ang.z = atan2(lPosTgt.x, lPosTgt.y);
+  return ang;
+}

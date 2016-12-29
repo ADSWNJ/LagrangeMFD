@@ -470,13 +470,15 @@ void LagrangeUniverse::lp_ves(const int s, const int i, const int w) {
   rel.P = ves->P - s4i[w][i].LP.P;
 
 
-  // Find two vectors in the plane of our minor body ... take the radius vector and the velocity vector
+  // Find two vectors in the plane of our reference body ... take the radius vector and the velocity vector
   mref = s4i[w][i].body[vdata[w][s].refEnt];
   Rt = ves->Q - mref.Q;
   Vt = ves->P - mref.P;
 
-
   //transform relative pos/vel into TransX-style prograde, plane change, inner coords
+  //for TransX - +X is forward (just our velocity vector), +Y is up (crossp of velocity and radius), and +Z is outward (crossp of fwd and up)
+  //note ... if you are on an eccentric orbit, same still applies... so outward is always normal to your velocity, away from the ref body
+  //for global coords for Orbiter, +x is right, +y is up, +z is forward
   XtHat = unit_s(Vt);
   YtHat = unit(crossp_s(Vt, Rt));
   ZtHat = unit(crossp_s(XtHat, YtHat));

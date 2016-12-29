@@ -55,6 +55,7 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
 
   private:
     AutopilotRotation ap;
+    bool ap_armed;
 };
 
 
