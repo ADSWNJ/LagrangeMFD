@@ -87,59 +87,8 @@
     <ClInclude Include="lib\Systems\Systems.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="lib\Orbiter\AutopilotRotation.hpp">
-      <Filter>Header Files\Lib\Orbiter</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Systems\Vect3.hpp">
-      <Filter>Header Files\Lib\Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Orbiter\VesselCapabilities.hpp">
-      <Filter>Header Files\Lib\Orbiter</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\PID\PID.hpp">
-      <Filter>Header Files\Lib\PID</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Orbiter\AngularAcc.hpp">
-      <Filter>Header Files\Lib\Orbiter</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Math\SpaceMath.hpp">
-      <Filter>Header Files\Lib\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Math\VectorMath.hpp">
-      <Filter>Header Files\Lib\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Math\GreatCircleAdvMath.hpp">
-      <Filter>Header Files\Lib\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Math\GreatCircleMath.hpp">
-      <Filter>Header Files\Lib\Math</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Systems\Spherical.hpp">
-      <Filter>Header Files\Lib\Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Systems\ThreeSphericals.hpp">
-      <Filter>Header Files\Lib\Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Systems\SystemsConverter.hpp">
-      <Filter>Header Files\Lib\Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Systems\Geo.hpp">
-      <Filter>Header Files\Lib\Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Systems\Point.hpp">
-      <Filter>Header Files\Lib\Systems</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Orbiter\SpaceMathOrbiter.hpp">
-      <Filter>Header Files\Lib\Orbiter</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Orbiter\SystemsConverterOrbiter.hpp">
-      <Filter>Header Files\Lib\Orbiter</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\PID\DerivatorDiscrete.hpp">
-      <Filter>Header Files\Lib\PID</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\PID\IntegratorDiscrete.hpp">
-      <Filter>Header Files\Lib\PID</Filter>
+    <ClInclude Include="Lagrange_AP.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -190,59 +139,8 @@
     <ClCompile Include="Lagrange_SketchpadFunctions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="lib\Orbiter\AutopilotRotation.cpp">
-      <Filter>Source Files\Lib\Orbiter</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Systems\Vect3.cpp">
-      <Filter>Source Files\Lib\Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Orbiter\VesselCapabilities.cpp">
-      <Filter>Source Files\Lib\Orbiter</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\PID\PID.cpp">
-      <Filter>Source Files\Lib\PID</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Orbiter\AngularAcc.cpp">
-      <Filter>Source Files\Lib\Orbiter</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Math\SpaceMath.cpp">
-      <Filter>Source Files\Lib\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Math\VectorMath.cpp">
-      <Filter>Source Files\Lib\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Math\GreatCircleAdvMath.cpp">
-      <Filter>Source Files\Lib\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Math\GreatCircleMath.cpp">
-      <Filter>Source Files\Lib\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Systems\Spherical.cpp">
-      <Filter>Source Files\Lib\Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Systems\ThreeSphericals.cpp">
-      <Filter>Source Files\Lib\Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Systems\SystemsConverter.cpp">
-      <Filter>Source Files\Lib\Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Systems\Geo.cpp">
-      <Filter>Source Files\Lib\Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Systems\Point.cpp">
-      <Filter>Source Files\Lib\Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Orbiter\SpaceMathOrbiter.cpp">
-      <Filter>Source Files\Lib\Orbiter</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\Orbiter\SystemsConverterOrbiter.cpp">
-      <Filter>Source Files\Lib\Systems</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\PID\DerivatorDiscrete.cpp">
-      <Filter>Source Files\Lib\PID</Filter>
-    </ClCompile>
-    <ClCompile Include="lib\PID\IntegratorDiscrete.cpp">
-      <Filter>Source Files\Lib\PID</Filter>
+    <ClCompile Include="Lagrange_AP.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

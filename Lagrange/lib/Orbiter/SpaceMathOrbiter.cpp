@@ -191,7 +191,7 @@ VECTOR3 SpaceMathOrbiter::GetRotationToTarget(const VECTOR3 & target, VECTOR3 *t
   *targetFwd = mul(rot_b, tgt3);
   *targetUp = mul(rot_b, tgtUp3);
 
-  return _V(ang_a, ang_b, ang_g);
+  return _V(-ang_a, -ang_b, -ang_g);
 }
 double SpaceMathOrbiter::GetHeadBearing( const VESSEL * v ) const
 {

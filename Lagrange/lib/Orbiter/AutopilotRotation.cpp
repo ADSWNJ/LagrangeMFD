@@ -105,17 +105,12 @@ void AutopilotRotation::Update(double SimDT)
 
     VECTOR3 angleToTarget  = SpaceMathOrbiter().GetRotationToTarget(m_trX_tgt, &m_targetVector, &m_targetVectorUp);
 
-    sprintf(oapiDebugString(), "Pro:{%.2f,%.2f,%.2f} PLC:{%.2f,%.2f,%.2f} Tgt:{%.2f,%.2f,%.2f} Ang:{%.2f,%.2f,%.2f}",
-    m_trX_pro.x, m_trX_pro.y, m_trX_pro.z,
-    m_trX_plc.x, m_trX_plc.y, m_trX_plc.z,
-    m_trX_tgt.x, m_trX_tgt.y, m_trX_tgt.z,
-      angleToTarget.x * 180.0/PI, angleToTarget.y * 180.0 / PI, angleToTarget.z * 180.0 / PI);
 
     const VECTOR3 & accRatio = GetVesselAngularAccelerationRatio(vessel);
 
     const double degree = 2.0 * PI / 360.0;
 
-    if (abs(angleToTarget.z) > 1.0 * degree) {
+    if (abs(angleToTarget.z) > 10.0 * degree) {
       angleToTarget = _V(0.0, 0.0, angleToTarget.z);
     } else if (abs(angleToTarget.x) > 45.0 * degree) {
       angleToTarget = _V(angleToTarget.x, 0.0, angleToTarget.z);
@@ -126,10 +121,25 @@ void AutopilotRotation::Update(double SimDT)
     const double x = damp * accRatio.x * m_pidAPSpaceX.Update( angleToTarget.x, SimDT );
     const double y = damp * accRatio.y * m_pidAPSpaceY.Update( angleToTarget.y, SimDT );
 
+    VESSELSTATUS vs;
+    vessel->GetStatus(vs);
+    sprintf(oapiDebugString(), "Pro:{%.2f,%.2f,%.2f} PLC:{%.2f,%.2f,%.2f} Tgt:{%.2f,%.2f,%.2f} Ang:{%.2f,%.2f,%.2f} VRot:{%.2f,%.2f,%.2f}",
+      m_trX_pro.x, m_trX_pro.y, m_trX_pro.z,
+      m_trX_plc.x, m_trX_plc.y, m_trX_plc.z,
+      m_trX_tgt.x, m_trX_tgt.y, m_trX_tgt.z,
+      angleToTarget.x * 180.0 / PI, angleToTarget.y * 180.0 / PI, angleToTarget.z * 180.0 / PI,
+      vs.vrot.x * 180.0 / PI, vs.vrot.y * 180.0 / PI, vs.vrot.z * 180.0 / PI);
+
     //vessel->SetAttitudeRotLevel( 2, b );
     //vessel->SetAttitudeRotLevel( 1, x );
     //vessel->SetAttitudeRotLevel( 0, y );
+    for (int i = 0; i < 3; i++) {
+      double att = angleToTarget.data[i];
+      double vax = vs.vrot.data[i];
+
+    }
 }
+
 
 void AutopilotRotation::Enable(bool val)
 {

@@ -16,6 +16,7 @@
 #include "MFDPersist.hpp"
 #include "Lagrange_GCore.hpp"
 #include "Lagrange_Universe.hpp"
+#include "Lagrange_AP.hpp"
 #include "ExportStruct.hpp"
 #include <list>
 #include <string>
@@ -54,7 +55,7 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     bool burnTdV_lock;
 
   private:
-    AutopilotRotation ap;
+    class Lagrange_AP ap;
     bool ap_armed;
 };
 
