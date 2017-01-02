@@ -30,6 +30,7 @@ protected:
 private:
   void MECO(VESSEL* vessel);
   void MainEngineOn(VESSEL* vessel, double level);
+  void SetRot0();
   void SetRotThrust(const VECTOR3 angleToTarget, const double SimDT);
   void GetTransXTarget(const VECTOR3 & trxVec);
   VECTOR3 GetRotationToTarget(const VECTOR3 & target, VECTOR3 *tgtFwd, VECTOR3 *tgtUp) const;
@@ -45,10 +46,10 @@ private:
   VECTOR3  m_trxPro;
   OBJHANDLE m_hRefBody;
   struct {
-    VECTOR3  rate;
-    VECTOR3  acc;
+    VECTOR3  aVel;
+    VECTOR3  aAcc;
     VECTOR3  thrust;
-    VECTOR3  accratio;
+    VECTOR3  aAccThrustRatio;
   } m_thrustRefData[10];
   int m_thrustRefIx[3];
   VECTOR3 m_thrustRefVal;
@@ -59,6 +60,7 @@ private:
   long m_dumpIx;
   double m_dumpTotT;
   bool m_dampspin;
+  VECTOR3 m_aVelLast;
 };
 
 #endif     /// _LAGRANGE_AP_CLASS
