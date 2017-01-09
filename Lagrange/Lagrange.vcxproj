@@ -170,7 +170,6 @@
     <ClInclude Include="Lagrange_LCore.hpp" />
     <ClInclude Include="Lagrange_Universe.hpp" />
     <ClInclude Include="Lagrange_VCore.hpp" />
-    <ClInclude Include="lib\Systems\Systems.hpp" />
     <ClInclude Include="MFDButtonPage.hpp" />
     <ClInclude Include="MFDPersist.hpp" />
     <ClInclude Include="ParseFunctions.h" />

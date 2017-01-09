@@ -7,7 +7,7 @@
 //  including a series of pre-computed reference values, and provide an interface to query
 //  the Lagrangian Point list
 //
-//	Copyright (C) 2016	Keith (Keithth G) Gelling and Andrew (ADSWNJ) Stokes
+//	Copyright (C) 2016-2017	Keith (Keithth G) Gelling and Andrew (ADSWNJ) Stokes
 //                   All rights reserved
 //
 //	See Lagrange.cpp
@@ -144,7 +144,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     public:
       int ix;                                               // Index of current body
       char name[32];                                        // Display names of each body
-      double mu;                                            // GGRAV * mass of body (or of sum of bodies in bary)
+      double gm;                                            // GGRAV * mass of body (or of sum of bodies in bary)
       OBJHANDLE hObj;                                       // Handles to each body
       double mass;                                          // Mass of each body
       bool isBary;                                          // Is the body a barycenter?

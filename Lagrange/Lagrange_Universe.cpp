@@ -3,7 +3,7 @@
 //	LagrangeUniverse (All calculations for the LP and related body state progation)
 //	===============================================================================
 //
-//	Copyright (C) 2016	Andrew (ADSWNJ) Stokes and Keith (Keithth G) Gelling
+//	Copyright (C) 2016-2017	Andrew (ADSWNJ) Stokes and Keith (Keithth G) Gelling
 //                   All rights reserved
 //
 //	See Lagrange.cpp
@@ -21,6 +21,15 @@ using namespace std;
 #include "orbitersdk.h"
 #include "Lagrange_Universe.hpp"
 
+
+inline VECTOR3 operator* (const double f, const VECTOR3 &a)
+{
+  VECTOR3 c;
+  c.x = a.x*f;
+  c.y = a.y*f;
+  c.z = a.z*f;
+  return c;
+}
 
 LagrangeUniverse::LagrangeUniverse() {
 
@@ -108,7 +117,7 @@ void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   strcpy(pbodyinst->name, p1);
   pbodyinst->hObj = oapiGetGbodyByName(pbodyinst->name);
   pbodyinst->mass = oapiGetMass(pbodyinst->hObj);
-  pbodyinst->mu = pbodyinst->mass * GGRAV;
+  pbodyinst->gm = pbodyinst->mass * GGRAV;
   pbodyinst->isBary = false;
   pbodyinst->b_e[0] = -1;
   return;
@@ -119,7 +128,7 @@ void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   pbodyinst->ix = p0;
   strcpy(pbodyinst->name, p1);
   pbodyinst->mass = body[maj].mass + body[min].mass;
-  pbodyinst->mu = pbodyinst->mass * GGRAV;
+  pbodyinst->gm = pbodyinst->mass * GGRAV;
   pbodyinst->isBary = true;
   pbodyinst->b_e[0] = maj;
   pbodyinst->b_e[1] = min;
@@ -397,55 +406,80 @@ void LagrangeUniverse::lp45(const int n, const int s) {
   // Return LP Q and P in global frame on gblLP and vessel-relative in vesLP
   //
   // Algorithm credit: Keith "Keithth G" Gelling: see http://www.orbiter-forum.com/showthread.php?t=36110
+  // Updated algorithm Jan 2017, following discussions between Keith Gelling and Brian (BrianJ) Jones. 
+  //
   //
 
   struct QP_struct dex, m1, m2;
   VECTOR3 com, cov, r, v, e, xHat, yHat, zHat;
   double  vsq, rln, rdotv, gm, ecc, a, nu, k1, k2, k3, k4, cnu, snu, mu1, mu2;
 
-  double sign = (LP.Lnum == 4) ? 1.0 : -1.0;
+  double sign = (LP.Lnum == 4) ? 1.0 : -1.0;                      // Determines which terms to reverse sign for L5 calculation
 
-  m1 = s4i[s][n].body[LP.maj];    // current Q & P values for the major reference
-  m2 = s4i[s][n].body[LP.min];    // current Q & P values for the minr reference
+  m1 = s4i[s][n].body[LP.maj];                                    // current S4 integrator Q & P values for the major reference (e.g. Earth)
+  m2 = s4i[s][n].body[LP.min];                                    // current S4 integrator Q & P values for the minor reference (e.g. Moon)
 
-  gm = LP.gm;                     // GM1 + GM2
-  mu1 = LP.mu1;                   // GM1/gm
-  mu2 = LP.mu2;                   // GM2/gm
+  gm = LP.gm;                                                     // gm = GM1 + GM2
+  mu1 = LP.mu1;                                                   // mu1 = GM1/gm
+  mu2 = LP.mu2;                                                   // mu2 = GM2/gm
 
-  com = (m1.Q * mu1) + (m2.Q * mu2);
-  cov = (m1.P * mu1) + (m2.P * mu2);
+  com = (m1.Q * mu1) + (m2.Q * mu2);                              // COM = mu1.Q1 + mu2.Q2
+  cov = (m1.P * mu1) + (m2.P * mu2);                              // COV = mu1.P1 + mu2.P2
 
-  r = m2.Q - m1.Q;
-  v = m2.P - m1.P;
+  r = m2.Q - m1.Q;                                                // r = Q2 - Q1   ... the position of the minor w.r.t. major
+  v = m2.P - m1.P;                                                // v = P2 - P1   ... the velocity of the minor w.r.t. major
 
-  vsq = dotp(v, v);
-  rln = length(r);
-  rdotv = dotp(r, v);
+  vsq = dotp(v, v);                                               // Helpers: v2 = v.v
+  rln = length(r);                                                //          rln = |r|
+  rdotv = dotp(r, v);                                             //          rdotv = r.v
 
-  e = (r *(vsq / gm)) - (v *(rdotv / gm)) - (r / rln);
-  ecc = length(e);
-  a = gm / (2.0*gm / rln - vsq);
-  nu = acos(dotp(e, r) / (ecc * rln));
-  if (dotp(r, v) < 0) nu = 2.0 * PI - nu;
+  e = ((vsq / gm) * r) - ((rdotv / gm) * v) - (r / rln);          // e = (v2/gm).r - {(r.v}/gm}.v - r/|r|  ... the eccentricity vecotr
+  ecc = length(e);                                                // |e| is the eccentricity
+  a = gm / (2.0*gm / rln - vsq);                                  // a = gm / {2.gm /|r| - v2} ... the semi-major axis of the elliptical orbit
+  nu = acos(dotp(e, r) / (ecc * rln));                            // nu = arccos(e.r / |e||r|) ... true anomaly of the minor
+  if (rdotv < 0) nu = 2.0 * PI - nu;                              // such that if r.v < 0 then nu = 2.PI - nu
 
-  k1 = a * (1.0 - ecc * ecc);
-  k2 = sqrt(gm / k1);
+  k1 = a * (1.0 - ecc * ecc);                                     // Helpers: k1 = a(1-e2)
+  k2 = sqrt(gm / k1);                                             //          k2 = root{gm /(a(1-e2))}
   cnu = cos(nu);
   snu = sin(nu);
-  k3 = 1.0 + ecc * cnu;
-  k4 = sqrt(3) / 2;
+  k3 = 1.0 + ecc * cnu;                                           //          k3 = 1 + e.cos(nu)
+  k4 = sqrt(3) / 2;                                               //          k4 = root(3)/2
 
-  dex.Q.x = (k1 / k3) * ((0.5 - mu2)*cnu - sign*k4*snu);
-  dex.Q.y = (k1 / k3) * ((0.5 - mu2)*snu + sign*k4*cnu);
-  dex.P.x = -sign * k2 * (k4*(ecc + cnu) + sign*(0.5 - mu2)*snu);
-  dex.P.y = -sign * k2 * (k4*snu - sign*(0.5-mu2)*(ecc+cnu));
+                                                                  // Dextral reference system: x/y coordinates of LP in rectilinear inertial ref frame centered on major
+                                                                  // with x pointing to orbital periapsis of minor, y in the orbital plane pointing in its direction of motion
+                                                                  // z is zero by definition (i.e. LP is in the plane of the minor orbit).
+  dex.Q.x = (k1 / k3) * ((0.5 - mu2)*cnu - sign*k4*snu);          // Qx for L4 = {a(1-e2)/(1+e.cos(nu)} . {(0.5-mu2)cos(nu) - root(3)/2.sin(nu)}
+  dex.Q.y = (k1 / k3) * ((0.5 - mu2)*snu + sign*k4*cnu);          // Qy for L4 = {a(1-e2)/(1+e.cos(nu)} . {(0.5-mu2)sin(nu) + root(3)/2.cos(nu)}
+  dex.P.x = -sign * k2 * (k4*(ecc + cnu) + sign*(0.5 - mu2)*snu); // Px for L4 = -{root{gm /(a(1-e2))} . {root(3)/2.(sin(nu)(|e| + cos(nu)) + (0.5 - u2).sin(nu)}
+  dex.P.y = -sign * k2 * (k4*snu - sign*(0.5-mu2)*(ecc+cnu));     // Py for L4 = -{root{gm /(a(1-e2))} . {root(3)/2.sin(nu) - (0.5 - u2)*(|e| + cos(nu))}
 
-  xHat = unit_s(e);                          // unit vector of e
-  zHat = unit(crossp_s(r, v));               // unit vector of r x v
-  yHat = unit(crossp_s(zHat, xHat));         // unit vector of zhat x xhat
+                                                                  // Conversion to Orbiter's global reference frame
+  xHat = unit_s(e);                                               // ^x = e / |e|
+  zHat = unit(crossp_s(r, v));                                    // ^z = (r x v) / |(r x v)|
+  yHat = unit(crossp_s(zHat, xHat));                              // ^y = ^z x ^x
 
-  s4i[s][n].LP.Q = (xHat * dex.Q.x) + (yHat * dex.Q.y) + com;
-  s4i[s][n].LP.P = (xHat * dex.P.x) + (yHat * dex.P.y) + cov;
+  s4i[s][n].LP.Q = (dex.Q.x * xHat) + (dex.Q.y * yHat) + com;     // Q in Orbiter global ref frame 
+  s4i[s][n].LP.P = (dex.P.x * xHat) + (dex.P.y * yHat) + cov;     // P in Orbiter global ref frame
+
+  if ((LP.maj == LU_EARTH) && (LP.min == LU_MOON)) {              // In the special case of determining EML4 or EML5, we need to factor in the Sun's influence
+    struct QP_struct ms;
+    VECTOR3 Q1s, Q2s;
+    double r1s, r2s, GMs, az1, az2, az, Pz;
+
+    ms = s4i[s][n].body[LU_SUN];                                  // current S4 integrator Q & P values for the Sun
+    Q1s = m1.Q - ms.Q;                                            // Relative position of Earth to Sun
+    Q2s = m2.Q - ms.Q;                                            // Relative position of Moon to Sun
+    r1s = length(Q1s);                                            // r1s = | Q1 - Qs |
+    r2s = length(Q2s);                                            // r1s = | Q1 - Qs |
+    GMs = body[LU_SUN].gm;                                        // GMs = G . Ms
+    az1 = (GMs * dotp(m1.Q - ms.Q, zHat) / (r1s * r1s * r1s));
+    az2 = (GMs * dotp(m2.Q - ms.Q, zHat) / (r2s * r2s * r2s));
+    az = az2 - az1;                                               // az = {GMs.(Q2z - Qsz)}/r2s^3 - {GMs.(Q1z - Qsz)}/r1s^3
+
+    Pz = k4 * sqrt(k1 / gm) * (k1 / (k3 * k3)) * az;
+    s4i[s][n].LP.P = s4i[s][n].LP.P + sign * Pz * zHat;           // Apply off-plane correction for E-M system
+  }
 
 }
 
@@ -1263,7 +1297,7 @@ inline VECTOR3 LagrangeUniverse::s4iforce(const int e, const int i) {
   VECTOR3 Qg;
   VECTOR3 Qeg;
   double temp;
-  double mu;
+  double gm;
 
   for (int ix = 0; LP.bodyIx[ix] != -1; ix++) {
     int g = LP.bodyIx[ix];
@@ -1271,8 +1305,8 @@ inline VECTOR3 LagrangeUniverse::s4iforce(const int e, const int i) {
     Qg = s4i[wkg][i].body[g].Q;
     Qeg = Qe - Qg;
     temp = pow((Qeg.x*Qeg.x)+(Qeg.y*Qeg.y) + (Qeg.z*Qeg.z), 1.5);
-    mu = body[g].mu;
-    Fadd = Qeg * (-mu / temp);
+    gm = body[g].gm;
+    Fadd = Qeg * (-gm / temp);
     F += Fadd;
   }
   return F;
@@ -1288,15 +1322,15 @@ inline VECTOR3 LagrangeUniverse::s4iforce_ves(const int s, const int i) {
   VECTOR3 Qg;
   VECTOR3 Qvg;
   double temp;
-  double mu;
+  double gm;
 
   for (int ix = 0; LP.bodyIx[ix] != -1; ix++) {
     int g = LP.bodyIx[ix];
     Qg = s4i[wkg][i].body[g].Q;
     Qvg = Qv - Qg;
     temp = pow((Qvg.x*Qvg.x) + (Qvg.y*Qvg.y) + (Qvg.z*Qvg.z), 1.5);
-    mu = body[g].mu;
-    F -= Qvg * (mu / temp);
+    gm = body[g].gm;
+    F -= Qvg * (gm / temp);
   }
   return F;
 }

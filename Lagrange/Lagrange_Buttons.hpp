@@ -3,7 +3,7 @@
 //	Lagrange (Button Handling Headers)
 //	==================================
 //
-//	Copyright (C) 2016	Andrew (ADSWNJ) Stokes and Keith (Keithth G) Gelling
+//	Copyright (C) 2016-2017	Andrew (ADSWNJ) Stokes
 //                   All rights reserved
 //
 //	See Lagrange.cpp

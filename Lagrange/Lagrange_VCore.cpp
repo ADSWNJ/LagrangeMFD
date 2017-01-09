@@ -3,7 +3,7 @@
 //	Lagrange (Vessel Core Persistence)
 //	==================================
 //
-//	Copyright (C) 2016	Andrew (ADSWNJ) Stokes and Keith (Keithth G) Gelling
+//	Copyright (C) 2016-2017	Andrew (ADSWNJ) Stokes
 //                   All rights reserved
 //
 //	See Lagrange.cpp
@@ -91,7 +91,7 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
     double burnTimer = (LU->vdata[LU->act][vix].burnMJD - mjd) * 24.0 * 60.0 * 60.0;
     if (burnTimer >= 0.0 && burnTimer < 1000.0) {
       ap.SetTargetVector(LU->vdata[LU->act][vix].burndV);
-      ap.Update(SimDT);
+      //ap.Update(SimDT);
     }
   } else {
     if (ap_armed) {

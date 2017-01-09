@@ -13,36 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Header Files\Lib">
-      <UniqueIdentifier>{06f24b3f-f64d-46e9-97fa-7287ee56b521}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Lib\Orbiter">
-      <UniqueIdentifier>{0a20fbcd-d3b4-4ace-a3b1-4c0798083918}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Lib\Systems">
-      <UniqueIdentifier>{014955d0-fd78-43ff-9b9c-d7ccb86e1701}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Lib">
-      <UniqueIdentifier>{52f0dea3-496b-4a3c-865f-6ea5f01158aa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Lib\Orbiter">
-      <UniqueIdentifier>{c8619b18-89a9-4e92-9df7-b19e6ec0ab34}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Lib\Systems">
-      <UniqueIdentifier>{8e998b73-d72b-4efe-99a2-08ba99264d8a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Lib\PID">
-      <UniqueIdentifier>{8d9b457c-4196-48d3-8807-5236f36b4c3b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Lib\PID">
-      <UniqueIdentifier>{716a0edd-02d0-463d-ac67-dfad4722093d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\Lib\Math">
-      <UniqueIdentifier>{db466b69-2a50-429f-a984-186cde977d18}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Lib\Math">
-      <UniqueIdentifier>{d56a7aca-3ca6-4d76-8899-01247db37a8e}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DisplayEngUnitFunctions.h">
@@ -82,9 +52,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ParseFunctions.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="lib\Systems\Systems.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Lagrange_AP.hpp">
