@@ -477,7 +477,7 @@ void LagrangeUniverse::lp45(const int n, const int s) {
     az2 = (GMs * dotp(m2.Q - ms.Q, zHat) / (r2s * r2s * r2s));
     az = az2 - az1;                                               // az = {GMs.(Q2z - Qsz)}/r2s^3 - {GMs.(Q1z - Qsz)}/r1s^3
 
-    Pz = k4 * sqrt(k1 / gm) * (k1 / (k3 * k3)) * az;
+    Pz = -k4 * sqrt(k1 / gm) * (k1 / (k3 * k3)) * az;
     s4i[s][n].LP.P = s4i[s][n].LP.P + sign * Pz * zHat;           // Apply off-plane correction for E-M system
   }
 
