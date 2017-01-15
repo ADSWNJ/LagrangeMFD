@@ -270,8 +270,9 @@ void Lagrange::Button_BAB() {
 }
 // BAC = Burn Mode: Auto Center
 void Lagrange::Button_BAC() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  VC->autocenter = !VC->autocenter;
+  VC->ap_arm(VC->autocenter);
+  return;
 }
 // BAT = Burn Mode: Auto Trim
 void Lagrange::Button_BAT() {

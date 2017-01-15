@@ -53,6 +53,8 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     int burnGranularity;
     int burnVar;
     bool burnTdV_lock;
+    bool autocenter;
+    void ap_arm(bool arm);
 
   private:
     class Lagrange_AP ap;

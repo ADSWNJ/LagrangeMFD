@@ -172,6 +172,7 @@
     <ClInclude Include="Lagrange_VCore.hpp" />
     <ClInclude Include="MFDButtonPage.hpp" />
     <ClInclude Include="MFDPersist.hpp" />
+    <ClInclude Include="OneAxis_AP.hpp" />
     <ClInclude Include="ParseFunctions.h" />
   </ItemGroup>
   <ItemGroup>
@@ -192,6 +193,7 @@
     <ClCompile Include="Lagrange_Universe.cpp" />
     <ClCompile Include="Lagrange_VCore.cpp" />
     <ClCompile Include="MFDPersist.cpp" />
+    <ClCompile Include="OneAxis_AP.cpp" />
     <ClCompile Include="ParseFunctions.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -28,6 +28,7 @@ Lagrange_VCore::Lagrange_VCore(VESSEL *vin, Lagrange_GCore* gcin) {
   burnGranularity = 1;
   burnVar = 0;
   burnTdV_lock = false;
+  autocenter = false;
   LU = GC->LU;
   assert(LU != nullptr);
   int s = LU->vdata[LU->act].size();
@@ -81,24 +82,25 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
     LU->lp_ves(vix, 0, LU->act);
   }
 
-  if (LU->vdata[LU->act][vix].burnArmed) {
-    if (!ap_armed) {
-      ap.SetVessel(v);
-      ap.SetRefBody(LU->body[LU->LP.ref].hObj);
-      ap.Enable();
-      ap_armed = true;
-    }
+  if (ap_armed) {
     double burnTimer = (LU->vdata[LU->act][vix].burnMJD - mjd) * 24.0 * 60.0 * 60.0;
     if (burnTimer >= 0.0 && burnTimer < 1000.0) {
       ap.SetTargetVector(LU->vdata[LU->act][vix].burndV);
-      //ap.Update(SimDT);
-    }
-  } else {
-    if (ap_armed) {
-      ap.Disable();
-      ap.Update(SimDT);
-      ap_armed = false;
+      ap.Update(SimT, SimDT);
     }
   }
   return;
+}
+
+
+void Lagrange_VCore::ap_arm(bool arm) {
+  if (arm) {
+    ap.SetVessel(v);
+    ap.SetRefBody(LU->body[LU->LP.ref].hObj);
+    ap.Enable();
+    ap_armed = true;
+  } else {
+    ap.Disable();
+    ap_armed = false;
+  }
 }

@@ -14,12 +14,13 @@
 #define _LAGRANGE_AP_CLASS
 
 #include "orbitersdk.h"
+#include "OneAxis_AP.hpp"
 class Lagrange_AP
 {
 public:
   Lagrange_AP();
   virtual ~Lagrange_AP();
-  void Update(double SimDT);
+  void Update(double SimT, double SimDT);
   void SetTargetVector(const VECTOR3 & targetVector); // Setting _V(0,0,0) disables the AP
   void Disable();
   void Enable();
@@ -31,7 +32,7 @@ private:
   void MECO(VESSEL* vessel);
   void MainEngineOn(VESSEL* vessel, double level);
   void SetRot0();
-  void SetRotThrust(const VECTOR3 angleToTarget, const double SimDT);
+  void ExecuteRotAP(const VECTOR3 angleToTarget, const double SimT, const double SimDT);
   void GetTransXTarget(const VECTOR3 & trxVec);
   VECTOR3 GetRotationToTarget(const VECTOR3 & target, VECTOR3 *tgtFwd, VECTOR3 *tgtUp) const;
   VECTOR3  m_targetVector;
@@ -45,22 +46,14 @@ private:
   VECTOR3  m_trxPlc;
   VECTOR3  m_trxPro;
   OBJHANDLE m_hRefBody;
-  struct {
-    VECTOR3  aVel;
-    VECTOR3  aAcc;
-    VECTOR3  thrust;
-    VECTOR3  aAccThrustRatio;
-  } m_thrustRefData[10];
-  int m_thrustRefIx[3];
-  VECTOR3 m_thrustRefVal;
-  bool m_thrustLastTime[3];
-  bool m_fullCycle[3];
   FILE *m_dumpFile;
   bool m_dumping;
   long m_dumpIx;
   double m_dumpTotT;
   bool m_dampspin;
   VECTOR3 m_aVelLast;
+
+  OneAxis_AP ap[6];
 };
 
 #endif     /// _LAGRANGE_AP_CLASS

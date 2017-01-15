@@ -57,6 +57,9 @@
     <ClInclude Include="Lagrange_AP.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OneAxis_AP.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="gpl-3_0.txt">
@@ -107,6 +110,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Lagrange_AP.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OneAxis_AP.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
