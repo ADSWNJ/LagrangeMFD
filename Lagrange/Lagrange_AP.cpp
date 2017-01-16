@@ -224,6 +224,7 @@ void Lagrange_AP::Enable()
     m_dumping = true;
     m_dumpIx = 0;
     m_dumpTotT = 0.0;
+    assert(m_dumpfile != NULL);
     fprintf(m_dumpFile, "Ix, SimT, SimDT, TotT,");
     for (char c = 'X'; c <= 'Z'; c++) {
       fprintf(m_dumpFile, "%c_RefIx, %c_AngToTgt, %c_AACC, %c_AVEL, %c_CycParam, %c_CycToHit, %c_aVelRatio, %c_IdealThr, %c_ActThr, %c_ThRefVal",

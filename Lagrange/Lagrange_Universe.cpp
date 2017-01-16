@@ -588,8 +588,8 @@ void LagrangeUniverse::threadCtrlMain() {
       s4i_valid = false;
     }
 
-    for (unsigned int e = 0; e < vdata[act].size(); e++) {
-      if (vdata[act][e].v != vdata[wkg][e].v) {
+    for (unsigned int k = 0; k < vdata[act].size(); k++) {
+      if (vdata[act][k].v != vdata[wkg][k].v) {
         vdata[act].erase(vdata[act].begin(), vdata[act].end());
         for (auto e = vdata[wkg].begin(); e != vdata[wkg].end(); e++) {
           vdata[act].push_back(*e);
