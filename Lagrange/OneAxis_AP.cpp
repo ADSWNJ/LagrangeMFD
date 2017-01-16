@@ -41,8 +41,8 @@ void OneAxis_AP::Enable(int axis, VESSEL *v, bool dump) {
     break;
   }
   case  2: {
-    m_thG_Plus = THGROUP_ATT_YAWRIGHT;
-    m_thG_Minus = THGROUP_ATT_YAWLEFT;
+    m_thG_Plus = THGROUP_ATT_YAWLEFT;
+    m_thG_Minus = THGROUP_ATT_YAWRIGHT;
     break;
   }
   case  3: {
@@ -57,7 +57,7 @@ void OneAxis_AP::Enable(int axis, VESSEL *v, bool dump) {
   
   char buf[256];
   int err;
-  sprintf_s(buf, 256, ".\\Config\\MFD\\Lagrange\\Diags\\OneAxisAP_%d.csv", axis);
+  sprintf_s(buf, 256, ".\\Config\\MFD\\Lagrange\\Diags\\OneAxisAP_%d.csv", m_axis);
   if (err = fopen_s(&m_dbgF, buf, "w") != 0) {
     char errbuf[256];
     sprintf(errbuf, strerror(err));
@@ -106,10 +106,12 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
   m_this_dT = dT;
   if (m_dT == 0.0) m_dT = m_this_dT;
 
-  if (P != 0.0) sign = (P < 0.0) ? 1.0 : -1.0; else sign = 0.0;
-  
+  //if (P != 0.0) sign = (P < 0.0) ? 1.0 : -1.0; else sign = 0.0;
+  sign = (P < 0.0) ? 1.0 : -1.0;
+
   if (m_ix == -2) {                                     // First burn with no calibration ... see what happens
-    m_thrustPct = sign;
+    m_thrustPct = 1.0;
+    if (sign < 0.0) m_thrustPct = -1.0;
     m_A = 1.0;
     if (m_dumping) {
       //              "SimT, SimDT, AvgDT, A, P, V, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
@@ -130,7 +132,7 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
   double trimAv = 0.0;
   double trimAvg = 0.0;
 
-  if (aP < m_zBand && (abs(V) / m_dT / 25.0 < m_zBand)) {
+  if (aP < m_zBand && (abs(V) / m_dT / 10.0 < m_zBand)) {
       m_thrustPct = 0.0;
       if (m_dumping) {
         //              "SimT, SimDT, AvgDT, A, P, V, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
@@ -141,6 +143,10 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
   } else {
     optA = (aV * aV) / (2.0 * aP);                 // Solves 0 = P + V.t + 0.5.A.t^2 and 0 = V + A.t for A, given P and V
     optT = (optA < 1e-6)? 1e10 : aV / optA;      // Solves 0 = V + A.t for t, given V and A
+    if (aP == 0.0) {
+      optA = 0.0;
+      optT = 0.0;
+    }
     trimAd = 2.0 * (-aP + aV*m_dT) / (m_dT * m_dT);  // Solve 0 = P + V.t + 0.5.A.t^2 for A, given P, V, t
     trimAv = aV / m_dT;                        // Solve 0 = V + A.t for A, given V, t
     trimAvg = (trimAd/4.0 + 4.0*trimAv) / 4.25;
@@ -170,6 +176,7 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
     //              "     SimT, SimDT, AvgDT, A,   P,   V,    aV, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
     fprintf(m_dbgF, "THR, %.3f, %.4f, %.4f, %.4f, %.4f, %.4f,%.7f,%c, %.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
       m_T, m_this_dT, m_dT, m_A, m_P, m_V, m_thrustPct, m_ThMode, optT, optA, loV, goV, trimAd, trimAv, finA, m_loA, m_goA);
+    fflush(m_dbgF);
   }
 
 
@@ -214,12 +221,13 @@ void OneAxis_AP::CalcCali(double V, double simT, double dT) {
   int ix = m_ix+1;
   if (ix > 9) ix = 0;
 
-  //if (m_dumping) {
-  //  fprintf(m_dbgF, "CalcCali, %d, %f, %f, %f, %f, %f\n", ix, V, m_cali[ix].T, simT, dT, m_cali[ix].thPct);
-  //}
+  if (m_dumping) {
+    fprintf(m_dbgF, "CalcCali, %d, %f, %f, %f, %f, %f\n", ix, V, m_cali[ix].T, simT, dT, m_cali[ix].thPct);
+  }
 
-  if (abs(m_cali[ix].T - (simT - dT)) < 1e-3 && abs(m_cali[ix].thPct) > 1e-6) {
+  if (abs(m_cali[ix].T - (simT - dT)) < 1e-3 && abs(m_cali[ix].thPct) > 0.25) {
     m_cali[ix].A = (V - m_cali[ix].V) / dT / m_cali[ix].thPct;
+    //if (m_cali[ix].A <= 0.0) return; // Bad things happen if we have a -ve acceleration in the pot
     m_ix++;
     if (m_ix > 9) {
       m_ix = 0;
@@ -236,9 +244,10 @@ void OneAxis_AP::CalcCali(double V, double simT, double dT) {
       m_dT /= 1.0 * (m_ix + 1);
       m_loA = m_A * m_loApct;
       m_goA = m_A * m_goApct;
-      //if (m_dumping) {
-      //  fprintf(m_dbgF, "CalcUPDT, %d, %f, %f, %f, %f\n", m_ix, m_A, m_dT, m_loA, m_goA);
-      //}
+
+      if (m_dumping) {
+        fprintf(m_dbgF, "CalcUPDT, %d, %f, %f, %f, %f\n", m_ix, m_A, m_dT, m_loA, m_goA);
+      }
     }
   }
 }

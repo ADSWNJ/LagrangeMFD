@@ -33,7 +33,7 @@ public:
   bool Update (oapi::Sketchpad *skp);
   bool DisplayOrbitMode();
   bool DisplayPlanMode();
-  bool DisplayBurnMode();
+  bool DisplayAPMode();
   bool DisplayLPMode();
   bool DisplayS4IMode();
   bool DisplayFrmMode();
@@ -63,10 +63,9 @@ public:
   void Button_MDN();
   void Button_MLF();
   void Button_MRG();
-  void Button_BAB();
-  void Button_BAC();
-  void Button_BAT();
-  void Button_PAH();
+  void Button_AAB();
+  void Button_AAC();
+  void Button_AAH();
   void Button_OK();
   void Button_NotImplementedYet();
   void Button_S4IARM();
@@ -99,6 +98,7 @@ protected:
   void skpFormatText(const int col, const int line, const char* fmt, ...);
   void skpFmtColText(const int col, const int line, const bool test, const DWORD truecol, const DWORD falsecol, const char* fmt, ...);
   void skpFmtEngText(const int col, const int line, const char* fmt, const char* sfx, const double val);
+  void skpFmtEngText(const int col, const int line, const char* fmt, const unsigned char* sfx, const double val);
   void skpTitle(const char* title);
   void skpColor(DWORD col);
   void showMessage();

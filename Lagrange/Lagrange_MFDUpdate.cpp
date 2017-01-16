@@ -16,6 +16,7 @@
 #include <math.h>
 #include <stdarg.h>
 
+#define CLR_RED 0x0000FF
 #define CLR_YELLOW 0x00FFFF
 #define CLR_WHITE 0xFFFFFF
 
@@ -28,11 +29,11 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
   case 0:
     return DisplayOrbitMode(); break;
   case 1:
-    return DisplayPlanMode(); break;
-  case 2:
-    return DisplayBurnMode(); break;
-  case 3:
     return DisplayLPMode(); break;
+  case 2:
+    return DisplayPlanMode(); break;
+  case 3:
+    return DisplayAPMode(); break;
   case 4:
     return DisplayS4IMode(); break;
   case 6:
@@ -106,66 +107,8 @@ bool Lagrange::DisplayOrbitMode() {
   return true;
 };
 
-bool Lagrange::DisplayPlanMode() {
-  skpTitle("Lagrange: PLAN");
-
-  int l = 4;
-  char *adjText[9] = { "Rough", "Coarse", "Medium", "Fine", "Super", "Ultra", "Hyper", "Micro", "Reset" };
-
-  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
-
-  if (vdata->burnArmed) skpFmtColText(0, l, true, CLR_YELLOW, CLR_WHITE, ">");
-  skpFmtColText(0, l++, vdata->burnArmed, CLR_YELLOW, CLR_WHITE, "  Planning Mode:  %s", vdata->burnArmed ? "Active" : "Inactive");
-  skpFormatText(0, l++, "  Adjustment:     %s", adjText[VC->burnGranularity]);
-  l++;
-
-  if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD() + (1 / (10 * 60 * 24));
-  skpFmtColText(0, VC->burnVar==0? l : l + 1 + VC->burnVar, true,   CLR_YELLOW, CLR_WHITE, ">");
-  skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
-  skpFmtEngText(0, l++, " (Burn Point):  %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
-  skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6f", vdata->burndV.x);
-  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6f", vdata->burndV.y);
-  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6f", vdata->burndV.z);
-  skpFmtColText(0, l,   (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV:     %14.6f", length(vdata->burndV));
-  if (VC->burnTdV_lock) skpFormatText(5,l, "(lock)");
-  l+=2;
-  if (!GC->LU->s4i_valid || vdata->enc_ix < 0) return true;
-
-  Lagrange_ves_s4i *vs4i_e = (vdata->enc_ix >= 0) ? &vdata->vs4i[vdata->enc_ix] : nullptr;
-  if (!vs4i_e) return true;
-
-  Lagrange_s4i *s4i_e = &GC->LU->s4i[GC->LU->act][vdata->enc_ix];
-  QP_struct *vesLP_e = (vs4i_e) ? &vs4i_e->vesLP : nullptr;
-  
-  skpFormatText(0, l++, "  Enc. MJD:     %14.6f", s4i_e->MJD);
-  skpFmtEngText(0, l++, "  Enc. Time:    %10.2f", "s", s4i_e->sec - oapiGetSimTime());
-  l++;
-  int rl = l;
-  skpFormatText(0, l++, "       Enc. Pos.");
-
-  skpFmtEngText(0, l++, "  Pro:%8.3f", "m", vesLP_e->Q.x);
-  skpFmtEngText(0, l++, "  PlC:%8.3f", "m", vesLP_e->Q.y);
-  skpFmtEngText(0, l++, "  Out:%8.3f", "m", vesLP_e->Q.z);
-  skpFmtEngText(0, l++, "  TOT:%8.3f", "m", vs4i_e->dQ);
-  skpFormatText(3, rl++, " Enc. dVel.");
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.x);
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.y);
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.z);
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vs4i_e->dP);
-
-  return true;
-};
-
-bool Lagrange::DisplayBurnMode() {
-  skpTitle("Lagrange: BURN");
-  int l = 4;
-  skpColor(CLR_YELLOW);
-  skpFormatText(1, l++, "TODO: Burn Mode Info");
-  return true;
-};
-
 bool Lagrange::DisplayLPMode() {
-  skpTitle("Lagrange: LP");
+  skpTitle("Lagrange: ENCOUNTER");
 
   int l = 4;
   Lagrange_vdata *vdata = &GC->LU->vdata[GC->LU->act][VC->vix];
@@ -229,12 +172,117 @@ bool Lagrange::DisplayLPMode() {
     skpFmtEngText(4, rl++, "%10.4f", "s", s4i_e->sec);
     skpFmtEngText(4, rl++, "%10.4f", "s", s4i_e->sec - oapiGetSimTime());
   }
-
-  rl++;
+  if (rl > l) l = rl+1;
+  l++; 
   double vm = VC->v->GetMass();
-  skpFormatText(0, rl++, "Mass: %10.6f", vm);
+  skpFormatText(0, l++, "Mass: %10.6fkg", vm);
   return true;
 };
+bool Lagrange::DisplayPlanMode() {
+  skpTitle("Lagrange: PLAN");
+
+  int l = 4;
+  char *adjText[9] = { "Rough", "Coarse", "Medium", "Fine", "Super", "Ultra", "Hyper", "Micro", "Reset" };
+
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+
+  if (vdata->burnArmed) skpFmtColText(0, l, true, CLR_YELLOW, CLR_WHITE, ">");
+  skpFmtColText(0, l++, vdata->burnArmed, CLR_YELLOW, CLR_WHITE, "  Planning Mode:  %s", vdata->burnArmed ? "Active" : "Inactive");
+  skpFormatText(0, l++, "  Adjustment:     %s", adjText[VC->burnGranularity[VC->burnVar]]);
+  l++;
+
+  if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD() + (1 / (10 * 60 * 24));
+  skpFmtColText(0, VC->burnVar==0? l : l + 1 + VC->burnVar, true,   CLR_YELLOW, CLR_WHITE, ">");
+  skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
+  skpFmtEngText(0, l++, " (Burn Point):  %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
+  skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6f", vdata->burndV.x);
+  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6f", vdata->burndV.y);
+  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6f", vdata->burndV.z);
+  skpFmtColText(0, l,   (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV:     %14.6f", length(vdata->burndV));
+  if (VC->burnTdV_lock) skpFormatText(5,l, "(lock)");
+  l+=2;
+  if (!GC->LU->s4i_valid || vdata->enc_ix < 0) return true;
+
+  Lagrange_ves_s4i *vs4i_e = (vdata->enc_ix >= 0) ? &vdata->vs4i[vdata->enc_ix] : nullptr;
+  if (!vs4i_e) return true;
+
+  Lagrange_s4i *s4i_e = &GC->LU->s4i[GC->LU->act][vdata->enc_ix];
+  QP_struct *vesLP_e = (vs4i_e) ? &vs4i_e->vesLP : nullptr;
+  
+  skpFormatText(0, l++, "  Enc. MJD:     %14.6f", s4i_e->MJD);
+  skpFmtEngText(0, l++, "  Enc. Time:    %10.2f", "s", s4i_e->sec - oapiGetSimTime());
+  l++;
+  int rl = l;
+  skpFormatText(0, l++, "       Enc. Pos.");
+
+  skpFmtEngText(0, l++, "  Pro:%8.3f", "m", vesLP_e->Q.x);
+  skpFmtEngText(0, l++, "  PlC:%8.3f", "m", vesLP_e->Q.y);
+  skpFmtEngText(0, l++, "  Out:%8.3f", "m", vesLP_e->Q.z);
+  skpFmtEngText(0, l++, "  TOT:%8.3f", "m", vs4i_e->dQ);
+  skpFormatText(3, rl++, " Enc. dVel.");
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.x);
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.y);
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.z);
+  skpFmtEngText(3, rl++, " %8.4f", "m/s", vs4i_e->dP);
+
+  return true;
+};
+
+bool Lagrange::DisplayAPMode() {
+  skpTitle("Lagrange: AUTOPILOT");
+  int l = 4; 
+  int l2;
+
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
+
+  bool burnArmed = vdata->burnArmed;
+  bool skArmed = VC->sk_armed;
+  bool inac = !burnArmed && !skArmed;
+
+  skpFmtColText(0, l++, !inac, CLR_YELLOW, CLR_WHITE,          "   AP Mode:      %s", burnArmed ? "Plan" : skArmed ? "Hold LP" : "Disarmed");
+  if (inac) {
+    skpFmtColText(0, l++, inac, CLR_WHITE, CLR_WHITE,          "   AP AutoAlign: %s", "Disarmed");
+  } else {
+    skpFmtColText(0, l++, VC->autocenter, CLR_RED, CLR_YELLOW, "   AP AutoAlign: %s", VC->autocenter ? "Active" : "Armed");
+  }
+  skpFmtColText(0, l++, false, CLR_YELLOW, CLR_WHITE, "   AP AutoBurn:  %s", "Out of Use");
+  skpFmtColText(0, l++, false, CLR_YELLOW, CLR_WHITE,          "   AP AutoHold:  %s", "Out of Use");
+
+  if (inac) return true;
+
+  l++; l++;
+
+  VECTOR3 att = VC->ap.GetATT()*DEG;
+  VECTOR3 avl = VC->ap.GetAVel()*DEG;
+  for (int i = 0; i < 3; i++) {
+    if (abs(att.data[i]) < 0.01) att.data[i] = 0.0;
+    if (abs(avl.data[i]) < 0.001) avl.data[i] = 0.0;
+  }
+
+  unsigned char deg[2] = { 0xb0, '\0' };
+  unsigned char degs[4] = { 0xb0, '/', 's', '\0' };
+
+  l2 = l;
+
+  skpFormatText(0, l++, "             Error");
+  skpFmtEngText(0, l++, "   Pitch:    %7.2f", deg, att.x);
+  skpFmtEngText(0, l++, "   Yaw:      %7.2f", deg, att.y);
+  skpFmtEngText(0, l++, "   Roll:     %7.2f", deg, att.z);
+
+  l = l2;
+
+  skpFormatText(4, l++, "   Rate");
+  skpFmtEngText(4, l++, "%8.3f", degs, avl.x);
+  skpFmtEngText(4, l++, "%8.3f", degs, avl.y);
+  skpFmtEngText(4, l++, "%8.3f", degs, avl.z);
+
+  l++; l++;
+
+
+  return true;
+};
+
 
 bool Lagrange::DisplayS4IMode() {
   skpTitle("Lagrange: S4I");

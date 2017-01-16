@@ -102,6 +102,47 @@ void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, con
   LC->skp->Text(LC->skpColPix, LC->skpLinePix, LC->skpBuf, strlen(LC->skpBuf));
 }
 
+
+void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, const unsigned char* sfx, const double val) {
+  LC->skpColPix = _Col(col);
+  LC->skpLinePix = _Line(line);
+  char engUnit[12] = "pnum kMGTPE";
+  double cnvVal = val;
+  int i = 4;
+  int loB = LC->skpLoB;
+
+  if (loB<-4) loB = -4;
+  if (loB>6) loB = 6;
+  loB += 4;
+
+  if (fabs(cnvVal) < 1) {
+    while ((fabs(cnvVal) < 1) && (i>loB)) {
+      i--;
+      cnvVal *= 1000;
+    }
+  } else if (fabs(cnvVal) >= 1000) {
+    while ((fabs(cnvVal) >= 1000) && (i< 10)) {
+      i++;
+      cnvVal /= 1000;
+    }
+  }
+  while (i<loB) {
+    i++;
+    cnvVal /= 1000;
+  }
+  if (engUnit[i] == ' ') {
+    sprintf_s(LC->skpFmtBuf, 128, "%s%s", fmt, sfx);
+    sprintf_s(LC->skpBuf, 128, LC->skpFmtBuf, cnvVal);
+  } else {
+    sprintf_s(LC->skpFmtBuf, 128, "%s%%c%s", fmt, sfx);
+    sprintf_s(LC->skpBuf, 128, LC->skpFmtBuf, cnvVal, engUnit[i]);
+  }
+  LC->skp->Text(LC->skpColPix, LC->skpLinePix, LC->skpBuf, strlen(LC->skpBuf));
+}
+
+
+
+
 void Lagrange::skpTitle(const char *title) {
   Title(LC->skp, title);
   LC->skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);

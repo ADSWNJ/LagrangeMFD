@@ -43,59 +43,58 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("<",   OAPI_KEY_COMMA, &Lagrange::Button_MLF);
     RegisterFunction(">",   OAPI_KEY_PERIOD, &Lagrange::Button_MRG);
 
-    // Plan Mode
+    // LP Mode
     static const MFDBUTTONMENU mnu1[] =
+    {
+      { "Mode Select", 0, 'M' }
+    };
+    RegisterPage(mnu1, sizeof(mnu1) / sizeof(MFDBUTTONMENU));
+    RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
+
+
+    // Plan Mode
+    static const MFDBUTTONMENU mnu2[] =
     {
       { "Mode Select", 0, 'M' },
       { "Arm/Disarm Plan", 0, 'A' },
       { "Set Burn MJD", 0, 'D' },
       { "Set Prograde", 0, 'F' },
-      { "Set Total Delta-V", 0, 'T' },
-      { "Lock Total Delta-V", 0, 'L' },
+      { "Set Plane Change", 0, 'P' },
+      { "Set Outward", 0, 'O' },
       { "Increase Increment", 0, 'U' },
-      { "Increment Value", 0, '+' },
+      { "Decrease Increment", 0, 'D' },
+      { "Increment Value", 0, '=' },
       { "Decrement Value", 0, '-' },
       { "Enter Value", 0, 'E' },
-      { "Set Plane Change", 0, 'P' },
-      { "Set Outward", 0, 'O' }
+      { "Set/Lock Total dV", 0, 'T' }
     };
-    RegisterPage(mnu1, sizeof(mnu1) / sizeof(MFDBUTTONMENU));
+    RegisterPage(mnu2, sizeof(mnu2) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
     RegisterFunction("ARM", OAPI_KEY_A, &Lagrange::Button_BURNARM);
     RegisterFunction("MJD", OAPI_KEY_D, &Lagrange::Button_MJD);
     RegisterFunction("PRO", OAPI_KEY_F, &Lagrange::Button_PRO);
-    RegisterFunction("TDV", OAPI_KEY_F, &Lagrange::Button_TDV);
-    RegisterFunction("LDV", OAPI_KEY_F, &Lagrange::Button_LDV);
-    RegisterFunction("ADJ", OAPI_KEY_1, &Lagrange::Button_ADJ);
-    RegisterFunction("++",  OAPI_KEY_3, &Lagrange::Button_AUP);
-    RegisterFunction("--",  OAPI_KEY_4, &Lagrange::Button_ADN);
-    RegisterFunction("ENT", OAPI_KEY_E, &Lagrange::Button_ENT);
     RegisterFunction("PLC", OAPI_KEY_P, &Lagrange::Button_PLC);
     RegisterFunction("OUT", OAPI_KEY_O, &Lagrange::Button_OUT);
+    RegisterFunction("ADJ", OAPI_KEY_U, &Lagrange::Button_ADJ);
+    RegisterFunction("ADM", OAPI_KEY_D, &Lagrange::Button_ADM);
+    RegisterFunction("++",  OAPI_KEY_EQUALS, &Lagrange::Button_AUP);
+    RegisterFunction("--",  OAPI_KEY_MINUS, &Lagrange::Button_ADN);
+    RegisterFunction("ENT", OAPI_KEY_E, &Lagrange::Button_ENT);
+    RegisterFunction("TDV", OAPI_KEY_F, &Lagrange::Button_TDV);
 
-    // Burn Mode
-    static const MFDBUTTONMENU mnu2[] =
-    {
-      { "Mode Select", 0, 'M' },
-      { "Set AutoBurn", 0, 'B' },
-      { "Set AutoCenter", 0, 'C' },
-      { "Set AutoTrim", 0, 'T' }
-    };
-    RegisterPage(mnu2, sizeof(mnu2) / sizeof(MFDBUTTONMENU));
-    RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
-    RegisterFunction("AB",  OAPI_KEY_B, &Lagrange::Button_BAB);
-    RegisterFunction("AC",  OAPI_KEY_C, &Lagrange::Button_BAC);
-    RegisterFunction("AT",  OAPI_KEY_T, &Lagrange::Button_BAT);
-
-    // Position Mode
+    // Autopilot Mode
     static const MFDBUTTONMENU mnu3[] =
     {
       { "Mode Select", 0, 'M' },
+      { "Set AutoAlign", 0, 'A' },
+      { "Set AutoBurn", 0, 'B' },
       { "Set AutoHold", 0, 'H' }
     };
     RegisterPage(mnu3, sizeof(mnu3) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
-    RegisterFunction("AH",  OAPI_KEY_H, &Lagrange::Button_PAH);
+    RegisterFunction("AA", OAPI_KEY_A, &Lagrange::Button_AAC);
+    RegisterFunction("AB",  OAPI_KEY_B, &Lagrange::Button_AAB);
+    RegisterFunction("AH",  OAPI_KEY_H, &Lagrange::Button_AAH);
 
     // S4I Mode
     static const MFDBUTTONMENU mnu4[] =

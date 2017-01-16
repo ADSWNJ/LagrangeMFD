@@ -50,15 +50,16 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     VESSEL *v;
     int vix; // Vessel index in LU
 
-    int burnGranularity;
+    int burnGranularity[5];
     int burnVar;
     bool burnTdV_lock;
     bool autocenter;
     void ap_arm(bool arm);
-
-  private:
     class Lagrange_AP ap;
     bool ap_armed;
+    bool sk_armed;
+
+  private:
 };
 
 

@@ -60,6 +60,8 @@ void Lagrange::Button_BURNARM() {
   vdata->burnArmed = !vdata->burnArmed;
   if (vdata->burnArmed) {
     vdata->burnMJD = oapiGetSimMJD() + (15.0 / (60.0 * 24.0)); // bump initial MJD 15 mins in the future
+  } else {
+    VC->ap_arm(false);
   }
 }
 // MJD = Plan Mode: Date Select
@@ -80,23 +82,20 @@ void Lagrange::Button_OUT() {
 }
 // TDV = Plan Mode: Total DV
 void Lagrange::Button_TDV() {
+  if (VC->burnVar == 4) VC->burnTdV_lock = !VC->burnTdV_lock;
   VC->burnVar = 4;
-}
-// LDV = Plan Mode: Lock/Unlock DV
-void Lagrange::Button_LDV() {
-  VC->burnTdV_lock = !VC->burnTdV_lock;
 }
 
 
 // ADM = Plan Mode: Adjust Granularity Down
 void Lagrange::Button_ADM() {
-  VC->burnGranularity--;
-  if (VC->burnGranularity < 0) VC->burnGranularity = 8;
+  VC->burnGranularity[VC->burnVar]--;
+  if (VC->burnGranularity[VC->burnVar] < 0) VC->burnGranularity[VC->burnVar] = 8;
 }
 // ADJ = Plan Mode: Adjust Granularity Up
 void Lagrange::Button_ADJ() {
-  VC->burnGranularity++;
-  if (VC->burnGranularity > 8) VC->burnGranularity = 0;
+  VC->burnGranularity[VC->burnVar]++;
+  if (VC->burnGranularity[VC->burnVar] > 8) VC->burnGranularity[VC->burnVar] = 0;
 }
 // AUP = Plan Mode: Increment Value
 void Lagrange::Button_AUP() {
@@ -110,7 +109,7 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
   double TdV = length(vdata->burndV);
   double ratio;
-  if (VC->burnGranularity == 8) {
+  if (VC->burnGranularity[VC->burnVar] == 8) {
     switch (VC->burnVar) {
     case 0:
       vdata->burnMJD = oapiGetSimMJD();
@@ -129,7 +128,7 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
       break;
     }
   } else {
-    adj *= 10.0 / pow(10.0, (double)VC->burnGranularity);
+    adj *= 10.0 / pow(10.0, (double)VC->burnGranularity[VC->burnVar]);
     switch (VC->burnVar) {
     case 0:
       vdata->burnMJD += adj;
@@ -263,27 +262,33 @@ void Lagrange::Button_MRG() {
   //TODO: Complete Function
   return Button_NotImplementedYet();
 }
-// BAB = Burn Mode: Auto Burn
-void Lagrange::Button_BAB() {
+// AAB = AP Mode: Auto Burn
+void Lagrange::Button_AAB() {
   //TODO: Complete Function
   return Button_NotImplementedYet();
 }
-// BAC = Burn Mode: Auto Center
-void Lagrange::Button_BAC() {
+// AAC = AP Mode: Auto Align
+void Lagrange::Button_AAC() {
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
+
+  bool burnArmed = vdata->burnArmed;
+  bool skArmed = VC->sk_armed;
+  bool inac = !burnArmed && !skArmed;
+  if (inac) {
+    VC->ap_arm(false);
+    return;
+  }
   VC->autocenter = !VC->autocenter;
   VC->ap_arm(VC->autocenter);
   return;
 }
-// BAT = Burn Mode: Auto Trim
-void Lagrange::Button_BAT() {
+// AAH = AP Mode: Auto Hold
+void Lagrange::Button_AAH() {
   //TODO: Complete Function
   return Button_NotImplementedYet();
 }
-// PAH = On LP Mode: Auto Hold
-void Lagrange::Button_PAH() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
-}
+
 // OK = Message Acknowledge
 void Lagrange::Button_OK() {
   LC->showMessage = false;

@@ -27,6 +27,9 @@ public:
   bool IsEnabled() const;
   void SetVessel(VESSEL* vessel);
   void SetRefBody(const OBJHANDLE hRefBody);
+  OBJHANDLE GetRefBody();
+  VECTOR3 GetAVel();
+  VECTOR3 GetATT();
 protected:
 private:
   void MECO(VESSEL* vessel);
@@ -52,8 +55,10 @@ private:
   double m_dumpTotT;
   bool m_dampspin;
   VECTOR3 m_aVelLast;
+  VECTOR3 m_angleToTarget;
+  VECTOR3 m_aVel;
 
-  OneAxis_AP ap[6];
+  OneAxis_AP one_ap[6];
 };
 
 #endif     /// _LAGRANGE_AP_CLASS

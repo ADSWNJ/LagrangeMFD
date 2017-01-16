@@ -73,8 +73,8 @@ void Lagrange_AP::SetVessel(VESSEL* vessel) {
   m_vessel = vessel;
   for (int i = 0; i < 3; i++) {
 //    ap[i].Enable(i, m_vessel, i==2?true:false);
-    ap[i].SetDeadband(0.001);
-    ap[i].SetAccParams(0.01, 0.5, 0.8);
+    one_ap[i].SetDeadband(0.001);
+    one_ap[i].SetAccParams(0.01, 0.5, 0.8);
   }
 }
 
@@ -85,6 +85,7 @@ VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 & target, VECTOR3 *target
   VECTOR3 tgtUp = *targetUp;
 
   double ang_g = atan2(tgtUp.x, tgtUp.y);
+  if (abs(tgtUp.x) < 0.001 && abs(tgtUp.y) < 0.001) ang_g = 0.0; // Damps behavior on the cardinal point
   MATRIX3 rot_g = _M(cos(ang_g), -sin(ang_g), 0.0,
     sin(ang_g), cos(ang_g), 0.0,
     0.0, 0.0, 1.0);
@@ -92,6 +93,7 @@ VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 & target, VECTOR3 *target
   VECTOR3 tgtUp2 = mul(rot_g, tgtUp);
 
   double ang_a = atan2(-target.y, target.z);
+  if (abs(target.y) < 0.001 && abs(target.z) < 0.001) ang_a = 0.0;
   MATRIX3 rot_a = _M(1.0, 0.0, 0.0,
     0.0, cos(ang_a), -sin(ang_a),
     0.0, sin(ang_a), cos(ang_a));
@@ -99,6 +101,7 @@ VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 & target, VECTOR3 *target
   VECTOR3 tgtUp3 = mul(rot_a, tgtUp2);
 
   double ang_b = atan2(-target.x, target.z);
+  if (abs(target.x) < 0.001 && abs(target.z) < 0.001) ang_b = 0.0;
   MATRIX3 rot_b = _M(cos(ang_b), 0.0, -sin(ang_b),
     0.0, 1.0, 0.0,
     sin(ang_b), 0.0, cos(ang_b));
@@ -106,17 +109,11 @@ VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 & target, VECTOR3 *target
   *targetFwd = mul(rot_b, tgt3);
   *targetUp = mul(rot_b, tgtUp3);
 
-  return _V(ang_a, ang_b, ang_g);
+  return _V(-ang_a, ang_b, ang_g);
 }
 
 void Lagrange_AP::Update(double SimT, double SimDT)
 {
-  if (length(m_targetVector) < 1e-6) {
-    Disable();
-    return;
-  }
-
-  if (!IsEnabled()) Enable();
 
   VESSELSTATUS vs;
   m_vessel->GetStatus(vs);
@@ -144,20 +141,19 @@ void Lagrange_AP::Update(double SimT, double SimDT)
 
   m_targetVectorFwd = _V(0.0, 0.0, 1.0) * length(m_targetVector);
   m_targetVectorUp = m_trxPlc;
-  VECTOR3 angleToTarget =  GetRotationToTarget(m_targetVector, &m_targetVectorFwd, &m_targetVectorUp);
+  m_angleToTarget =  GetRotationToTarget(m_targetVector, &m_targetVectorFwd, &m_targetVectorUp);
 
-  ExecuteRotAP(angleToTarget, SimT, SimDT);
-  VECTOR3 aV;
-  m_vessel->GetAngularVel(aV);
-  aV.y = -aV.y;
-  sprintf(oapiDebugString(), "Pro:{%.2f,%.2f,%.2f} PLC:{%.2f,%.2f,%.2f} Tgt:{%.2f,%.2f,%.2f} Ang:{%.2f,%.2f,%.2f} VRot:{%.2f,%.2f,%.2f} AVel:{%.2f,%.2f,%.2f}",
+  if (IsEnabled()) ExecuteRotAP(m_angleToTarget, SimT, SimDT);
+  m_vessel->GetAngularVel(m_aVel);
+/*  sprintf(oapiDebugString(), "Pro:{%.2f,%.2f,%.2f} PLC:{%.2f,%.2f,%.2f} Tgt:{%.2f,%.2f,%.2f} Ang:{%.2f,%.2f,%.2f} VRot:{%.2f,%.2f,%.2f} AVel:{%.2f,%.2f,%.2f}",
     m_trxPro.x, m_trxPro.y, m_trxPro.z,
     m_trxPlc.x, m_trxPlc.y, m_trxPlc.z,
     m_targetVector.x, m_targetVector.y, m_targetVector.z,
-    angleToTarget.x * 180.0 / PI, angleToTarget.y * 180.0 / PI, angleToTarget.z * 180.0 / PI,
+    m_angleToTarget.x * 180.0 / PI, m_angleToTarget.y * 180.0 / PI, m_angleToTarget.z * 180.0 / PI,
     vs.vrot.x * 180.0 / PI, vs.vrot.y * 180.0 / PI, vs.vrot.z * 180.0 / PI,
-    aV.data[0]*DEG, aV.data[1] * DEG, aV.data[2] * DEG
+    m_aVel.data[0]*DEG, m_aVel.data[1] * DEG, m_aVel.data[2] * DEG
   );
+*/
 }
 
 
@@ -165,8 +161,6 @@ void Lagrange_AP::ExecuteRotAP(const VECTOR3 angleToTarget, const double SimT, c
   int minaxis = 0; // set to 0 after debugging
   VECTOR3 aVel;
   VECTOR3 ang = angleToTarget;
-  ang.y = -ang.y;
-  ang.x = -ang.x;
   VECTOR3 rot{ 0.0,0.0,0.0 };
   m_dumpIx++;
 
@@ -174,10 +168,9 @@ void Lagrange_AP::ExecuteRotAP(const VECTOR3 angleToTarget, const double SimT, c
   // From this, the average Thrust Reference Value is calculated each of the first 10 cycles, then updating each 10 cycles
   // (this removes the bumps from any one-off burn anomalies). 
   m_vessel->GetAngularVel(aVel);
-  aVel.y = -aVel.y;
   m_aVelLast = aVel;
   for (int axis = minaxis; axis < 3; axis++) {
-    ap[axis].CalcCali(aVel.data[axis] * DEG, SimT, SimDT);
+    one_ap[axis].CalcCali(aVel.data[axis] * DEG, SimT, SimDT);
   }
 
   //If we are spinning too much ... damp it first
@@ -194,18 +187,25 @@ void Lagrange_AP::ExecuteRotAP(const VECTOR3 angleToTarget, const double SimT, c
 
 // Focus on z first, then y+z, then move x gently at the end
   if (abs(ang.z) * DEG > 20.0) {
-    ang = _V(0.0, 0.0, angleToTarget.z);
+    ang.x = ang.y = 0.0;
   } else if (abs(ang.y) * DEG > 20.0) {
-    ang = _V(0.0, angleToTarget.y, angleToTarget.z);
+    ang.x = 0.0;
   }
 
-  rot.data[0] = ap[0].CalcThrust(-ang.x * DEG, aVel.x * DEG, SimT, SimDT);
-  rot.data[1] = ap[1].CalcThrust(-ang.y * DEG, aVel.y * DEG, SimT, SimDT);
-  rot.data[2] = ap[2].CalcThrust(-ang.z * DEG, aVel.z * DEG, SimT, SimDT);
+  //rot = _V(0.0, 0.0, 0.0);
+  rot.data[0] = one_ap[0].CalcThrust(-ang.x * DEG, aVel.x * DEG, SimT, SimDT);
+  rot.data[1] = one_ap[1].CalcThrust(-ang.y * DEG, aVel.y * DEG, SimT, SimDT);
+  rot.data[2] = one_ap[2].CalcThrust(-ang.z * DEG, aVel.z * DEG, SimT, SimDT);
 
+  //If we are at target, use KILLROT to keep us stable
+  if (length(ang)*DEG < 0.001 && length(aVel)*DEG < 0.0001) {
+    m_vessel->ActivateNavmode(NAVMODE_KILLROT);
+  } else {
+    m_vessel->DeactivateNavmode(NAVMODE_KILLROT);
+  }
 
   for (int axis = minaxis; axis < 3; axis++) {
-    ap[axis].ExecuteThrust();
+    one_ap[axis].ExecuteThrust();
   }
 }
 
@@ -233,7 +233,7 @@ void Lagrange_AP::Enable()
     fprintf(m_dumpFile, "\n");
   }
   for (int i = 0; i < 3; i++) {
-    ap[i].Enable(i, m_vessel, true);
+    one_ap[i].Enable(i, m_vessel, true);
   }
 }
 
@@ -243,7 +243,7 @@ void Lagrange_AP::Disable()
   SetTargetVector(_V(0.0, 0.0, 0.0));
   SetRot0();
   for (int i = 0; i < 3; i++) {
-    ap[i].Disable();
+    one_ap[i].Disable();
   }
   m_isEnabled = false;
   if (m_dumping) {
@@ -256,6 +256,18 @@ void Lagrange_AP::SetRot0() {
   m_vessel->SetAttitudeRotLevel(0, 0.0);
   m_vessel->SetAttitudeRotLevel(1, 0.0);
   m_vessel->SetAttitudeRotLevel(2, 0.0);
+}
+
+VECTOR3 Lagrange_AP::GetATT() {
+  return m_angleToTarget;
+}
+
+VECTOR3 Lagrange_AP::GetAVel() {
+  return m_aVel;
+}
+
+OBJHANDLE Lagrange_AP::GetRefBody() {
+  return m_hRefBody;
 }
 
 /*void AutopilotRotation::MainEngineOn(VESSEL * vessel, double level)
