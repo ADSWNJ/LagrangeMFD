@@ -20,23 +20,20 @@ class Lagrange_AP
 public:
   Lagrange_AP();
   virtual ~Lagrange_AP();
-  void Update(double SimT, double SimDT);
-  void SetTargetVector(const VECTOR3 & targetVector); // Setting _V(0,0,0) disables the AP
-  void Disable();
-  void Enable();
+  void Update(VESSEL* v, const double SimT, const double SimDT, const VECTOR3 & targetVector, const OBJHANDLE hRefBody);
+  void SetTargetVector(VESSEL* v, const VECTOR3 & targetVector, const OBJHANDLE hRefBody);
+  void Disable(VESSEL* v);
+  void Enable(VESSEL* v);
   bool IsEnabled() const;
-  void SetVessel(VESSEL* vessel);
-  void SetRefBody(const OBJHANDLE hRefBody);
-  OBJHANDLE GetRefBody();
-  VECTOR3 GetAVel();
-  VECTOR3 GetATT();
+  VECTOR3 GetAVel() const;
+  VECTOR3 GetATT() const;
 protected:
 private:
-  void MECO(VESSEL* vessel);
-  void MainEngineOn(VESSEL* vessel, double level);
-  void SetRot0();
-  void ExecuteRotAP(const VECTOR3 angleToTarget, const double SimT, const double SimDT);
-  void GetTransXTarget(const VECTOR3 & trxVec);
+  void MECO(VESSEL* v);
+  void MainEngineOn(VESSEL* v, double level);
+  void SetRot0(VESSEL* v);
+  void ExecuteRotAP(VESSEL* v, const VECTOR3 angleToTarget, const double SimT, const double SimDT);
+  void GetTransXTarget(VESSEL* v, const VECTOR3 & trxVec, const OBJHANDLE hRefBody);
   VECTOR3 GetRotationToTarget(const VECTOR3 & target, VECTOR3 *tgtFwd, VECTOR3 *tgtUp) const;
   VECTOR3  m_targetVector;
   VECTOR3  m_targetVectorUp;
@@ -44,11 +41,9 @@ private:
   VECTOR3  m_targetVectorUnit;
   double   m_targetLengthPrev;
   bool     m_isEnabled;
-  VESSEL   *m_vessel;
   VECTOR3  m_trxOut;
   VECTOR3  m_trxPlc;
   VECTOR3  m_trxPro;
-  OBJHANDLE m_hRefBody;
   FILE *m_dumpFile;
   bool m_dumping;
   long m_dumpIx;
