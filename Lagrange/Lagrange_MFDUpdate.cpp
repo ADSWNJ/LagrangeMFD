@@ -246,7 +246,7 @@ bool Lagrange::DisplayAPMode() {
   } else {
     skpFmtColText(0, l++, VC->autocenter, CLR_RED, CLR_YELLOW, "   AP AutoAlign: %s", VC->autocenter ? "Active" : "Armed");
   }
-  skpFmtColText(0, l++, false, CLR_YELLOW, CLR_WHITE, "   AP AutoBurn:  %s", "Out of Use");
+  skpFmtColText(0, l++, false, CLR_YELLOW, CLR_WHITE,          "   AP AutoBurn:  %s", "Out of Use");
   skpFmtColText(0, l++, false, CLR_YELLOW, CLR_WHITE,          "   AP AutoHold:  %s", "Out of Use");
 
   if (inac) return true;

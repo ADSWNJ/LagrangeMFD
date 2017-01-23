@@ -207,9 +207,6 @@ void LagrangeUniverse::defOrbPlot(LagrangeUniverse_LP_Def *lptab, int lppen, int
   lptab->plotixpen[3] = b3pen;
 }
 
-
-
-
 int LagrangeUniverse::selectNextLP() {
   selectLP(LP.nxix+1);
   return LP.nxix;
@@ -600,10 +597,12 @@ void LagrangeUniverse::threadCtrlMain() {
     }
 
     for (unsigned int e = 0; e < vdata[act].size(); e++) {
+        
       vdata[act][e].burnArmed = vdata[wkg][e].burnArmed;
       vdata[act][e].burnMJD = vdata[wkg][e].burnMJD;
       vdata[act][e].burndV = vdata[wkg][e].burndV;
       vdata[act][e].refEnt = vdata[wkg][e].refEnt;
+
 
       bool mmext; 
       int fromTransX;
@@ -765,6 +764,7 @@ void LagrangeUniverse::integrateUniverse() {
     vdata[wkg][s].enc_P = DBL_MAX;
     vdata[wkg][s].enc_ix = -1;    // if -1 by end of scan, then either the encounter is before or after our scan
     vdata[wkg][s].block_scan = 2;
+    vdata[wkg][s].burn_ix = -1;
   }
 
   {

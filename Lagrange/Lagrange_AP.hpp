@@ -20,8 +20,7 @@ class Lagrange_AP
 public:
   Lagrange_AP();
   virtual ~Lagrange_AP();
-  void Update(VESSEL* v, const double SimT, const double SimDT, const VECTOR3 & targetVector, const OBJHANDLE hRefBody);
-  void SetTargetVector(VESSEL* v, const VECTOR3 & targetVector, const OBJHANDLE hRefBody);
+  void Update(VESSEL* v, const double SimT, const double SimDT, const double burnSimDT, const VECTOR3 &targetVector, const VECTOR3 &Qr, const VECTOR3 &Pr);
   void Disable(VESSEL* v);
   void Enable(VESSEL* v);
   bool IsEnabled() const;
@@ -33,17 +32,18 @@ private:
   void MainEngineOn(VESSEL* v, double level);
   void SetRot0(VESSEL* v);
   void ExecuteRotAP(VESSEL* v, const VECTOR3 angleToTarget, const double SimT, const double SimDT);
-  void GetTransXTarget(VESSEL* v, const VECTOR3 & trxVec, const OBJHANDLE hRefBody);
-  VECTOR3 GetRotationToTarget(const VECTOR3 & target, VECTOR3 *tgtFwd, VECTOR3 *tgtUp) const;
+  void WarpKillRot(VESSEL* v, char axis);
+  VECTOR3 ConvertTransXTarget(VESSEL* v, const VECTOR3 &trxVec, const VECTOR3 &Qr, const VECTOR3 &Pr, VECTOR3 &proHat, VECTOR3 &plcHat, VECTOR3 &outHat);
+  VECTOR3 GetRotationToTarget(const VECTOR3 &target) const;
   VECTOR3  m_targetVector;
-  VECTOR3  m_targetVectorUp;
-  VECTOR3  m_targetVectorFwd;
-  VECTOR3  m_targetVectorUnit;
+  VECTOR3  m_targetVectorLocal;
+  VECTOR3 m_targetProAxis;
+  VECTOR3 m_targetPlcAxis;
+  VECTOR3 m_targetOutAxis;
+
   double   m_targetLengthPrev;
   bool     m_isEnabled;
-  VECTOR3  m_trxOut;
-  VECTOR3  m_trxPlc;
-  VECTOR3  m_trxPro;
+
   FILE *m_dumpFile;
   bool m_dumping;
   long m_dumpIx;

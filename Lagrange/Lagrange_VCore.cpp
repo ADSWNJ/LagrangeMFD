@@ -73,15 +73,46 @@ Lagrange_VCore::~Lagrange_VCore() {
 
 
 void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
-  // Run every step of the simulation
-  v->GetGlobalPos(LU->vdata[LU->act][vix].vs4i[0].ves.Q);
-  v->GetGlobalVel(LU->vdata[LU->act][vix].vs4i[0].ves.P);
+  VECTOR3 curQ, curP;
+  double curMass;
+  auto *vdata = &(LU->vdata[LU->act][vix]); 
+  auto *vs4i_0 = &(vdata->vs4i[0]);
 
-  LU->vdata[LU->act][vix].vs4i[0].mass = LU->vdata[LU->act][vix].curMass = v->GetMass();
+  v->GetGlobalPos(curQ);
+  v->GetGlobalVel(curP);
+  curMass = v->GetMass();
+
+  vs4i_0->ves.Q = curQ;
+  vs4i_0->ves.P = curP;
+  vs4i_0->mass = curMass;
+  vdata->curMass = curMass;
+
   if (LU->s4i_valid) {
     LU->lp_ves(vix, 0, LU->act);
-  }
-  ap.Update(v, SimT, SimDT, LU->vdata[LU->act][vix].burndV, LU->body[LU->LP.ref].hObj);
+
+    VECTOR3 burnQv, burnQe, burnPv, burnPe;
+    double burnSimT, burnMJD;
+
+    if ((vdata->burnArmed) && (vdata->burn_ix > 0)) {
+      auto *vs4i_b = &(vdata->vs4i[vdata->burn_ix]);
+      auto *es4i_b = &(LU->s4i[LU->act][vdata->burn_ix].body[LU->LP.ref]);
+      burnQv = vs4i_b->ves.Q;
+      burnPv = vs4i_b->ves.P;
+      burnQe = es4i_b->Q;
+      burnPe = es4i_b->P;
+      burnSimT = LU->s4i[LU->act][vdata->burn_ix].sec;
+      burnMJD = LU->s4i[LU->act][vdata->burn_ix].MJD;
+    } else {
+      OBJHANDLE hRef = (LU->body[LU->LP.ref].hObj);
+      burnQv = curQ;
+      burnPv = curP;
+      oapiGetGlobalPos(hRef, &burnQe);
+      oapiGetGlobalVel(hRef, &burnPe);
+      burnSimT = 0.0;
+      burnMJD = 0.0;
+    }
+
+    ap.Update(v, SimT, SimDT, burnSimT, LU->vdata[LU->act][vix].burndV, (burnQv - burnQe), (burnPv - burnPe));
 
 //  if (ap_armed) {
 //    double burnTimer = (LU->vdata[LU->act][vix].burnMJD - mjd) * 24.0 * 60.0 * 60.0;
@@ -89,6 +120,7 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
 //      ap.Update(SimT, SimDT);
 //    }
 //  }
+  }
   return;
 }
 

@@ -33,17 +33,17 @@ class OneAxis_AP
 public:
   OneAxis_AP();
   virtual ~OneAxis_AP();
-  void Enable(const int axis, VESSEL *v, const bool dump);
+  void Enable(VESSEL *v, const int axis, const bool dump);
   void Disable();
   void SetAccParams(const double A, const double loApct, const double goApct);
   void SetDeadband(const double zBand);
   double CalcThrust(const double P, const double V, const double simT, const double dT);
-  void ExecuteThrust();
+  void ExecuteThrust(VESSEL *v);
   void CalcCali(const double V, const double simT, const double dT);
 
 protected:
 private:
-  VESSEL* m_v;
+  //VESSEL* m_v;
   int m_axis;
   double m_A, m_loA, m_goA;
   double m_loApct, m_goApct;
@@ -71,6 +71,7 @@ private:
   bool m_dumping;
   char m_ThMode;
   bool m_enabled;
+  double m_lastWarp;
 };
 
 #endif // OneAxis_AP

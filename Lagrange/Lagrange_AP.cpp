@@ -15,13 +15,8 @@
 
 Lagrange_AP::Lagrange_AP()
   : m_targetVector(_V(0.0, 0.0, 0.0))
-  , m_targetVectorUp(_V(0.0, 0.0, 0.0))
-  , m_targetVectorUnit(_V(0.0, 0.0, 0.0))
   , m_targetLengthPrev(0.0)
   , m_isEnabled(false)
-  , m_trxOut(_V(0.0, 0.0, 0.0))
-  , m_trxPlc(_V(0.0, 0.0, 0.0))
-  , m_trxPro(_V(0.0, 0.0, 0.0))
   , m_dampspin(false)
   , m_aVelLast(_V(0.0,0.0,0.0))
 {
@@ -33,80 +28,81 @@ Lagrange_AP::Lagrange_AP()
 
 Lagrange_AP::~Lagrange_AP() {}
 
-void  Lagrange_AP::GetTransXTarget(VESSEL* v, const VECTOR3 & trxVec, const OBJHANDLE hRefBody)
-{
-  // Find TransX style coord system axes in ship coords
-  VECTOR3 rpos;
-  VECTOR3 gvel;
-  VECTOR3 gPos;
-  v->GetRelativePos(hRefBody, rpos);
-  v->GetGlobalVel(gvel);
-  v->GetGlobalPos(gPos);
 
-  VECTOR3 gPro = unit(gvel);
-  VECTOR3 gPlc = unit(crossp(gvel, rpos));
-  VECTOR3 gOut = unit(crossp(gPlc, gPro));
-  VECTOR3 gTgt = gPro * trxVec.x + gPlc * trxVec.y + gOut * trxVec.z;
-  v->Global2Local(gPro + gPos, m_trxPro);
-  v->Global2Local(gPlc + gPos, m_trxPlc);
-  v->Global2Local(gTgt + gPos, m_targetVector);
-  m_targetVectorUnit = unit(m_targetVector);
-}
-
-void Lagrange_AP::SetTargetVector(VESSEL* v, const VECTOR3 & targetVector, const OBJHANDLE hRefBody)
+/*
+ * Convert TransX Target
+ * ---------------------
+ * Converts TransX targeting information into global targeting data, w.r.t. the relative pos and vel of vessel to reference body
+ * Sets the prograde, out, plc paramterized axes as a side-effect
+ */
+VECTOR3 Lagrange_AP::ConvertTransXTarget(VESSEL* v, const VECTOR3 &trxVec, const VECTOR3 &Qr, const VECTOR3 &Pr, VECTOR3 &proHat, VECTOR3 &plcHat, VECTOR3 &outHat)
 {
-  if (length(targetVector) < 1e-6) {
-    m_targetVector = _V(0.0, 0.0, 0.0);
-    m_targetVectorUnit = _V(0.0, 0.0, 0.0);
-    m_targetVectorFwd = _V(0.0, 0.0, 0.0);
-    m_targetVectorUp = _V(0.0, 0.0, 0.0);
-    return;
+  if (length(trxVec) == 0.0) {
+    proHat = _V(0.0, 0.0, 1.0);
+    plcHat = _V(0.0, 1.0, 0.0);
+    outHat = _V(1.0, 0.0, 0.0);
+    return _V(0.0, 0.0, 0.0);
   }
-  GetTransXTarget(v, targetVector, hRefBody);
+
+  proHat = unit(Pr);
+  plcHat = crossp(proHat, unit(Qr));
+  outHat = crossp(plcHat, proHat);
+  return unit(proHat * trxVec.x + plcHat * trxVec.y + outHat * trxVec.z );
 }
 
-VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 & target, VECTOR3 *targetFwd, VECTOR3 *targetUp) const
+VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 &target) const
 {
-  VECTOR3 tgtFwd = *targetFwd;
-  VECTOR3 tgtUp = *targetUp;
-
-  double ang_g = atan2(tgtUp.x, tgtUp.y);
-  if (abs(tgtUp.x) < 0.001 && abs(tgtUp.y) < 0.001) ang_g = 0.0; // Damps behavior on the cardinal point
-  MATRIX3 rot_g = _M(cos(ang_g), -sin(ang_g), 0.0,
-    sin(ang_g), cos(ang_g), 0.0,
-    0.0, 0.0, 1.0);
-  VECTOR3 tgt2 = mul(rot_g, tgtFwd);
-  VECTOR3 tgtUp2 = mul(rot_g, tgtUp);
-
-  double ang_a = atan2(-target.y, target.z);
-  if (abs(target.y) < 0.001 && abs(target.z) < 0.001) ang_a = 0.0;
-  MATRIX3 rot_a = _M(1.0, 0.0, 0.0,
-    0.0, cos(ang_a), -sin(ang_a),
-    0.0, sin(ang_a), cos(ang_a));
-  VECTOR3 tgt3 = mul(rot_a, tgt2);
-  VECTOR3 tgtUp3 = mul(rot_a, tgtUp2);
-
-  double ang_b = atan2(-target.x, target.z);
-  if (abs(target.x) < 0.001 && abs(target.z) < 0.001) ang_b = 0.0;
-  MATRIX3 rot_b = _M(cos(ang_b), 0.0, -sin(ang_b),
-    0.0, 1.0, 0.0,
-    sin(ang_b), 0.0, cos(ang_b));
-
-  *targetFwd = mul(rot_b, tgt3);
-  *targetUp = mul(rot_b, tgtUp3);
-
-  return _V(-ang_a, ang_b, ang_g);
+  return _V(atan2(target.y, target.z), atan2(target.x, target.z), 0.0);
 }
 
-void Lagrange_AP::Update(VESSEL* v, const double SimT, const double SimDT, const VECTOR3 & targetVector, const OBJHANDLE hRefBody)
+
+/*
+ * Autopilot Update
+ * ================
+ * Call this in your pre-step function.
+ * Params:
+ * v is your vessel handle
+ * SimT is the current simulation time
+ * SimDT is the last simulation time step
+ * targetVector is a TransX-style PRO/OUT/PLC vector
+ * Qr is the global position of the vessel relative to the reference celestial body
+ * Pr is the global velocity of the vessel relative to the reference celestial body
+ *
+ */
+void Lagrange_AP::Update(VESSEL* v, const double SimT, const double SimDT, const double burnSimT, const VECTOR3 &targetVector, const VECTOR3 &Qr, const VECTOR3 &Pr)
 {
+
+  double lenQr = length(Qr);
+  double lenPr = length(Pr);
+
+  VECTOR3 QrU = Qr;
+  VECTOR3 PrU = Pr;
 
   VESSELSTATUS vs;
   v->GetStatus(vs);
-  SetTargetVector(v, targetVector, hRefBody);
-  m_targetVectorFwd = _V(0.0, 0.0, 1.0) * length(m_targetVector);
-  m_targetVectorUp = m_trxPlc;
-  m_angleToTarget =  GetRotationToTarget(m_targetVector, &m_targetVectorFwd, &m_targetVectorUp);
+  
+  m_targetVector = ConvertTransXTarget(v, targetVector, Qr, Pr, m_targetProAxis, m_targetPlcAxis, m_targetOutAxis);
+  
+  VECTOR3 gTgt;
+  v->GetGlobalPos(gTgt);
+  gTgt += m_targetVector;
+  v->Global2Local(gTgt, m_targetVectorLocal);
+  v->GetAngularVel(m_aVel);
+
+  char buf[256];
+  sprintf_s(buf, 256, "TV:{%.2f,%.2f,%.2f} Pro:{%.2f,%.2f,%.2f} Plc:{%.2f,%.2f,%.2f} Out:{%.2f,%.2f,%.2f} Tgt:{%.2f,%.2f,%.2f}, Rot:{%.1f,%.1f,%.1f} LTGT:{%.2f,%.2f,%.2f} ATAN2:{%.2f %.2f}  BST:%f",
+    targetVector.x, targetVector.y, targetVector.z,
+    m_targetProAxis.x, m_targetProAxis.y, m_targetProAxis.z,
+    m_targetPlcAxis.x, m_targetPlcAxis.y, m_targetPlcAxis.z,
+    m_targetOutAxis.x, m_targetOutAxis.y, m_targetOutAxis.z,
+    m_targetVector.x, m_targetVector.y, m_targetVector.z,
+    vs.arot.x*DEG, vs.arot.y*DEG, vs.arot.z*DEG,
+    m_targetVectorLocal.x, m_targetVectorLocal.y, m_targetVectorLocal.z,
+    atan2(m_targetVectorLocal.y, m_targetVectorLocal.z)*DEG, atan2(m_targetVectorLocal.x, m_targetVectorLocal.z)*DEG,
+    burnSimT
+    );
+  strcpy(oapiDebugString(), buf);
+  m_angleToTarget =  GetRotationToTarget(m_targetVectorLocal);
 
   if (IsEnabled()) ExecuteRotAP(v, m_angleToTarget, SimT, SimDT);
 
@@ -115,22 +111,11 @@ void Lagrange_AP::Update(VESSEL* v, const double SimT, const double SimDT, const
 
 void Lagrange_AP::ExecuteRotAP(VESSEL* v, const VECTOR3 angleToTarget, const double SimT, const double SimDT) {
   int minaxis = 0; // set to 0 after debugging
-  VECTOR3 aVel;
   VECTOR3 ang = angleToTarget;
   VECTOR3 rot{ 0.0,0.0,0.0 };
+  double warp = oapiGetTimeAcceleration();
+  bool atWarp = warp > 10.0;
   m_dumpIx++;
-
-  /*if (oapiGetTimeAcceleration() > 100)
-  {
-    VECTOR3 gblTgtUnit;
-    VECTOR3 gblPos;
-    m_vessel->GetGlobalPos(gblPos);
-    m_vessel->Local2Global(m_targetVectorUnit, gblTgtUnit);
-    gblTgtUnit -= gblPos;
-    m_vessel->SetGlobalOrientation(gblTgtUnit);
-    m_vessel->SetAngularVel(_V(0.0, 0.0, 0.0));
-    return;
-  }*/
 
   v->DeactivateNavmode(NAVMODE_PROGRADE);
   v->DeactivateNavmode(NAVMODE_RETROGRADE);
@@ -139,48 +124,71 @@ void Lagrange_AP::ExecuteRotAP(VESSEL* v, const VECTOR3 angleToTarget, const dou
   v->DeactivateNavmode(NAVMODE_HLEVEL);
   v->DeactivateNavmode(NAVMODE_HOLDALT);
 
-  // Determines the angular acceleration in the last SimDT, and then calculates the Acc:Thrust ratio
-  // From this, the average Thrust Reference Value is calculated each of the first 10 cycles, then updating each 10 cycles
-  // (this removes the bumps from any one-off burn anomalies). 
-  v->GetAngularVel(aVel);
-  m_aVelLast = aVel;
-  for (int axis = minaxis; axis < 3; axis++) {
-    one_ap[axis].CalcCali(aVel.data[axis] * DEG, SimT, SimDT);
-  }
+  double spinVdeg = length(m_aVel)*DEG;
 
   //If we are spinning too much ... damp it first
-  if (length(aVel)*DEG > 100.0 || m_dampspin) {
+  if (spinVdeg > 100.0 || m_dampspin) {
+    m_dampspin = (spinVdeg > 0.05 / SimDT);
     SetRot0(v);
-    v->ActivateNavmode( NAVMODE_KILLROT );
-    if (m_dumping) fprintf(m_dumpFile, "%d, %.2f, %.3f, AvelLen = %.2f, KILLROT\n", m_dumpIx, oapiGetSimTime(), SimDT, length(aVel) * DEG);
-    m_dampspin = (length(aVel) > 1.0 * RAD);
+    if (atWarp) {
+      WarpKillRot(v,'a');
+      if (m_dumping) fprintf(m_dumpFile, "%d, %.2f, %.3f, spinVdeg = %.2f, simDT = %.2f, spinPerDT = %.2f, WARPKILLROT, warp_factor %.0f\n", m_dumpIx, oapiGetSimTime(), SimDT, spinVdeg, SimDT, spinVdeg * SimDT, warp);
+
+    } else {
+      v->ActivateNavmode(NAVMODE_KILLROT);
+      if (m_dumping) fprintf(m_dumpFile, "%d, %.2f, %.3f, spinVdeg = %.2f, f, simDT = %.2f, spinPerDT = %.2f, KILLROT\n", m_dumpIx, oapiGetSimTime(), SimDT, spinVdeg, SimDT, spinVdeg * SimDT);
+    }
     return;
   } else {
+    if (m_dampspin & m_dumping) fprintf(m_dumpFile, "%d, %.2f, %.3f, spinVdeg = %.2f, f, simDT = %.2f, spinPerDT = %.2f, KILLEXIT\n", m_dumpIx, oapiGetSimTime(), SimDT, spinVdeg, SimDT, spinVdeg * SimDT);
     m_dampspin = false;
     v->DeactivateNavmode(NAVMODE_KILLROT);
   }
+  m_aVelLast = m_aVel;
+
+
+  // Determines the angular acceleration in the last SimDT, and then calculates the Acc:Thrust ratio
+  // From this, the average Thrust Reference Value is calculated each of the first 10 cycles, then updating each 10 cycles
+  // (this removes the bumps from any one-off burn anomalies). 
+
+  for (int axis = minaxis; axis < 3; axis++) {
+    one_ap[axis].CalcCali(m_aVel.data[axis] * DEG, SimT, SimDT);
+  }
 
 // Focus on z first, then y+z, then move x gently at the end
-  if (abs(ang.z) * DEG > 20.0) {
+  if (abs(ang.z) * DEG > 10.0) {
     ang.x = ang.y = 0.0;
-  } else if (abs(ang.y) * DEG > 20.0) {
+  } else if (abs(ang.y) * DEG > 40.0) {
     ang.x = 0.0;
   }
 
-  //rot = _V(0.0, 0.0, 0.0);
-  rot.data[0] = one_ap[0].CalcThrust(-ang.x * DEG, aVel.x * DEG, SimT, SimDT);
-  rot.data[1] = one_ap[1].CalcThrust(-ang.y * DEG, aVel.y * DEG, SimT, SimDT);
-  rot.data[2] = one_ap[2].CalcThrust(-ang.z * DEG, aVel.z * DEG, SimT, SimDT);
+  rot = _V(0.0, 0.0, 0.0);
+  rot.data[0] = one_ap[0].CalcThrust(-ang.x * DEG, m_aVel.x * DEG, SimT, SimDT);
+  rot.data[1] = one_ap[1].CalcThrust(ang.y * DEG, m_aVel.y * DEG, SimT, SimDT);
+  rot.data[2] = one_ap[2].CalcThrust(ang.z * DEG, m_aVel.z * DEG, SimT, SimDT);
 
-  //If we are at target, use KILLROT to keep us stable
-  if (length(ang)*DEG < 0.001 && length(aVel)*DEG < 0.0001) {
-    v->ActivateNavmode(NAVMODE_KILLROT);
+  if (m_dumping) fprintf(m_dumpFile, "%d, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n",
+    m_dumpIx, SimT, SimDT, spinVdeg, 
+    -ang.x * DEG, m_aVel.x * DEG, rot.data[0], 
+    -ang.y * DEG, m_aVel.y * DEG, rot.data[1],
+    -ang.z * DEG, m_aVel.z * DEG, rot.data[2] );
+
+  if (atWarp) WarpKillRot(v, 'z'); 
+
+  if (length(ang)*DEG < 0.001 / warp && length(m_aVel)*DEG < 0.0001 / warp) {
+    if (atWarp) {
+      WarpKillRot(v, 'a');
+    } else {
+      v->ActivateNavmode(NAVMODE_KILLROT);
+    }
   } else {
     v->DeactivateNavmode(NAVMODE_KILLROT);
   }
 
+
+
   for (int axis = minaxis; axis < 3; axis++) {
-    one_ap[axis].ExecuteThrust();
+    one_ap[axis].ExecuteThrust(v);
   }
 }
 
@@ -191,25 +199,27 @@ bool Lagrange_AP::IsEnabled() const
 
 void Lagrange_AP::Enable(VESSEL* v)
 {
+  if (!m_isEnabled) m_dampspin = true; // initial damping
   m_isEnabled = true;
 
-  if (fopen_s(&m_dumpFile, ".\\Config\\MFD\\Lagrange\\Diags\\AP.csv", "w") != 0) {
+  m_dumpFile = NULL;
+  errno_t err = fopen_s(&m_dumpFile, ".\\Config\\MFD\\Lagrange\\Diags\\AP.csv", "w");
+  if (err != 0 || m_dumpFile == NULL) {
     m_dumping = false;
   } else {
     m_dumping = true;
     m_dumpIx = 0;
     m_dumpTotT = 0.0;
-    assert(m_dumpFile != NULL);
-    fprintf(m_dumpFile, "Ix, SimT, SimDT, TotT,");
+    fprintf(m_dumpFile, "Ix, SimT, SimDT, spinVdeg, ");
     for (char c = 'X'; c <= 'Z'; c++) {
-      fprintf(m_dumpFile, "%c_RefIx, %c_AngToTgt, %c_AACC, %c_AVEL, %c_CycParam, %c_CycToHit, %c_aVelRatio, %c_IdealThr, %c_ActThr, %c_ThRefVal",
-                            c,        c,           c,       c,       c,           c,           c,            c,           c,         c);
+      fprintf(m_dumpFile, "%c_Ang, %c_Vel, %c_Thr",
+                            c,        c,    c);
       if (c!= 'Z') fprintf(m_dumpFile, ",");
     }
     fprintf(m_dumpFile, "\n");
   }
   for (int i = 0; i < 3; i++) {
-    one_ap[i].Enable(i, v, true);
+    one_ap[i].Enable(v, i, true);
   }
 }
 
@@ -217,9 +227,6 @@ void Lagrange_AP::Disable(VESSEL* v)
 {
   v->ActivateNavmode(NAVMODE_KILLROT);
   m_targetVector = _V(0.0, 0.0, 0.0);
-  m_targetVectorUnit = _V(0.0, 0.0, 0.0);
-  m_targetVectorFwd = _V(0.0, 0.0, 0.0);
-  m_targetVectorUp = _V(0.0, 0.0, 0.0);
   SetRot0(v);
   for (int i = 0; i < 3; i++) {
     one_ap[i].Disable();
@@ -243,6 +250,15 @@ VECTOR3 Lagrange_AP::GetATT() const {
 
 VECTOR3 Lagrange_AP::GetAVel() const {
   return m_aVel;
+}
+
+void Lagrange_AP::WarpKillRot(VESSEL *v, char axis) {
+  VESSELSTATUS vs;
+  v->GetStatus(vs);
+  if (axis == 'a' || axis == 'x') vs.vrot.x = 0.0;
+  if (axis == 'a' || axis == 'y') vs.vrot.y = 0.0;
+  if (axis == 'a' || axis == 'z') vs.vrot.z = 0.0;
+  v->DefSetState(&vs);
 }
 
 
