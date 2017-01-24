@@ -11,8 +11,6 @@ class AutopilotRotation
         virtual ~AutopilotRotation();
         void Update(double SimDT);
         bool SetTargetVector(const VECTOR3 & targetVector, const OBJHANDLE hRefBody); // Setting _V(0,0,0) disables the AP
-        void Disable();
-        bool IsEnabled() const;
         void SetVessel(VESSEL * vessel);
     protected:
     private:

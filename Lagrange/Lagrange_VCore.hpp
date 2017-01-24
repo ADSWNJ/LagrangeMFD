@@ -53,11 +53,11 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     int burnGranularity[5];
     int burnVar;
     bool burnTdV_lock;
-    bool autocenter;
-    void ap_arm(bool arm);
     class Lagrange_AP ap;
-    bool ap_armed;
-    bool sk_armed;
+
+    int apMode;     //  0 = inactive, 1 = Plan mode, 2 = station keep mode
+    int apState;    //  0 = inactive, 1 = Ready (armed), 2 = Point, 3 = Burn
+    bool apHoldInRange; 
 
   private:
 };

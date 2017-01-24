@@ -60,8 +60,6 @@ void Lagrange::Button_BURNARM() {
   vdata->burnArmed = !vdata->burnArmed;
   if (vdata->burnArmed) {
     vdata->burnMJD = oapiGetSimMJD() + (15.0 / (60.0 * 24.0)); // bump initial MJD 15 mins in the future
-  } else {
-    VC->ap_arm(false);
   }
 }
 // MJD = Plan Mode: Date Select
@@ -264,31 +262,37 @@ void Lagrange::Button_MRG() {
 }
 // AAB = AP Mode: Auto Burn
 void Lagrange::Button_AAB() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
+  if (VC->apMode != 1) return; // AB button off if not in plan mode
+  if (VC->apState == 3) {
+    VC->apState = 2;
+  } else {
+    VC->apState = 3;
+  }
 }
 // AAC = AP Mode: Auto Align
 void Lagrange::Button_AAC() {
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
   Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
-
-  bool burnArmed = vdata->burnArmed;
-  bool skArmed = VC->sk_armed;
-  bool inac = !burnArmed && !skArmed;
-  if (inac) {
-    VC->ap_arm(false);
-    return;
+  if (VC->apMode != 1) return; // AA button off if not in plan mode
+  if (VC->apState >= 2) {
+    VC->apState = 1;
+  } else {
+    VC->apState = 2;
   }
-  VC->autocenter = !VC->autocenter;
-  VC->ap_arm(VC->autocenter);
-  return;
 }
 // AAH = AP Mode: Auto Hold
 void Lagrange::Button_AAH() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
+  Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
+  if (VC->apMode != 2) return; // AH button off if not in hold mode
+  if (VC->apState >= 2) {
+    VC->apState = 1;
+  } else {
+    VC->apState = 3;
+  }
 }
-
 // OK = Message Acknowledge
 void Lagrange::Button_OK() {
   LC->showMessage = false;

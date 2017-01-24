@@ -151,10 +151,10 @@ bool Lagrange::DisplayLPMode() {
     rl++;
     LC->skpLoB = 0;
     skpFormatText(4, rl++, "Enc. Vel.");
-    skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->P.x);
-    skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->P.y);
-    skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->P.z);
-    skpFmtEngText(4, rl++, "%8.3f", "m", vs4i_e->dP);
+    skpFmtEngText(4, rl++, "%8.3f", "m/s", vesLP_e->P.x);
+    skpFmtEngText(4, rl++, "%8.3f", "m/s", vesLP_e->P.y);
+    skpFmtEngText(4, rl++, "%8.3f", "m/s", vesLP_e->P.z);
+    skpFmtEngText(4, rl++, "%8.3f", "m/s", vs4i_e->dP);
 
     rl++;
     skpFormatText(0, rl++, "Enc. MJD:");
@@ -195,11 +195,14 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtColText(0, VC->burnVar==0? l : l + 1 + VC->burnVar, true,   CLR_YELLOW, CLR_WHITE, ">");
   skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
   skpFmtEngText(0, l++, " (Burn Point):  %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
-  skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6f", vdata->burndV.x);
-  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6f", vdata->burndV.y);
-  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6f", vdata->burndV.z);
-  skpFmtColText(0, l,   (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV:     %14.6f", length(vdata->burndV));
-  if (VC->burnTdV_lock) skpFormatText(5,l, "(lock)");
+  skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6fm/s", vdata->burndV.x);
+  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6fm/s", vdata->burndV.y);
+  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6fm/s", vdata->burndV.z);
+  if (VC->burnTdV_lock) {
+    skpFmtColText(0, l, (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV Lock:%14.6fm/s", length(vdata->burndV));
+  } else {
+    skpFmtColText(0, l, (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV:     %14.6fm/s", length(vdata->burndV));
+  }
   l+=2;
   if (!GC->LU->s4i_valid || vdata->enc_ix < 0) return true;
 
@@ -225,6 +228,12 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.z);
   skpFmtEngText(3, rl++, " %8.4f", "m/s", vs4i_e->dP);
 
+  l++; l++;
+  if (vdata->burnArmed && vdata->burn_ix < 0) {
+    skpColor(CLR_YELLOW);
+    skpFormatText(0, l++, "NOTE: Burn Time not in S4I range");
+  }
+
   return true;
 };
 
@@ -236,20 +245,30 @@ bool Lagrange::DisplayAPMode() {
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
   Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
 
-  bool burnArmed = vdata->burnArmed;
-  bool skArmed = VC->sk_armed;
-  bool inac = !burnArmed && !skArmed;
+  bool inac = VC->apMode == 0;
+  bool apPlan = VC->apMode == 1;
+  bool apHold = VC->apMode == 2;
+  bool apPoint = VC->apState >= 2;
+  bool apBurn = VC->apState == 3;
 
-  skpFmtColText(0, l++, !inac, CLR_YELLOW, CLR_WHITE,          "   AP Mode:      %s", burnArmed ? "Plan" : skArmed ? "Hold LP" : "Disarmed");
   if (inac) {
-    skpFmtColText(0, l++, inac, CLR_WHITE, CLR_WHITE,          "   AP AutoAlign: %s", "Disarmed");
-  } else {
-    skpFmtColText(0, l++, VC->autocenter, CLR_RED, CLR_YELLOW, "   AP AutoAlign: %s", VC->autocenter ? "Active" : "Armed");
+    skpColor(CLR_WHITE);
+    skpFormatText(0, l++, "   AP Mode:      DISARMED");
+    l++; l++;
+    skpFormatText(0, l++, "   (AP arms when Plan active");
+    skpFormatText(0, l++, "    and in the S4I range, or");
+    skpFormatText(0, l++, "    when within 1000km of LP)");
+    return true;
   }
-  skpFmtColText(0, l++, false, CLR_YELLOW, CLR_WHITE,          "   AP AutoBurn:  %s", "Out of Use");
-  skpFmtColText(0, l++, false, CLR_YELLOW, CLR_WHITE,          "   AP AutoHold:  %s", "Out of Use");
 
-  if (inac) return true;
+  skpFmtColText(0, l++, apPoint, CLR_RED, CLR_YELLOW,   "   AP Mode:      %s", apPlan ? "Plan" : "Hold LP");
+  if (VC->apMode == 1) {
+    skpFmtColText(0, l++, apPoint, CLR_RED, CLR_YELLOW, "   AP AutoAlign: %s", apPoint ? "Active" : "Armed");
+    skpFmtColText(0, l++, apBurn, CLR_RED, CLR_YELLOW,  "   AP AutoBurn:  %s", apBurn ? "Active" : "Armed");
+  } else {
+    skpFmtColText(0, l++, apBurn, CLR_RED, CLR_YELLOW,  "   AP AutoHold:  %s", apBurn ? "Active" : "Armed");
+  }
+
 
   l++; l++;
 
@@ -262,10 +281,15 @@ bool Lagrange::DisplayAPMode() {
 
   unsigned char deg[2] = { 0xb0, '\0' };
   unsigned char degs[4] = { 0xb0, '/', 's', '\0' };
-
+  skpColor(CLR_WHITE);
   l2 = l;
+  if (VC->apMode == 1) {
+    skpFormatText(0, l++, "   Alignment Error");
+  } else {
+    skpFormatText(0, l++, "   Prograde Error");
+  }
 
-  skpFormatText(0, l++, "             Error");
+
   skpFmtEngText(0, l++, "   Pitch:    %7.2f", deg, att.x);
   skpFmtEngText(0, l++, "   Yaw:      %7.2f", deg, att.y);
   skpFmtEngText(0, l++, "   Roll:     %7.2f", deg, att.z);
@@ -278,7 +302,23 @@ bool Lagrange::DisplayAPMode() {
   skpFmtEngText(4, l++, "%8.3f", degs, avl.z);
 
   l++; l++;
+  if (VC->apMode == 1) return true;
 
+  l2 = l;
+
+  skpFormatText(0, l++, "   LP Offset");
+  skpFmtEngText(0, l++, "   X:        %7.2f", "m", vs4i->vesLP.Q.x);
+  skpFmtEngText(0, l++, "   Y:        %7.2f", "m", vs4i->vesLP.Q.y);
+  skpFmtEngText(0, l++, "   Z:        %7.2f", "m", vs4i->vesLP.Q.z);
+
+  l = l2;
+
+  skpFormatText(4, l++, "   Rate");
+  skpFmtEngText(4, l++, "%8.3f", "m/s", vs4i->vesLP.P.x);
+  skpFmtEngText(4, l++, "%8.3f", "m/s", vs4i->vesLP.P.y);
+  skpFmtEngText(4, l++, "%8.3f", "m/s", vs4i->vesLP.P.z);
+
+  l++; l++;
 
   return true;
 };

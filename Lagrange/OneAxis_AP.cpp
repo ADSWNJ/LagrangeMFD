@@ -49,6 +49,21 @@ void OneAxis_AP::Enable(VESSEL *v, int axis, bool dump) {
     m_thG_Minus = THGROUP_ATT_BANKLEFT;
     break;
   }
+  case  4: {
+    m_thG_Plus = THGROUP_ATT_FORWARD;
+    m_thG_Minus = THGROUP_ATT_BACK;
+    break;
+  }
+  case  5: {
+    m_thG_Plus = THGROUP_ATT_DOWN;
+    m_thG_Minus = THGROUP_ATT_UP;
+    break;
+  }
+  case  6: {
+    m_thG_Plus = THGROUP_ATT_RIGHT;
+    m_thG_Minus = THGROUP_ATT_LEFT;
+    break;
+  }
   default: { throw("ERROR IN ExecuteThrust: bad axis"); }
   }
   m_dumping = false;

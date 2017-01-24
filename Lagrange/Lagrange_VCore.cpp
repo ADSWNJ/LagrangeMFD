@@ -22,13 +22,15 @@ Lagrange_VCore::Lagrange_VCore(VESSEL *vin, Lagrange_GCore* gcin) {
 	// Vessel core constructor
   GC = gcin;
 	v = vin;
-  ap_armed = false;
-  sk_armed = false;
+  //ap_armed = false;
+  //sk_armed = false;
+  apMode = apState = 0;
+  apHoldInRange = false;
 
   for (int i=0; i<5; i++) burnGranularity[i] = 1;
   burnVar = 0;
   burnTdV_lock = false;
-  autocenter = false;
+  //autocenter = false;
   LU = GC->LU;
   assert(LU != nullptr);
   int s = LU->vdata[LU->act].size();
@@ -73,27 +75,45 @@ Lagrange_VCore::~Lagrange_VCore() {
 
 
 void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
-  VECTOR3 curQ, curP;
-  double curMass;
-  auto *vdata = &(LU->vdata[LU->act][vix]); 
-  auto *vs4i_0 = &(vdata->vs4i[0]);
-
-  v->GetGlobalPos(curQ);
-  v->GetGlobalVel(curP);
-  curMass = v->GetMass();
-
-  vs4i_0->ves.Q = curQ;
-  vs4i_0->ves.P = curP;
-  vs4i_0->mass = curMass;
-  vdata->curMass = curMass;
 
   if (LU->s4i_valid) {
-    LU->lp_ves(vix, 0, LU->act);
 
-    VECTOR3 burnQv, burnQe, burnPv, burnPe;
-    double burnSimT, burnMJD;
+    VECTOR3 curQ, curP;
+    double curMass;
+    auto *vdata = &(LU->vdata[LU->act][vix]);
+    auto *vs4i_0 = &(vdata->vs4i[0]);
+    auto *es4i_0 = &(LU->s4i[LU->act][0].body[LU->LP.ref]);
+
+    v->GetGlobalPos(curQ);
+    v->GetGlobalVel(curP);
+    curMass = v->GetMass();
+
+    vs4i_0->ves.Q = curQ;
+    vs4i_0->ves.P = curP;
+    vs4i_0->mass = curMass;
+    vdata->curMass = curMass;
+
+    apHoldInRange = vs4i_0->dQ < 1.0e6; // LP within 1000km
 
     if ((vdata->burnArmed) && (vdata->burn_ix > 0)) {
+      if (apMode != 1) apState = 1; // if we are switching into plan, then put AP on standby
+      apMode = 1;
+    } else if (apHoldInRange) {
+      if (apMode != 2) apState = 1; // if we are switching into hold, then put AP on standby
+      apMode = 2;
+    } else {
+      apMode = 0;
+      apState = 0;
+    }
+
+    LU->lp_ves(vix, 0, LU->act);
+
+    VECTOR3 burnQv, burnQe, burnPv, burnPe, burn_Q, burn_P;
+    double burnSimT, burnMJD;
+
+    if (apMode == 0) return; // AP inactive
+
+    if (apMode == 1) {
       auto *vs4i_b = &(vdata->vs4i[vdata->burn_ix]);
       auto *es4i_b = &(LU->s4i[LU->act][vdata->burn_ix].body[LU->LP.ref]);
       burnQv = vs4i_b->ves.Q;
@@ -102,36 +122,18 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
       burnPe = es4i_b->P;
       burnSimT = LU->s4i[LU->act][vdata->burn_ix].sec;
       burnMJD = LU->s4i[LU->act][vdata->burn_ix].MJD;
+      burn_Q = burnQv - burnQe;
+      burn_P = burnPv - burnPe;
+      ap.Update_PlanMode(v, apState, SimT, SimDT, burnSimT, LU->vdata[LU->act][vix].burndV, burn_Q, burn_P);
     } else {
-      OBJHANDLE hRef = (LU->body[LU->LP.ref].hObj);
-      burnQv = curQ;
-      burnPv = curP;
-      oapiGetGlobalPos(hRef, &burnQe);
-      oapiGetGlobalVel(hRef, &burnPe);
-      burnSimT = 0.0;
-      burnMJD = 0.0;
+      burnQv = vs4i_0->ves.Q;
+      burnPv = vs4i_0->ves.P;
+      burnQe = es4i_0->Q;
+      burnPe = es4i_0->P;
+      burn_Q = burnQv - burnQe;
+      burn_P = burnPv - burnPe;
+      ap.Update_HoldMode(v, apState, SimT, SimDT, burn_Q, burn_P, vs4i_0->vesLP.Q, vs4i_0->vesLP.P);
     }
-
-    ap.Update(v, SimT, SimDT, burnSimT, LU->vdata[LU->act][vix].burndV, (burnQv - burnQe), (burnPv - burnPe));
-
-//  if (ap_armed) {
-//    double burnTimer = (LU->vdata[LU->act][vix].burnMJD - mjd) * 24.0 * 60.0 * 60.0;
-//    if (burnTimer >= 0.0 && burnTimer < 1000.0) {
-//      ap.Update(SimT, SimDT);
-//    }
-//  }
   }
   return;
-}
-
-
-void Lagrange_VCore::ap_arm(bool arm) {
-  if (arm) {
-    ap.Enable(v);
-    ap_armed = true;
-  } else {
-    ap.Disable(v);
-    autocenter = false;
-    ap_armed = false;
-  }
 }
