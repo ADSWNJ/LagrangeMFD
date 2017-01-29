@@ -108,7 +108,7 @@ void Lagrange_AP::Update_PlanMode(VESSEL* v, const int apState, const double Sim
     atan2(m_targetVectorLocal.y, m_targetVectorLocal.z)*DEG, atan2(m_targetVectorLocal.x, m_targetVectorLocal.z)*DEG,
     burnSimT
   );
-  strcpy(oapiDebugString(), buf);
+  //strcpy(oapiDebugString(), buf);
   m_angleToTarget = GetRotationToTarget(m_targetVectorLocal);
 
   if (apState > 1) {

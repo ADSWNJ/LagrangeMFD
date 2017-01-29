@@ -370,7 +370,7 @@ void Lagrange::Button_DML() {
   GC->LU->dmp_log = true;
 }
 
-// DML = Trigger Dump Enc
+// DME = Trigger Dump Enc
 void Lagrange::Button_DME() {
   GC->LU->dmp_enc = true;
 }

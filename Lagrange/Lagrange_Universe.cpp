@@ -804,6 +804,7 @@ void LagrangeUniverse::integrateUniverse() {
         _dmp_enc = false;
       } else {
         fprintf(dump_enc, "Reason, Chop, CSec, VIx, Ix1, Ix2, Ix3, Sec1, Sec2, Sec3, Dis1, Dis2, Dis3\n");
+        fflush(dump_enc);
       }
     }
   }
@@ -812,10 +813,12 @@ void LagrangeUniverse::integrateUniverse() {
   unsigned int last_regix = 0;
   unsigned int last_encix = 0;
   
-  for (unsigned int cur=1; cur<s4int_count[wkg]; cur++) {
+  for (unsigned int cur = 1; cur < s4int_count[wkg]; cur++) {
+
+    //sprintf(oapiDebugString(), "WKG:%d CUR:%d", (int)wkg, cur);
     // S4 Integrator main loop
     int i, j, k;
-    double nextdt = dt / (double) interpolation_chop;
+    double nextdt = dt / (double)interpolation_chop;
     double nextMJD = s4i[wkg][prev].MJD + nextdt / (24.0*60.0*60.0);
     double nextsec = s4i[wkg][prev].sec + nextdt;
 
@@ -829,141 +832,143 @@ void LagrangeUniverse::integrateUniverse() {
 
     s4i[wkg][cur].sec = nextsec;
     s4i[wkg][cur].MJD = nextMJD;
+    // The actual S4I algorithm
+    {
+      // Step 1a, rolling forward from prev
+      for (i = 0; LP.bodyIx[i] != -1; i++) {
+        ent = LP.bodyIx[i];
+        s4i[wkg][cur].body[ent].P = s4i[wkg][prev].body[ent].P;
+        s4i[wkg][cur].body[ent].Q = s4i[wkg][prev].body[ent].Q + s4i[wkg][cur].body[ent].P  * (0.5 * w0 * nextdt);
+      }
 
-    // Step 1a, rolling forward from prev
-    for (i = 0; LP.bodyIx[i] != -1; i++) {
-      ent = LP.bodyIx[i];
-      s4i[wkg][cur].body[ent].P = s4i[wkg][prev].body[ent].P;
-      s4i[wkg][cur].body[ent].Q = s4i[wkg][prev].body[ent].Q + s4i[wkg][cur].body[ent].P  * (0.5 * w0 * nextdt);
-    }
-
-    // Step 1a Vessel Calc, rolling forward from prev
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      vs4i = &vdata[wkg][s].vs4i[cur];
-      vs4i_prev = &vdata[wkg][s].vs4i[prev];
-      vs4i->ves.P = vs4i_prev->ves.P;
-      vs4i->ves.Q = vs4i_prev->ves.Q + vs4i->ves.P  * (0.5 * w0 * nextdt);
-    }
-
-    //Step 1b
-    for (i = 0; LP.bodyIx[i] != -1; i++) {
-      ent = LP.bodyIx[i];
-      s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w0 * nextdt);
-    }
-
-    //Step 1b Vessel Calc
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      vs4i = &vdata[wkg][s].vs4i[cur];
-      vs4i->ves.P += s4iforce_ves(s, cur) * (w0 * nextdt);
-    }
-
-    //Step 1c, 2a
-    for (i = 0; LP.bodyIx[i] != -1; i++) {
-      ent = LP.bodyIx[i];
-      s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w0 + w1) * nextdt);
-    }
-
-    //Step 1c, 2a Vessel Calc
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      vs4i = &vdata[wkg][s].vs4i[cur];
-      vs4i->ves.Q += vs4i->ves.P * (0.5 * (w0 + w1) * nextdt);
-    }
-
-    //Step 2b
-    for (i = 0; LP.bodyIx[i] != -1; i++) {
-      ent = LP.bodyIx[i];
-      s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w1 * nextdt);
-    }
-
-    //Step 2b Vessel Calc
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      vs4i = &vdata[wkg][s].vs4i[cur];
-      vs4i->ves.P += s4iforce_ves(s, cur) * (w1 * nextdt);
-    }
-
-    //Step 2c, 3a
-    for (i = 0; LP.bodyIx[i] != -1; i++) {
-      ent = LP.bodyIx[i];
-      s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w1 + w0) * nextdt);
-    }
-
-    //Step 2c, 3a Vessel Calc
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      vs4i = &vdata[wkg][s].vs4i[cur];
-      vs4i->ves.Q += vs4i->ves.P * (0.5 * (w1 + w0) * nextdt);
-    }
-
-    //Step 3b
-    for (i = 0; LP.bodyIx[i] != -1; i++) {
-      ent = LP.bodyIx[i];
-      s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w0 * nextdt);
-    }
-
-    //Step 3b Vessel Calc
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      vs4i = &vdata[wkg][s].vs4i[cur];
-      vs4i->ves.P += s4iforce_ves(s, cur) * (w0 * nextdt);
-    }
-
-    //Step 3c
-    for (i = 0; LP.bodyIx[i] != -1; i++) {
-      ent = LP.bodyIx[i];
-      s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w0) * nextdt);
-    }
-
-    //Step 3c Vessel Calc
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      vs4i = &vdata[wkg][s].vs4i[cur];
-      vs4i->ves.Q += vs4i->ves.P * (0.5 * (w0) * nextdt);
-    }
-
-    // Step 3d Impulse Step: integrate plan mode burn
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      if (vdata[wkg][s].burnArmed && abs(nextMJD - vdata[wkg][s].burnMJD) < 1E-06) {
-
-        // Convert Prograde/Plane/Outer into global coords
+      // Step 1a Vessel Calc, rolling forward from prev
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
         vs4i = &vdata[wkg][s].vs4i[cur];
-        VECTOR3 vesDQmaj = vs4i->ves.Q - s4i[wkg][cur].body[vdata[wkg][s].refEnt].Q;
-        VECTOR3 vesDPmaj = vs4i->ves.P - s4i[wkg][cur].body[vdata[wkg][s].refEnt].P;
-        VECTOR3 vesCross = crossp(vesDQmaj, vesDPmaj);
-        VECTOR3 proHat = vesDPmaj / length(vesDPmaj);
-        VECTOR3 plaHat = vesCross / length(vesCross);
-        VECTOR3 outHat = crossp(proHat, plaHat);
-        VECTOR3 impulse;
-        impulse.x = vdata[wkg][s].burndV.x * proHat.x + vdata[wkg][s].burndV.y * outHat.x + vdata[wkg][s].burndV.z * plaHat.x;
-        impulse.y = vdata[wkg][s].burndV.x * proHat.y + vdata[wkg][s].burndV.y * outHat.y + vdata[wkg][s].burndV.z * plaHat.y;
-        impulse.z = vdata[wkg][s].burndV.x * proHat.z + vdata[wkg][s].burndV.y * outHat.z + vdata[wkg][s].burndV.z * plaHat.z;
-        vs4i->ves.P += impulse;
-        vdata[wkg][s].burndVg = impulse;
-        vdata[wkg][s].burn_ix = cur;
-        vdata[wkg][s].deltaMass = vdata[wkg][s].curMass - (vdata[wkg][s].curMass / exp(length(impulse)/ vdata[wkg][s].mainExVel0));
-        vdata[wkg][s].burnDuration = vdata[wkg][s].deltaMass * vdata[wkg][s].mainExVel0 / vdata[wkg][s].mainThrust;
-
+        vs4i_prev = &vdata[wkg][s].vs4i[prev];
+        vs4i->ves.P = vs4i_prev->ves.P;
+        vs4i->ves.Q = vs4i_prev->ves.Q + vs4i->ves.P  * (0.5 * w0 * nextdt);
       }
-    }
 
-    //Barycenter update step
-    for (i = 0; LP.baryIx[i] != -1; i++) {
-      ent = LP.baryIx[i];
-      s4i[wkg][cur].body[ent].Q = _V(0.0,0.0,0.0);
-      s4i[wkg][cur].body[ent].P = _V(0.0,0.0,0.0);
-      for (j=0; body[ent].b_e[j]!=-1; j++) {
-        k = body[ent].b_e[j];
-        s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[k].Q * (body[k].mass / body[ent].mass);
-        s4i[wkg][cur].body[ent].P += s4i[wkg][cur].body[k].P * (body[k].mass / body[ent].mass);
+      //Step 1b
+      for (i = 0; LP.bodyIx[i] != -1; i++) {
+        ent = LP.bodyIx[i];
+        s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w0 * nextdt);
       }
-    }
-    
-    // Find LP Q and P
-    if (LP.Lnum<4) {
-      lp123(cur,wkg);
-    } else {
-      lp45(cur,wkg);
-    }
 
-    // Find vessel relative LP data
-    for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
-      lp_ves(s, cur, wkg);
+      //Step 1b Vessel Calc
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        vs4i = &vdata[wkg][s].vs4i[cur];
+        vs4i->ves.P += s4iforce_ves(s, cur) * (w0 * nextdt);
+      }
+
+      //Step 1c, 2a
+      for (i = 0; LP.bodyIx[i] != -1; i++) {
+        ent = LP.bodyIx[i];
+        s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w0 + w1) * nextdt);
+      }
+
+      //Step 1c, 2a Vessel Calc
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        vs4i = &vdata[wkg][s].vs4i[cur];
+        vs4i->ves.Q += vs4i->ves.P * (0.5 * (w0 + w1) * nextdt);
+      }
+
+      //Step 2b
+      for (i = 0; LP.bodyIx[i] != -1; i++) {
+        ent = LP.bodyIx[i];
+        s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w1 * nextdt);
+      }
+
+      //Step 2b Vessel Calc
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        vs4i = &vdata[wkg][s].vs4i[cur];
+        vs4i->ves.P += s4iforce_ves(s, cur) * (w1 * nextdt);
+      }
+
+      //Step 2c, 3a
+      for (i = 0; LP.bodyIx[i] != -1; i++) {
+        ent = LP.bodyIx[i];
+        s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w1 + w0) * nextdt);
+      }
+
+      //Step 2c, 3a Vessel Calc
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        vs4i = &vdata[wkg][s].vs4i[cur];
+        vs4i->ves.Q += vs4i->ves.P * (0.5 * (w1 + w0) * nextdt);
+      }
+
+      //Step 3b
+      for (i = 0; LP.bodyIx[i] != -1; i++) {
+        ent = LP.bodyIx[i];
+        s4i[wkg][cur].body[ent].P += s4iforce(ent, cur) * (w0 * nextdt);
+      }
+
+      //Step 3b Vessel Calc
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        vs4i = &vdata[wkg][s].vs4i[cur];
+        vs4i->ves.P += s4iforce_ves(s, cur) * (w0 * nextdt);
+      }
+
+      //Step 3c
+      for (i = 0; LP.bodyIx[i] != -1; i++) {
+        ent = LP.bodyIx[i];
+        s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[ent].P * (0.5 * (w0)* nextdt);
+      }
+
+      //Step 3c Vessel Calc
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        vs4i = &vdata[wkg][s].vs4i[cur];
+        vs4i->ves.Q += vs4i->ves.P * (0.5 * (w0)* nextdt);
+      }
+
+      // Step 3d Impulse Step: integrate plan mode burn
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        if (vdata[wkg][s].burnArmed && abs(nextMJD - vdata[wkg][s].burnMJD) < 1E-06) {
+
+          // Convert Prograde/Plane/Outer into global coords
+          vs4i = &vdata[wkg][s].vs4i[cur];
+          VECTOR3 vesDQmaj = vs4i->ves.Q - s4i[wkg][cur].body[vdata[wkg][s].refEnt].Q;
+          VECTOR3 vesDPmaj = vs4i->ves.P - s4i[wkg][cur].body[vdata[wkg][s].refEnt].P;
+          VECTOR3 vesCross = crossp(vesDQmaj, vesDPmaj);
+          VECTOR3 proHat = vesDPmaj / length(vesDPmaj);
+          VECTOR3 plaHat = vesCross / length(vesCross);
+          VECTOR3 outHat = crossp(proHat, plaHat);
+          VECTOR3 impulse;
+          impulse.x = vdata[wkg][s].burndV.x * proHat.x + vdata[wkg][s].burndV.y * outHat.x + vdata[wkg][s].burndV.z * plaHat.x;
+          impulse.y = vdata[wkg][s].burndV.x * proHat.y + vdata[wkg][s].burndV.y * outHat.y + vdata[wkg][s].burndV.z * plaHat.y;
+          impulse.z = vdata[wkg][s].burndV.x * proHat.z + vdata[wkg][s].burndV.y * outHat.z + vdata[wkg][s].burndV.z * plaHat.z;
+          vs4i->ves.P += impulse;
+          vdata[wkg][s].burndVg = impulse;
+          vdata[wkg][s].burn_ix = cur;
+          vdata[wkg][s].deltaMass = vdata[wkg][s].curMass - (vdata[wkg][s].curMass / exp(length(impulse) / vdata[wkg][s].mainExVel0));
+          vdata[wkg][s].burnDuration = vdata[wkg][s].deltaMass * vdata[wkg][s].mainExVel0 / vdata[wkg][s].mainThrust;
+
+        }
+      }
+
+      //Barycenter update step
+      for (i = 0; LP.baryIx[i] != -1; i++) {
+        ent = LP.baryIx[i];
+        s4i[wkg][cur].body[ent].Q = _V(0.0, 0.0, 0.0);
+        s4i[wkg][cur].body[ent].P = _V(0.0, 0.0, 0.0);
+        for (j = 0; body[ent].b_e[j] != -1; j++) {
+          k = body[ent].b_e[j];
+          s4i[wkg][cur].body[ent].Q += s4i[wkg][cur].body[k].Q * (body[k].mass / body[ent].mass);
+          s4i[wkg][cur].body[ent].P += s4i[wkg][cur].body[k].P * (body[k].mass / body[ent].mass);
+        }
+      }
+
+      // Find LP Q and P
+      if (LP.Lnum < 4) {
+        lp123(cur, wkg);
+      } else {
+        lp45(cur, wkg);
+      }
+
+      // Find vessel relative LP data
+      for (unsigned int s = 0; s < vdata[wkg].size(); s++) {
+        lp_ves(s, cur, wkg);
+      }
     }
 
     // Look for encounter points (where we need to binary chop interpolate into the encounters)
@@ -973,6 +978,12 @@ void LagrangeUniverse::integrateUniverse() {
         double EDM2 = length(vdata[wkg][s].vs4i[cur - 2].vesLP.Q);
         double EDM1 = length(vdata[wkg][s].vs4i[cur - 1].vesLP.Q);
         double EDM0 = length(vdata[wkg][s].vs4i[cur - 0].vesLP.Q);
+        double EDM2_1 = 0.0, EDM1_1 = 0.0, EDM0_1 = 0.0;
+        if (s == 0 && vdata[wkg].size() > 1) {
+          EDM2_1 = length(vdata[wkg][s+1].vs4i[cur - 2].vesLP.Q);
+          EDM1_1 = length(vdata[wkg][s+1].vs4i[cur - 1].vesLP.Q);
+          EDM0_1 = length(vdata[wkg][s+1].vs4i[cur - 0].vesLP.Q);
+        }
 
         double SECM2 = s4i[wkg][cur - 2].sec;
         double SECM1 = s4i[wkg][cur - 1].sec;
@@ -980,9 +991,10 @@ void LagrangeUniverse::integrateUniverse() {
 
         bool minDeltaRange = abs(EDM1 - EDM0) < 1e-5;
 
-        if ((EDM2 >= EDM1 && EDM1 <= EDM0) ||
-          (interpolation_chop > 64 && minDeltaRange)) {  // We have found an inversion of the curve
-          if (interpolation_chop < 1024 && !minDeltaRange) {
+        if ((EDM2 >= EDM1 && EDM1 <= EDM0) ||               // Inversion found
+            (interpolation_chop > 64 && minDeltaRange) ||   // Inside min range
+            (EDM1 <= EDM0 && interpolation_chop > 1)) {     // Beyond inversion at higher search
+          if (interpolation_chop < 16384 && !minDeltaRange) {
             if (interpolation_chop == 1) {
               last_regix = cur - 2;
             }
@@ -991,10 +1003,11 @@ void LagrangeUniverse::integrateUniverse() {
               fprintf(dump_enc, "%u, %u, %u, ",           cur - 2, cur - 1, cur);
               fprintf(dump_enc, "%.15f, %.15f, %.15f, ",  s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec );
               fprintf(dump_enc, "%.15f, %.15f, %.15f\n",  EDM2, EDM1, EDM0);
+              fflush(dump_enc);
             }
 
             interpolation_chop *= 2;  // Double the resolution (up to max of 1024)
-            vdata[wkg][s].block_scan = 1;
+            for (unsigned int ss = 0; ss < vdata[wkg].size(); ss++) vdata[wkg][ss].block_scan = 1;
             rewind = true;
             break;
           } else {
@@ -1003,10 +1016,11 @@ void LagrangeUniverse::integrateUniverse() {
               fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
               fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
               fprintf(dump_enc, "%.15f, %.15f, %.15f\n", EDM2, EDM1, EDM0);
-              if (_dmp_enc) fprintf(dump_enc, "END\n");
+              fprintf(dump_enc, "END\n");
+              fflush(dump_enc);
             }
             interpolation_chop = 1; // Release the pressure ... we have enough accuracy now on the search
-            vdata[wkg][s].block_scan = 2;
+            for (unsigned int ss = 0; ss < vdata[wkg].size(); ss++) vdata[wkg][ss].block_scan = 2;
             last_encix = cur - 1;
             // Now we need to move the encounter to last_regix+1. However, if we have any burns inbetween then make sure we keep those lines
             last_regix++; // Now pointing to first insert point
@@ -1016,7 +1030,10 @@ void LagrangeUniverse::integrateUniverse() {
               for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
                 if (vdata[wkg][c].burnArmed && abs(s4i[wkg][kk].MJD - vdata[wkg][c].burnMJD) < 1E-06) {
                   intervening_burn = true;
-                  if (_dmp_enc) fprintf(dump_enc, "BURN,,,%u,,,%u,,,%.6lf\n", s, kk, s4i[wkg][kk].sec);
+                  if (_dmp_enc) {
+                    fprintf(dump_enc, "BURN,,,%u,,,%u,,,%.6lf\n", s, kk, s4i[wkg][kk].sec);
+                    fflush(dump_enc);
+                  }
                   break;
                 }
               }
@@ -1040,18 +1057,23 @@ void LagrangeUniverse::integrateUniverse() {
                   fprintf(dump_enc, ", , %u, ", last_regix);
                   fprintf(dump_enc, ", , %.15f, ", s4i[wkg][last_regix].sec);
                   fprintf(dump_enc, ", , %.15f\n", vdata[wkg][c].enc_Q);
+                  fflush(dump_enc);
                 }
               }
 
             }
             cur = last_regix;
             prev = cur - 1;
+            if (cur < 2) break;
 
             if (_dmp_enc) {
               fprintf(dump_enc, "FIXUP, , , , ");
               fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
               fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
               fprintf(dump_enc, ", , \n");
+              fflush(dump_enc);
+              fclose(dump_enc);
+              fopen_s(&dump_enc, ".\\Config\\MFD\\Lagrange\\Diags\\ENC.csv", "a");
             }
             break;
           }
