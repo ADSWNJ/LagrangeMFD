@@ -81,10 +81,10 @@ bool Lagrange_DialogFunc::clbkENT(void *id, char *str, void *usrdata) {
     vdata->burndV.x = f;
     break;
   case 2:
-    vdata->burndV.y = f;
+    vdata->burndV.z = f;
     break;
   case 3:
-    vdata->burndV.z = f;
+    vdata->burndV.y = f;
     break;
   case 4:
     if (TdV > 0.0) {
@@ -112,20 +112,20 @@ bool Lagrange_DialogFunc::clbkENT(void *id, char *str, void *usrdata) {
       if (vdata->burndV.y < TdV) {
         ratio = sqrt(TdV * TdV - vdata->burndV.y * vdata->burndV.y) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.z * vdata->burndV.z);
         vdata->burndV.x *= ratio;
-        vdata->burndV.z *= ratio;
+        vdata->burndV.y *= ratio;
       } else {
         vdata->burndV.x = 0.0;
-        vdata->burndV.z = 0.0;
+        vdata->burndV.y = 0.0;
       }
       break;
     case 3:
       if (vdata->burndV.z < TdV) {
         ratio = sqrt(TdV * TdV - vdata->burndV.z * vdata->burndV.z) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.y * vdata->burndV.y);
         vdata->burndV.x *= ratio;
-        vdata->burndV.y *= ratio;
+        vdata->burndV.z *= ratio;
       } else {
         vdata->burndV.x = 0.0;
-        vdata->burndV.y = 0.0;
+        vdata->burndV.z = 0.0;
       }
       break;
     case 4:

@@ -196,8 +196,8 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
   skpFmtEngText(0, l++, " (Burn Point):  %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
   skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6fm/s", vdata->burndV.x);
-  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6fm/s", vdata->burndV.y);
-  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6fm/s", vdata->burndV.z);
+  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6fm/s", vdata->burndV.z);
+  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6fm/s", vdata->burndV.y);
   if (VC->burnTdV_lock) {
     skpFmtColText(0, l, (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV Lock:%14.6fm/s", length(vdata->burndV));
   } else {
@@ -223,10 +223,10 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtEngText(0, l++, "  Out:%8.3f", "m", vesLP_e->Q.z);
   skpFmtEngText(0, l++, "  TOT:%8.3f", "m", vs4i_e->dQ);
   skpFormatText(3, rl++, " Enc. dVel.");
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.x);
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.y);
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vesLP_e->P.z);
-  skpFmtEngText(3, rl++, " %8.4f", "m/s", vs4i_e->dP);
+  skpFmtEngText(3, rl++, "%9.4f", "m/s", vesLP_e->P.x);
+  skpFmtEngText(3, rl++, "%9.4f", "m/s", vesLP_e->P.y);
+  skpFmtEngText(3, rl++, "%9.4f", "m/s", vesLP_e->P.z);
+  skpFmtEngText(3, rl++, "%9.4f", "m/s", vs4i_e->dP);
 
   l++; l++;
   if (vdata->burnArmed && vdata->burn_ix < 0) {
@@ -254,10 +254,10 @@ bool Lagrange::DisplayAPMode() {
   if (inac) {
     skpColor(CLR_WHITE);
     skpFormatText(0, l++, "   AP Mode:      DISARMED");
-    l++; l++;
-    skpFormatText(0, l++, "   (AP arms when Plan active");
-    skpFormatText(0, l++, "    and in the S4I range, or");
-    skpFormatText(0, l++, "    when within 1000km of LP)");
+    l += 12;
+    skpFormatText(0, l++, "AP arming conditions:");
+    skpFormatText(0, l++, "-Plan armed and burn in S4I range");
+    skpFormatText(0, l++, "-Within 1,000km of Lagrange Point");
     return true;
   }
 
@@ -302,7 +302,33 @@ bool Lagrange::DisplayAPMode() {
   skpFmtEngText(4, l++, "%8.3f", degs, avl.z);
 
   l++; l++;
-  if (VC->apMode == 1) return true;
+  if (VC->apMode == 1) {
+    double simT = oapiGetSimTime();
+    double burnStart = VC->burnStart - simT;
+    double burnEnd = VC->burnEnd - simT;
+    if (VC->apState > 1) {
+      skpFmtEngText(0, l++, "   Burn Duration: %8.3f", "s", VC->burnDurn);
+      l++;
+      if (burnStart >= 0.0 && burnStart < 30.0 && burnStart != burnEnd) skpColor(CLR_YELLOW);
+      if (burnStart >= 0.0 && burnStart < 10.0 && burnStart != burnEnd) skpColor(CLR_RED);
+      skpFmtEngText(0, l++, "   Burn Start:    %8.3f", "s", VC->burnStart - simT);
+      skpColor(CLR_WHITE);
+      if (burnStart < 0.0 && burnEnd >= 0.0 && burnEnd < 30.0 && burnStart != burnEnd) skpColor(CLR_YELLOW);
+      if (burnStart < 0.0 && burnEnd >= 0.0 && burnEnd < 10.0 && burnStart != burnEnd) skpColor(CLR_RED);
+      skpFmtEngText(0, l++, "   Burn End:      %8.3f", "s", VC->burnEnd - simT);
+      l++;
+    }
+    if (VC->burnStart<simT && VC->burnEnd > simT) {
+      skpColor(CLR_RED);
+      if (VC->apState == 2) {
+        skpFormatText(0, l++, "   >>> BURN NOW <<<");
+      } else if (VC->apState == 3) {
+        skpFormatText(0, l++, "   Auto-Burning");
+      }
+      skpColor(CLR_WHITE);
+    }
+    return true;
+  }
 
   l2 = l;
 

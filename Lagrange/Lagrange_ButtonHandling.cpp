@@ -116,10 +116,10 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
       vdata->burndV.x = 0.0;
       break;
     case 2:
-      vdata->burndV.y = 0.0;
+      vdata->burndV.z = 0.0;
       break;
     case 3:
-      vdata->burndV.z = 0.0;
+      vdata->burndV.y = 0.0;
       break;
     case 4:
       vdata->burndV = _V(0.0, 0.0, 0.0);
@@ -135,10 +135,10 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
       vdata->burndV.x += adj;
       break;
     case 2:
-      vdata->burndV.y += adj;
+      vdata->burndV.z += adj;
       break;
     case 3:
-      vdata->burndV.z += adj;
+      vdata->burndV.y += adj;
       break;
     case 4:
       ratio = (TdV + adj) / TdV;
@@ -163,20 +163,20 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
       if (vdata->burndV.y < TdV) {
         ratio = sqrt(TdV * TdV - vdata->burndV.y * vdata->burndV.y) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.z * vdata->burndV.z);
         vdata->burndV.x *= ratio;
-        vdata->burndV.z *= ratio;
+        vdata->burndV.y *= ratio;
       } else {
         vdata->burndV.x = 0.0;
-        vdata->burndV.z = 0.0;
+        vdata->burndV.y = 0.0;
       }
       break;
     case 3:
       if (vdata->burndV.z < TdV) {
         ratio = sqrt(TdV * TdV - vdata->burndV.z * vdata->burndV.z) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.y * vdata->burndV.y);
         vdata->burndV.x *= ratio;
-        vdata->burndV.y *= ratio;
+        vdata->burndV.z *= ratio;
       } else {
         vdata->burndV.x = 0.0;
-        vdata->burndV.y = 0.0;
+        vdata->burndV.z = 0.0;
       }
       break;
     case 4:
@@ -200,11 +200,11 @@ void Lagrange::Button_ENT() {
     oapiOpenInputBox("Enter Plan Prograde Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 2:
-    sprintf(GC->LU->buf, "%.6f", vdata->burndV.y);
+    sprintf(GC->LU->buf, "%.6f", vdata->burndV.z);
     oapiOpenInputBox("Enter Plan Plane Change Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 3:
-    sprintf(GC->LU->buf, "%.6f", vdata->burndV.z);
+    sprintf(GC->LU->buf, "%.6f", vdata->burndV.y);
     oapiOpenInputBox("Enter Plan Outward Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 4:
@@ -278,6 +278,7 @@ void Lagrange::Button_AAC() {
   if (VC->apMode != 1) return; // AA button off if not in plan mode
   if (VC->apState >= 2) {
     VC->apState = 1;
+    VC->ap.Disable(VC->v);
   } else {
     VC->apState = 2;
   }

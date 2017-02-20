@@ -58,6 +58,10 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     int apMode;     //  0 = inactive, 1 = Plan mode, 2 = station keep mode
     int apState;    //  0 = inactive, 1 = Ready (armed), 2 = Point, 3 = Burn
     bool apHoldInRange; 
+    bool burnFrozen;
+    double burnStart, burnEnd, burnDurn;
+    double burnCV, burnTV, burnDV; 
+
 
   private:
 };

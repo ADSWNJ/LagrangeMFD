@@ -93,11 +93,14 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
     vs4i_0->mass = curMass;
     vdata->curMass = curMass;
 
+    burnFrozen = ap.IsBurnFrozen();
+
     apHoldInRange = vs4i_0->dQ < 1.0e6; // LP within 1000km
 
-    if ((vdata->burnArmed) && (vdata->burn_ix > 0)) {
+    if (((vdata->burnArmed) && (vdata->burn_ix > 0)) ||(burnFrozen)) {
       if (apMode != 1) apState = 1; // if we are switching into plan, then put AP on standby
       apMode = 1;
+      if (burnFrozen) vdata->burnArmed = false;
     } else if (apHoldInRange) {
       if (apMode != 2) apState = 1; // if we are switching into hold, then put AP on standby
       apMode = 2;
@@ -114,17 +117,29 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
     if (apMode == 0) return; // AP inactive
 
     if (apMode == 1) {
-      auto *vs4i_b = &(vdata->vs4i[vdata->burn_ix]);
-      auto *es4i_b = &(LU->s4i[LU->act][vdata->burn_ix].body[LU->LP.ref]);
+      int i = vdata->burn_ix;
+      if (i < 0) i = 0;
+      auto *vs4i_b = &(vdata->vs4i[i]);
+      auto *es4i_b = &(LU->s4i[LU->act][i].body[LU->LP.ref]);
       burnQv = vs4i_b->ves.Q;
       burnPv = vs4i_b->ves.P;
       burnQe = es4i_b->Q;
       burnPe = es4i_b->P;
-      burnSimT = LU->s4i[LU->act][vdata->burn_ix].sec;
-      burnMJD = LU->s4i[LU->act][vdata->burn_ix].MJD;
+      burnSimT = LU->s4i[LU->act][i].sec;
+      burnMJD = LU->s4i[LU->act][i].MJD;
       burn_Q = burnQv - burnQe;
       burn_P = burnPv - burnPe;
       ap.Update_PlanMode(v, apState, SimT, SimDT, burnSimT, LU->vdata[LU->act][vix].burndV, burn_Q, burn_P);
+      if (apState > 1) {
+        burnStart = ap.GetBurnStart();
+        burnEnd = ap.GetBurnEnd();
+        burnDurn = burnEnd - burnStart;
+        VESSELSTATUS vs;
+        v->GetStatus(vs);
+        burnCV = length(vs.rvel);
+        burnDV = ap.GetBurnDV();
+        burnTV = ap.GetBurnTgtV();
+      }
     } else {
       burnQv = vs4i_0->ves.Q;
       burnPv = vs4i_0->ves.P;
