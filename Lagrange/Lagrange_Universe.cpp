@@ -38,6 +38,7 @@ LagrangeUniverse::LagrangeUniverse() {
     s4int_count[i] = 20000;
     s4int_timestep[i] = 30.0;
   }
+  s4int_hysteresis = 10.0;
 
   defBody(&body[0], 0, "Sun");
   defBody(&body[1], 1, "Earth");
@@ -937,6 +938,7 @@ void LagrangeUniverse::integrateUniverse() {
           impulse.x = vdata[wkg][s].burndV.x * proHat.x + vdata[wkg][s].burndV.y * outHat.x + vdata[wkg][s].burndV.z * plaHat.x;
           impulse.y = vdata[wkg][s].burndV.x * proHat.y + vdata[wkg][s].burndV.y * outHat.y + vdata[wkg][s].burndV.z * plaHat.y;
           impulse.z = vdata[wkg][s].burndV.x * proHat.z + vdata[wkg][s].burndV.y * outHat.z + vdata[wkg][s].burndV.z * plaHat.z;
+          vdata[wkg][s].burn = vs4i->ves;
           vs4i->ves.P += impulse;
           vdata[wkg][s].burndVg = impulse;
           vdata[wkg][s].burn_ix = cur;
@@ -1047,7 +1049,7 @@ void LagrangeUniverse::integrateUniverse() {
             for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
               vdata[wkg][c].vs4i[last_regix] = vdata[wkg][c].vs4i[kk];
 
-              if (vdata[wkg][c].vs4i[last_regix].dQ < vdata[wkg][c].enc_Q) {
+              if (vdata[wkg][c].vs4i[last_regix].dQ < vdata[wkg][c].enc_Q - s4int_hysteresis) {
                 vdata[wkg][c].enc_Q = vdata[wkg][c].vs4i[last_regix].dQ;
                 vdata[wkg][c].enc_P = vdata[wkg][c].vs4i[last_regix].dP;
                 vdata[wkg][c].enc_ix = last_regix;

@@ -88,6 +88,7 @@ public:
   double burnDuration;                                      // Burn duration on main engines
   bool burnArmed;                                           // Tells the integrator to use this burn data
   double burnMJD;                                           // date of hypotetical or real burn
+  QP_struct burn;                                           // Holds Q & V at burn instant just before adding in the inpulse
   VECTOR3 burndV;                                           // hypothetical or real burn in TransX frame (prograde, out, plane)
   VECTOR3 burndVg;                                          // burn in global frame
   OBJHANDLE TransX_CurrentBodyIndex;                        // From TransX
@@ -196,7 +197,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     } LP;
 
     unsigned int s4int_count[2];                            // Iteration count for inegrator
-    double s4int_timestep[2];                               // Iteration timestap for integrator
+    double s4int_timestep[2];                               // Iteration timestep for integrator
 
     vector<Lagrange_s4i> s4i[2];                            // 4th Order symplectic integrator (vector = number of steps)
     vector<Lagrange_vdata> vdata[2];                        // Vessel 4th order integrator data (vector = number of vessels)
@@ -218,6 +219,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<bool> s4i_waitrel;
     atomic<bool> dmp_log;
     atomic<bool> dmp_enc;
+    atomic<double> s4int_hysteresis;                          // Hysteresis value for encounters (needs to beat prev. enc. by this value to update it)
 
 
   protected:

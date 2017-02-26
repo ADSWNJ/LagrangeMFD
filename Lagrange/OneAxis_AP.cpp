@@ -18,12 +18,15 @@ OneAxis_AP::OneAxis_AP() :
   m_A(1.0),
   m_loA(0.0),
   m_goA(0.0),
-  m_zBand(0.0),
+  m_zHiBand(0.0),
+  m_zLoBand(0.0),
   m_fullCali(false),
   m_ix(-2),
   m_dT(0.0),
   m_enabled(false),
-  m_lastWarp(0.0)
+  m_lastWarp(0.0),
+  m_lastAcc(0.0),
+  m_cap(false)
 {}
 
 OneAxis_AP::~OneAxis_AP() {}
@@ -31,7 +34,7 @@ OneAxis_AP::~OneAxis_AP() {}
 void OneAxis_AP::Enable(VESSEL *v, int axis, bool dump) {
   m_enabled = true;
   m_axis = axis+1;
-  m_ThMode = ' ';
+  strcpy(m_ThMode, " ");
   
   switch (m_axis) {
   case  1: {
@@ -78,7 +81,7 @@ void OneAxis_AP::Enable(VESSEL *v, int axis, bool dump) {
     return;
   }
   m_dumping = true;
-  if (m_dbgF) fprintf(m_dbgF, "Type, SimT, SimDT, AvgDT, A, P, V, Thr, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA, loA, goA \n");
+  if (m_dbgF) fprintf(m_dbgF, "Type, Warp, Cali, SimT, SimDT, AvgDT, A, P, V, Thr, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA, loA, goA \n");
 }
 
 void OneAxis_AP::SetAccParams(double A, double loApct, double goApct) {
@@ -92,8 +95,10 @@ void OneAxis_AP::SetAccParams(double A, double loApct, double goApct) {
 /*
  * Sets the deadband for the position error (and velocity/dT error)
  */
-void OneAxis_AP::SetDeadband(double zBand) {
-  m_zBand = zBand;
+void OneAxis_AP::SetDeadband(const double zHiBand, const double zLoBand, const bool cap) {
+  m_zHiBand = zHiBand;
+  m_zLoBand = zLoBand;
+  m_cap = cap;
 }
 
 /*
@@ -133,13 +138,13 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
   sign = (P < 0.0) ? 1.0 : -1.0;
 
   if (m_ix == -2) {                                     // First burn with no calibration ... see what happens
-    m_thrustPct = 1.0 / warpBias;
-    if (sign < 0.0) m_thrustPct = -1.0 / warpBias;
+    m_thrustPct = 1.0 / warp;
+    if (sign < 0.0) m_thrustPct = -1.0 / warp;
     m_A = 1.0;
     if (m_dumping) {
-      //              "SimT, SimDT, AvgDT, A, P, V, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
-      fprintf(m_dbgF, "THR, %.3f, %.4f, %.4f, %.4f, %.4f,%.4f,%.4f,%c, %.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
-        m_T, m_this_dT, m_dT, m_A, m_P, m_V, m_thrustPct, 'I', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+      //              "Warp, Ix, SimT, SimDT, AvgDT, A, P, V, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
+      fprintf(m_dbgF, "THR, %f, %d, %.3f, %.4f, %.4f, %.4f, %.4f,%.4f,%.4f,%s, %.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
+        warp, m_ix, m_T, m_this_dT, m_dT, m_A, m_P, m_V, m_thrustPct, "INIT", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
     }
     return m_thrustPct;
   }
@@ -161,12 +166,15 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
   double trimAv = 0.0;
   double trimAvg = 0.0;
 
-  if (aP < m_zBand && (abs(V) * warpBias / m_dT / 10.0 < m_zBand)) {
+  double this_zBand = (m_ThMode[0] == 'D') ? m_zLoBand : m_zHiBand;
+
+  if (aP < this_zBand && (abs(V) * warpBias / m_dT / 10.0 < this_zBand)) {
       m_thrustPct = 0.0;
+      strcpy(m_ThMode, "FIN");
       if (m_dumping) {
-        //              "SimT, SimDT, AvgDT, A, P, V, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
-        fprintf(m_dbgF, "THR, %.3f, %.4f, %.4f, %.4f, %.4f, %.4f,%.4f,%c, %.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
-          m_T, m_this_dT, m_dT, m_A, m_P, m_V, m_thrustPct, 'F', 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        //              "Warp, Ix, SimT, SimDT, AvgDT, A, P, V, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
+        fprintf(m_dbgF, "THR, %f, %d, %.3f, %.4f, %.4f, %.4f, %.4f, %.4f,%.4f,%s, %.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
+          warp, m_ix, m_T, m_this_dT, m_dT, m_A, m_P, m_V, m_thrustPct, m_ThMode, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
       }
       return m_thrustPct;                               // Both the Pos Error and the Vel Error are inside the deadband, so exit
   } else {
@@ -180,33 +188,38 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
     trimAv = aV / m_dT;                        // Solve 0 = V + A.t for A, given V, t
     trimAvg = (trimAd/4.0 + 4.0*trimAv) / 4.25;
     if (abs(trimAvg) < l_A && abs(trimAd/4.0) < l_A && abs(trimAv) < l_A) {                                  // Trim phase trgger
-      m_ThMode = 'T';
+      strcpy(m_ThMode, "TRIM");
       finA = -trimAvg;                   // Average these accelerations to hit the target in 2 iterations
     } else {
       loV = sqrt(2.0 * aP * l_loA);                // Solves 0 = P + V.t + 0.5.A.t^2 and 0 = V + a.t for V given P and A
       goV = sqrt(2.0 * aP * l_goA);                // Solves 0 = P + V.t + 0.5.A.t^2 and 0 = V + a.t for V given P and A
       if (aV < loV) {
-        m_ThMode = 'B';
+        strcpy(m_ThMode, "ACCEL");
         finA = (loV - aV) / m_dT;                 // Boost phase (to increase closure rate)
-      } else if (aV < goV  && m_ThMode != 'D') {
-        m_ThMode = 'C';
+      } else if (aV < goV  && m_ThMode[0] != 'D') {
+        strcpy(m_ThMode, "CRUISE");
         finA = 0.0;                                     // Cruise phase waiting for optimal deceleration
       } else {
-        m_ThMode = 'D';
+        strcpy(m_ThMode, "DECEL");
         finA = -optA;                 // Deceleration phase, tracking to P=0 and V=0
       }
     }
   }
   m_thrustPct = sign * finA / m_A;
 
+  if (m_cap) {
+    if (m_thrustPct >  1.00 / warpBias) m_thrustPct =  1.00 / warpBias;
+    if (m_thrustPct < -1.00 / warpBias) m_thrustPct = -1.00 / warpBias;
+  } else {
+    if (m_thrustPct >  1.00) m_thrustPct = 1.00;
+    if (m_thrustPct < -1.00) m_thrustPct = -1.00;
+  }
 
-  if (m_thrustPct >  1.00 / warpBias) m_thrustPct =  1.00 / warpBias;
-  if (m_thrustPct < -1.00 / warpBias) m_thrustPct = -1.00 / warpBias;
 
   if (m_dumping) {
-    //              "     SimT, SimDT, AvgDT, A,   P,   V,    aV, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
-    fprintf(m_dbgF, "THR, %.3f, %.4f, %.4f, %.4f, %.4f, %.4f,%.7f,%c, %.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
-      m_T, m_this_dT, m_dT, m_A, m_P, m_V, m_thrustPct, m_ThMode, optT, optA, loV, goV, trimAd, trimAv, finA, m_loA, m_goA);
+    //              "     Warp, IX, SimT, SimDT, AvgDT, A,   P,   V,    aV, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
+    fprintf(m_dbgF, "THR, %f, %d, %.3f, %.4f, %.4f, %.4f, %.4f, %.4f,%.7f,%s, %.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
+      warp, m_ix, m_T, m_this_dT, m_dT, m_A, m_P, m_V, m_thrustPct, m_ThMode, optT, optA, loV, goV, trimAd, trimAv, finA, m_loA, m_goA);
     fflush(m_dbgF);
   }
 
@@ -247,6 +260,12 @@ void OneAxis_AP::CalcCali(double V, double simT, double dT) {
   if (ix > 9) ix = 0;
   double warp = oapiGetTimeAcceleration();
   double warpBias = warp <= 1.0 ? 1.0 : warp;
+  if (warp != m_lastAcc) {
+    m_lastAcc = warp;
+    m_ix = -2;
+    m_fullCali = false;
+    return;
+  }
 
   if (abs(m_cali[ix].T - (simT - dT)) < 1e-3 && abs(m_cali[ix].thPct) > 0.25 / warpBias) {
     m_cali[ix].A = (V - m_cali[ix].V) / dT / m_cali[ix].thPct;

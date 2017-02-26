@@ -105,7 +105,8 @@ Lagrange_Buttons::Lagrange_Buttons()
       { "S4I Delta Time", 0, 'T' },
       { "Iter Wait Time", 0, 'W' },
       { "Dump Logs", 0, 'L' },
-      { "Dump Encounter", 0, 'E' }
+      { "Dump Encounter", 0, 'E' },
+      { "Set Hysteresis", 0, 'H' }
     };
     RegisterPage(mnu4, sizeof(mnu4) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
@@ -113,8 +114,9 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("ITR", OAPI_KEY_I, &Lagrange::Button_ITR);
     RegisterFunction("DT",  OAPI_KEY_T, &Lagrange::Button_TSP);
     RegisterFunction("WT",  OAPI_KEY_W, &Lagrange::Button_WT);
-    RegisterFunction("DML", OAPI_KEY_W, &Lagrange::Button_DML);
-    RegisterFunction("DME", OAPI_KEY_W, &Lagrange::Button_DME);
+    RegisterFunction("DML", OAPI_KEY_L, &Lagrange::Button_DML);
+    RegisterFunction("DME", OAPI_KEY_E, &Lagrange::Button_DME);
+    RegisterFunction("HYS", OAPI_KEY_H, &Lagrange::Button_HYS);
 
     // Acknowledge Message Mode
     static const MFDBUTTONMENU mnu5[] =

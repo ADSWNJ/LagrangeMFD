@@ -61,6 +61,7 @@ class Lagrange_VCore : public EnjoLib::ModuleMessagingExtPut{
     bool burnFrozen;
     double burnStart, burnEnd, burnDurn;
     double burnCV, burnTV, burnDV; 
+    double ap_ahStartMassV;
 
 
   private:

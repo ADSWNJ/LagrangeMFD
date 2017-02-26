@@ -36,7 +36,7 @@ public:
   void Enable(VESSEL *v, const int axis, const bool dump);
   void Disable();
   void SetAccParams(const double A, const double loApct, const double goApct);
-  void SetDeadband(const double zBand);
+  void SetDeadband(const double zHiBand, const double zLoBand, const bool cap);
   double CalcThrust(const double P, const double V, const double simT, const double dT);
   void ExecuteThrust(VESSEL *v);
   void CalcCali(const double V, const double simT, const double dT);
@@ -47,9 +47,11 @@ private:
   int m_axis;
   double m_A, m_loA, m_goA;
   double m_loApct, m_goApct;
-  double m_zBand;
+  double m_zHiBand;
+  double m_zLoBand;
   double m_thrustPct;
   double m_lastV;
+  double m_lastAcc;
   bool m_fullCali;
   int m_ix;
   struct {
@@ -69,9 +71,10 @@ private:
   THGROUP_TYPE m_thG_Minus;
   FILE* m_dbgF;
   bool m_dumping;
-  char m_ThMode;
+  char m_ThMode[10];
   bool m_enabled;
   double m_lastWarp;
+  bool m_cap;
 };
 
 #endif // OneAxis_AP

@@ -102,7 +102,10 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
       apMode = 1;
       if (burnFrozen) vdata->burnArmed = false;
     } else if (apHoldInRange) {
-      if (apMode != 2) apState = 1; // if we are switching into hold, then put AP on standby
+      if (apMode != 2) {
+        apState = 1; // if we are switching into hold, then put AP on standby
+        ap_ahStartMassV = v->GetMass();
+      }
       apMode = 2;
     } else {
       apMode = 0;
@@ -119,16 +122,17 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
     if (apMode == 1) {
       int i = vdata->burn_ix;
       if (i < 0) i = 0;
-      auto *vs4i_b = &(vdata->vs4i[i]);
+      //auto *vs4i_b = &(vdata->vs4i[i]);
       auto *es4i_b = &(LU->s4i[LU->act][i].body[LU->LP.ref]);
-      burnQv = vs4i_b->ves.Q;
-      burnPv = vs4i_b->ves.P;
+      burnQv = vdata->burn.Q;
+      burnPv = vdata->burn.P;
       burnQe = es4i_b->Q;
       burnPe = es4i_b->P;
       burnSimT = LU->s4i[LU->act][i].sec;
       burnMJD = LU->s4i[LU->act][i].MJD;
       burn_Q = burnQv - burnQe;
       burn_P = burnPv - burnPe;
+      double lenBurnP = length(burn_P);
       ap.Update_PlanMode(v, apState, SimT, SimDT, burnSimT, LU->vdata[LU->act][vix].burndV, burn_Q, burn_P);
       if (apState > 1) {
         burnStart = ap.GetBurnStart();

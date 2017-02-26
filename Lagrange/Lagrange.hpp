@@ -78,8 +78,10 @@ public:
   void Button_WT();
   void Button_DML();
   void Button_DME();
+  void Button_HYS();
 
   void ButtonHelper_AdjVar(double adj);
+  void ButtonHelper_TrimEntBox(char *buf);
 
   const char* GetModuleName() const { return "Lagrange"; };
 

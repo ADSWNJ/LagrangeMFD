@@ -45,9 +45,15 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
 };
 
 bool Lagrange::DisplayOrbitMode() {
-  skpTitle("Lagrange: ORBIT");
-
   int l = 3;
+  Lagrange_vdata *vdata = &GC->LU->vdata[GC->LU->act][VC->vix];
+
+  if (vdata->burnArmed) {
+    skpTitle("Lagrange: ORBIT PLAN");
+  } else {
+    skpTitle("Lagrange: ORBIT LIVE");
+  }
+
   int circrad = (int)(W / 120);
   int enc_x, enc_y;
 
@@ -108,10 +114,16 @@ bool Lagrange::DisplayOrbitMode() {
 };
 
 bool Lagrange::DisplayLPMode() {
-  skpTitle("Lagrange: ENCOUNTER");
 
   int l = 4;
   Lagrange_vdata *vdata = &GC->LU->vdata[GC->LU->act][VC->vix];
+  
+  if (vdata->burnArmed) {
+    skpTitle("Lagrange: ENCOUNTER PLAN");
+  } else {
+    skpTitle("Lagrange: ENCOUNTER LIVE");
+  }
+  
   Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
   QP_struct *ves = &vs4i->ves;
   QP_struct *vesLP = &vs4i->vesLP;
@@ -187,7 +199,15 @@ bool Lagrange::DisplayPlanMode() {
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
 
   if (vdata->burnArmed) skpFmtColText(0, l, true, CLR_YELLOW, CLR_WHITE, ">");
-  skpFmtColText(0, l++, vdata->burnArmed, CLR_YELLOW, CLR_WHITE, "  Planning Mode:  %s", vdata->burnArmed ? "Active" : "Inactive");
+
+  if (!VC->ap.IsBurnFrozen()) {
+    skpFmtColText(0, l++, vdata->burnArmed, CLR_YELLOW, CLR_WHITE, "  Planning Mode:  %s", vdata->burnArmed ? "Active" : "Inactive");
+  } else {
+    skpColor(CLR_RED);
+    skpFormatText(0, l++, "  Planning Mode:  %s", "Frozen");
+    skpColor(CLR_WHITE);
+  }
+
   skpFormatText(0, l++, "  Adjustment:     %s", adjText[VC->burnGranularity[VC->burnVar]]);
   l++;
 
@@ -212,8 +232,13 @@ bool Lagrange::DisplayPlanMode() {
   Lagrange_s4i *s4i_e = &GC->LU->s4i[GC->LU->act][vdata->enc_ix];
   QP_struct *vesLP_e = (vs4i_e) ? &vs4i_e->vesLP : nullptr;
   
+  if (vdata->burnArmed) {
+    skpFormatText(0, l++, "  Encounter: PLAN");
+  } else {
+    skpFormatText(0, l++, "  Encounter: LIVE");
+  }
   skpFormatText(0, l++, "  Enc. MJD:     %14.6f", s4i_e->MJD);
-  skpFmtEngText(0, l++, "  Enc. Time:    %10.2f", "s", s4i_e->sec - oapiGetSimTime());
+  skpFmtEngText(0, l++, "  Enc. Time:  %15.5f", "s", s4i_e->sec - oapiGetSimTime());
   l++;
   int rl = l;
   skpFormatText(0, l++, "       Enc. Pos.");
@@ -345,7 +370,7 @@ bool Lagrange::DisplayAPMode() {
   skpFmtEngText(4, l++, "%8.3f", "m/s", vs4i->vesLP.P.z);
 
   l++; l++;
-
+  skpFmtEngText(0, l++, "   AH Fuel Burn:    %8.3f", "kg", VC->ap_ahStartMassV - VC->v->GetMass());
   return true;
 };
 
@@ -372,7 +397,7 @@ bool Lagrange::DisplayS4IMode() {
   }
 
   l++;
-  char *DiagText[7] = { "S4I Run    ",
+  char *DiagText[8] = { "S4I Run    ",
                         "MJD From   ",
                         "MJD To     ",
                         "S4I deltaT ",

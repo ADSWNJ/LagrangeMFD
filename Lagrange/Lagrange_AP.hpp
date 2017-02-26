@@ -43,11 +43,12 @@ private:
   void AddVesselToStack(VESSEL *v, std::vector<VESSEL*> &stack);
   void WarpKillRot(VESSEL* v, char axis);
 
-  VECTOR3 ConvertTransXTarget(VESSEL* v, const VECTOR3 &trxVec, const VECTOR3 &Qr, const VECTOR3 &Pr, VECTOR3 &trxGbl, const bool burnFrozen);
-  VECTOR3 GetRotationToTarget(const VECTOR3 &target) const;
+  VECTOR3 ConvertTransXTarget(VESSEL* v, const VECTOR3 &trxVec, const VECTOR3 &Qr, const VECTOR3 &Pr, VECTOR3 &trxGbl, VECTOR3 &upLcl, const bool burnFrozen);
+  VECTOR3 GetRotationToTarget(const VECTOR3 &target, const VECTOR3 &up) const;
   VECTOR3 m_targetVector;
   VECTOR3 m_targetVectorLocal;
   VECTOR3 m_targetVectorGlobal;
+  VECTOR3 m_upVectorLocal; 
   //VECTOR3 m_targetProAxis;
   //VECTOR3 m_targetPlcAxis;
   //VECTOR3 m_targetOutAxis;

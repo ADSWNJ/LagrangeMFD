@@ -59,7 +59,9 @@ void Lagrange::Button_BURNARM() {
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
   vdata->burnArmed = !vdata->burnArmed;
   if (vdata->burnArmed) {
-    vdata->burnMJD = oapiGetSimMJD() + (15.0 / (60.0 * 24.0)); // bump initial MJD 15 mins in the future
+    if (vdata->burnMJD < oapiGetSimMJD()) {
+      vdata->burnMJD = oapiGetSimMJD() + (15.0 / (60.0 * 24.0)); // bump initial MJD 15 mins in the future
+    }
   }
 }
 // MJD = Plan Mode: Date Select
@@ -193,26 +195,41 @@ void Lagrange::Button_ENT() {
   switch (VC->burnVar) {
   case 0:
     sprintf(GC->LU->buf, "%.6f", vdata->burnMJD);
+    ButtonHelper_TrimEntBox(GC->LU->buf);
     oapiOpenInputBox("Enter Plan Burn MJD", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 1:
     sprintf(GC->LU->buf, "%.6f", vdata->burndV.x);
+    ButtonHelper_TrimEntBox(GC->LU->buf);
     oapiOpenInputBox("Enter Plan Prograde Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 2:
     sprintf(GC->LU->buf, "%.6f", vdata->burndV.z);
+    ButtonHelper_TrimEntBox(GC->LU->buf);
     oapiOpenInputBox("Enter Plan Plane Change Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 3:
     sprintf(GC->LU->buf, "%.6f", vdata->burndV.y);
+    ButtonHelper_TrimEntBox(GC->LU->buf);
     oapiOpenInputBox("Enter Plan Outward Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 4:
     sprintf(GC->LU->buf, "%.6f", TdV);
+    ButtonHelper_TrimEntBox(GC->LU->buf);
     oapiOpenInputBox("Enter Plan Total Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   }
 }
+void Lagrange::ButtonHelper_TrimEntBox(char *buf) {
+  char *b = buf + strlen(buf) -1;
+  while (*b == '0') {
+    *b-- = '\0';
+  }
+  if (*b == '.') {
+    *b = '\0';
+  }
+}
+
 // TGT = Orbit Mode: Select Target - e.g. Sun Earth L2
 void Lagrange::Button_TGT() {
   LC->mode = 6;
@@ -351,17 +368,27 @@ void Lagrange::Button_ITR() {
   return;
 }
 
+// HYS = Adjust Hysteresis Value (need to be better than this deadband to update an encounter point)
+void Lagrange::Button_HYS() {
+  double tmp = GC->LU->s4int_hysteresis;
+  sprintf(GC->LU->buf, "%.1f", tmp);
+  ButtonHelper_TrimEntBox(GC->LU->buf);
+  oapiOpenInputBox("Enter Enc. Hysteresis Dist in m (e.g. 1.0)", Lagrange_DialogFunc::clbkHYS, GC->LU->buf, 20, LC);
+  return;
+}
+
 // TSP = Adjust Iteration TimeStep
 void Lagrange::Button_TSP() {
   sprintf(GC->LU->buf, "%.1f", GC->LU->s4int_timestep[GC->LU->act]);
+  ButtonHelper_TrimEntBox(GC->LU->buf);
   oapiOpenInputBox("Enter Iteration Timestep (e.g. 30.0)", Lagrange_DialogFunc::clbkTSP, GC->LU->buf, 20, LC);
   return;
 }
 
-
 // WT = Adjust S4I Wait Time
 void Lagrange::Button_WT() {
   sprintf(GC->LU->buf, "%.1f", GC->LU->s4int_refresh);
+  ButtonHelper_TrimEntBox(GC->LU->buf);
   oapiOpenInputBox("Enter S4I wait time (e.g. 0.0 or 10.0)", Lagrange_DialogFunc::clbkWT, GC->LU->buf, 20, LC);
   return;
 }

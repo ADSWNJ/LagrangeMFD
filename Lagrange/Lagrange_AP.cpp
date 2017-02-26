@@ -22,12 +22,12 @@ Lagrange_AP::Lagrange_AP()
   , m_aVelLast(_V(0.0,0.0,0.0))
 {
   for (int i = 0; i < 3; i++) {
-    one_ap[i].SetDeadband(0.001);
+    one_ap[i].SetDeadband(0.001, 0.001, true);
     one_ap[i].SetAccParams(0.01, 0.5, 0.8);
   }
   for (int i = 3; i < 6; i++) {
-    one_ap[i].SetDeadband(10.0);
-    one_ap[i].SetAccParams(0.01, 0.2, 0.8);
+    one_ap[i].SetDeadband(10000.0, 1.0, false);
+    one_ap[i].SetAccParams(0.01, 0.01, 0.2);
   }
 }
 
@@ -37,9 +37,9 @@ Lagrange_AP::~Lagrange_AP() {}
 /*
  * Convert TransX Target
  * ---------------------
- * Converts TransX targeting information into global targeting data, w.r.t. the relative pos and vel of vessel to reference body
+ * Converts TransX targeting information into vessel-local targeting data, w.r.t. the relative pos and vel of vessel to reference body
  */
-VECTOR3 Lagrange_AP::ConvertTransXTarget(VESSEL *v, const VECTOR3 &trxVec, const VECTOR3 &Qr, const VECTOR3 &Pr, VECTOR3 &trxGbl, const bool burnFrozen) 
+VECTOR3 Lagrange_AP::ConvertTransXTarget(VESSEL *v, const VECTOR3 &trxVec, const VECTOR3 &Qr, const VECTOR3 &Pr, VECTOR3 &trxGbl, VECTOR3 &upLcl, const bool burnFrozen) 
 {
   VECTOR3 proHat;
   VECTOR3 plcHat;
@@ -64,12 +64,19 @@ VECTOR3 Lagrange_AP::ConvertTransXTarget(VESSEL *v, const VECTOR3 &trxVec, const
   v->GetGlobalPos(gTgt);
   gTgt += trxGbl;
   v->Global2Local(gTgt, tgtVectorLocal);
+  v->GetGlobalPos(gTgt);
+  if (!burnFrozen) {
+    gTgt += plcHat;
+    v->Global2Local(gTgt, upLcl);
+  }
   return tgtVectorLocal;
 }
 
-VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 &target) const
+VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 &target, const VECTOR3 &up) const
 {
-  return _V(atan2(target.y, target.z), atan2(target.x, target.z), 0.0);
+  double upxyLen2 = abs(up.x*up.x + up.y*up.y);
+  if (upxyLen2 < 1e-6) return _V(atan2(target.y, target.z), atan2(target.x, target.z), 0.0);
+  return _V(atan2(target.y, target.z), atan2(target.x, target.z), atan2(-up.x, up.y));
 }
 
 
@@ -89,14 +96,6 @@ VECTOR3 Lagrange_AP::GetRotationToTarget(const VECTOR3 &target) const
  */
 void Lagrange_AP::Update_PlanMode(VESSEL* v, const int apState, const double SimT, const double SimDT, const double burnSimT, const VECTOR3 &targetVector, const VECTOR3 &Qr, const VECTOR3 &Pr) {
 
-/*  bool    m_burnFrozen;
-  double  m_startBurnTime;
-  double  m_endBurnTime;
-  VECTOR3 m_targetVector;
-  double  m_stackMass;
-  double  m_thrust;
-  double  m_ISP; */
-
   double lenQr = length(Qr);
   double lenPr = length(Pr);
 
@@ -110,19 +109,21 @@ void Lagrange_AP::Update_PlanMode(VESSEL* v, const int apState, const double Sim
     m_targetVector = targetVector;
     m_deltaV = length(m_targetVector);
   }
-  m_targetVectorLocal = ConvertTransXTarget(v, m_targetVector, Qr, Pr, m_targetVectorGlobal, m_burnFrozen); 
+  m_targetVectorLocal = ConvertTransXTarget(v, m_targetVector, Qr, Pr, m_targetVectorGlobal, m_upVectorLocal, m_burnFrozen); 
   if (!m_burnFrozen) {
     m_tgtV = length(vs.rvel + m_targetVectorLocal);
   }
+  m_angleToTarget = GetRotationToTarget(m_targetVectorLocal, m_upVectorLocal);
 
   char buf[256];
-  sprintf_s(buf, 256, "burnFrozen:%d G-tgt:{%+.4f,%+.4f,%+.4f} L-tgt:{%+.4f,%+.4f,%+.4f}",
+  sprintf_s(buf, 256, "ALPHA DBG: burnFrozen:%d G-tgt:{%+.4f,%+.4f,%+.4f} L-tgt:{%+.4f,%+.4f,%+.4f}  Angle-tgt:{%+.4f,%+.4f,%+.4f}  UpVector:{%+.4f,%+.4f,%+.4f}",
     (m_burnFrozen?1:0),
     m_targetVectorGlobal.x, m_targetVectorGlobal.y, m_targetVectorGlobal.z,
-    m_targetVectorLocal.x, m_targetVectorLocal.y, m_targetVectorLocal.z
+    m_targetVectorLocal.x, m_targetVectorLocal.y, m_targetVectorLocal.z,
+    m_angleToTarget.x*DEG, m_angleToTarget.y*DEG, m_angleToTarget.z*DEG,
+    m_upVectorLocal.x, m_upVectorLocal.y, m_upVectorLocal.z
   );
   strcpy(oapiDebugString(), buf);
-  m_angleToTarget = GetRotationToTarget(m_targetVectorLocal);
 
   if (apState > 1) { // point enabled
     if (!IsEnabled()) Enable(v);
@@ -135,7 +136,7 @@ void Lagrange_AP::Update_PlanMode(VESSEL* v, const int apState, const double Sim
     if (!m_burnFrozen) GetVesselBurnData(v, burnSimT);
     if (apState > 2) { // burn enabled
       if (!m_burnFrozen) {
-        if (SimT <= m_startBurnTime && (SimT + 5.0 > m_startBurnTime)) {
+        if (SimT <= m_startBurnTime && (SimT + 10.0 > m_startBurnTime)) {
           m_burnFrozen = true;
         }
       }
@@ -167,15 +168,17 @@ void Lagrange_AP::Update_HoldMode(VESSEL* v, const int apState, const double Sim
   }
   if (!IsEnabled()) Enable(v);
 
-  m_targetVectorLocal = ConvertTransXTarget(v, _V(1.0, 0.0, 0.0), Qr, Pr, m_targetVectorGlobal, false); //  , m_targetProAxis, m_targetPlcAxis, m_targetOutAxis);
-  m_angleToTarget = GetRotationToTarget(m_targetVectorLocal);
+  m_targetVectorLocal = ConvertTransXTarget(v, _V(1.0, 0.0, 0.0), Qr, Pr, m_targetVectorGlobal, m_upVectorLocal, false); //  , m_targetProAxis, m_targetPlcAxis, m_targetOutAxis);
+  m_angleToTarget = GetRotationToTarget(m_targetVectorLocal, m_upVectorLocal);
   double warp = oapiGetTimeAcceleration();
   v->GetAngularVel(m_aVel);
 
   double l_ang = length(m_angleToTarget)*DEG;
   double l_aVel = length(m_aVel)*DEG;
-
-  if (ExecuteRotAP(v, m_angleToTarget, SimT, SimDT)>0.01) return;
+  ExecuteRotAP(v, m_angleToTarget, SimT, SimDT);
+  if (abs(m_angleToTarget.x) * DEG > 0.01) return;
+  if (abs(m_angleToTarget.y) * DEG > 0.01) return;
+  if (abs(m_angleToTarget.z) * DEG > 0.01) return;
   ExecuteLinAP(v, QLPr, PLPr, SimT, SimDT);
 }
 
@@ -218,11 +221,11 @@ double Lagrange_AP::ExecuteRotAP(VESSEL* v, const VECTOR3 angleToTarget, const d
     one_ap[axis].CalcCali(m_aVel.data[axis] * DEG, SimT, SimDT);
   }
 
-// Focus on z first, then y+z, then move x gently at the end
-  if (abs(ang.z) * DEG > 10.0) {
-    ang.x = ang.y = 0.0;
-  } else if (abs(ang.y) * DEG > 40.0) {
-    ang.x = 0.0;
+// Focus on y first, then y+x, then move z gently at the end
+  if (abs(ang.y) * DEG > 30.0) {
+    ang.x = ang.z = 0.0;
+  } else if (abs(ang.x) * DEG > 5.0 || abs(ang.y) * DEG > 5.0) {
+    ang.z = 0.0;
   }
 
   rot = _V(0.0, 0.0, 0.0);
@@ -327,6 +330,7 @@ void Lagrange_AP::Enable(VESSEL* v)
 
 void Lagrange_AP::Disable(VESSEL* v)
 {
+  if (!m_isEnabled) return;
   v->ActivateNavmode(NAVMODE_KILLROT);
   m_targetVector = _V(0.0, 0.0, 0.0);
   SetRot0(v);
@@ -373,31 +377,22 @@ void Lagrange_AP::ExecuteBurn(VESSEL *v, double SimT, double SimDT) {
     return; // Um ... no main engine?!
   }
 
-  if (SimT > m_endBurnTime) { // finished burn: MECO time
+  if (SimT > m_endBurnTime) {                                  // finished burn: MECO time
     v->SetThrusterGroupLevel(thgm, 0.0);
     m_burnFrozen = false;
     Disable(v);
-    return;
-  }
-
-  if (SimT + SimDT > m_endBurnTime) { // last puff needed
+  } else if (SimT + SimDT > m_endBurnTime) {                   // last puff needed
     double fractionalBurn = (m_endBurnTime - SimT) / SimDT;
     v->SetThrusterGroupLevel(thgm, fractionalBurn);
-    return;
-  }
-
-  if (SimT> m_startBurnTime) { // regular burn
+  } else if (SimT> m_startBurnTime) {                          // regular burn
     v->SetThrusterGroupLevel(thgm, 1.0);
-    return;
-  }
-
-  if (SimT + SimDT> m_startBurnTime) { // first DT of burn
-    double fractionalBurn = (m_startBurnTime - SimT) / SimDT;
+  } else if (SimT + SimDT> m_startBurnTime) {                  // first DT of burn
+    double fractionalBurn = (SimT + SimDT - m_startBurnTime) / SimDT;
     v->SetThrusterGroupLevel(thgm, fractionalBurn);
-    return;
+  } else {
+    v->SetThrusterGroupLevel(thgm, 0.0);                       // Pre-burn
   }
 
-  v->SetThrusterGroupLevel(thgm, 0.0); // Pre-burn
   return;
 }
 
