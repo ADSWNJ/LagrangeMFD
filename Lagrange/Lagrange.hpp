@@ -45,7 +45,6 @@ public:
   void Button_BURNARM();
   void Button_MJD();
   void Button_TDV();
-  void Button_LDV();
   void Button_PRO();
   void Button_OUT();
   void Button_PLC();
@@ -74,6 +73,8 @@ public:
   void Button_PRV();
   void Button_PMT();
   void Button_ITR();
+  void Button_RNG();
+  void Button_RCT();
   void Button_TSP();
   void Button_WT();
   void Button_DML();

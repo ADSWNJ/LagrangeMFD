@@ -206,7 +206,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
 
     double s4int_refresh;                                   // wait time between s4i runs
 
-    double dbg[2][7];                                       // Debug vars (wkg/act first param, diags for 2nd)
+    double dbg[2][8];                                       // S4I Debug vars (wkg/act first param, diags for 2nd)
     char buf[80];
     double next_s4i_time;
 

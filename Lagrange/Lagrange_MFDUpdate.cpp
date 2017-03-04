@@ -384,33 +384,51 @@ bool Lagrange::DisplayS4IMode() {
   case 'a':
   case 'B':
   case 'b':
-    skpFormatText(0,l++, "S4I State            Active");
+    skpFormatText(0,l++,  "S4I State                  Active");
     break;
   case 'P':
-    skpFormatText(0, l++, "S4I State            Paused");
+    skpFormatText(0, l++, "S4I State                  Paused");
     break;
   case 'K':
-    skpFormatText(0, l++, "S4I State            Killed");
+    skpFormatText(0, l++, "S4I State                  Killed");
     break;
   default:
     skpFormatText(0, l++, "S4I State");
   }
 
   l++;
-  char *DiagText[8] = { "S4I Run    ",
-                        "MJD From   ",
-                        "MJD To     ",
-                        "S4I deltaT ",
-                        "Calc time  ",
-                        "Orb Plot # ",
-                        "S4I Iter # "};
+  char *DiagText[12] = { "Last S4I Run     ",
+                        "MJD From         ",
+                        "MJD To           ",
+                        "Wait Time        ",
+                        "S4I Calc Rng (d) ",
+                        "S4I Calc Rng (h) ",
+                        "S4I Calc Rng (m) ",
+                        "S4I Calc Rng (s) ",
+                        "S4I Iter #       ",
+                        "S4I DeltaT       ",
+                        "S4I Calc time    ",
+                        "Orb Plot #       "
+                      };
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     skpFormatText(0, l++, "%s %15.3f", DiagText[i], GC->LU->dbg[GC->LU->act][i]);
   }
-  for (int i = 5; i < 7; i++) {
-    skpFormatText(0, l++, "%s %15.0f", DiagText[i], GC->LU->dbg[GC->LU->act][i]);
-  }
+  l++;
+  double s4i_cp = (GC->LU->dbg[GC->LU->act][4] * GC->LU->dbg[GC->LU->act][5]) / 60.0 / 60.0 / 24.0;
+  skpFormatText(0, l++, "%s %15.8f", DiagText[4], s4i_cp);
+  s4i_cp *= 24.0;
+  skpFormatText(0, l++, "%s %15.6f", DiagText[5], s4i_cp);
+  s4i_cp *= 60.0;
+  skpFormatText(0, l++, "%s %15.4f", DiagText[6], s4i_cp);
+  s4i_cp *= 60.0;
+  skpFormatText(0, l++, "%s %15.2f", DiagText[7], s4i_cp);
+  l++;
+  skpFormatText(0, l++, "%s %15.0f", DiagText[8], GC->LU->dbg[GC->LU->act][4]);
+  skpFormatText(0, l++, "%s %15.3f", DiagText[9], GC->LU->dbg[GC->LU->act][5]);
+  skpFormatText(0, l++, "%s %15.3f", DiagText[10], GC->LU->dbg[GC->LU->act][6]);
+  l++; l++;
+  skpFormatText(0, l++, "%s %15.0f", DiagText[11], GC->LU->dbg[GC->LU->act][7]);
   return true;
 };
 

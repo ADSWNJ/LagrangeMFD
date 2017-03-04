@@ -228,6 +228,7 @@ void Lagrange::ButtonHelper_TrimEntBox(char *buf) {
   if (*b == '.') {
     *b = '\0';
   }
+  if (strlen(buf) == 1 && buf[0] == '0') buf[0] = '\0';
 }
 
 // TGT = Orbit Mode: Select Target - e.g. Sun Earth L2
@@ -382,6 +383,20 @@ void Lagrange::Button_TSP() {
   sprintf(GC->LU->buf, "%.1f", GC->LU->s4int_timestep[GC->LU->act]);
   ButtonHelper_TrimEntBox(GC->LU->buf);
   oapiOpenInputBox("Enter Iteration Timestep (e.g. 30.0)", Lagrange_DialogFunc::clbkTSP, GC->LU->buf, 20, LC);
+  return;
+}
+
+// RNG = Adjust S4I Calc Range
+void Lagrange::Button_RNG() {
+  sprintf(GC->LU->buf, "");
+  oapiOpenInputBox("Enter S4I Calc Range [d, h, m, s] (e.g. 365d, 24.0h, 23.123m)", Lagrange_DialogFunc::clbkRNG, GC->LU->buf, 20, LC);
+  return;
+}
+
+// RCT = Adjust S4I Calc Time
+void Lagrange::Button_RCT() {
+  sprintf(GC->LU->buf, "");
+  oapiOpenInputBox("Enter Requested Calc Time (e.g. 0.750)", Lagrange_DialogFunc::clbkRCT, GC->LU->buf, 20, LC);
   return;
 }
 

@@ -123,7 +123,7 @@ void Lagrange_VCore::corePreStep(double SimT,double SimDT,double mjd) {
       int i = vdata->burn_ix;
       if (i < 0) i = 0;
       //auto *vs4i_b = &(vdata->vs4i[i]);
-      auto *es4i_b = &(LU->s4i[LU->act][i].body[LU->LP.ref]);
+      auto *es4i_b = &(LU->s4i[LU->act][i].body[vdata->refEnt]);
       burnQv = vdata->burn.Q;
       burnPv = vdata->burn.P;
       burnQe = es4i_b->Q;

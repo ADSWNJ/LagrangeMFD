@@ -101,9 +101,11 @@ Lagrange_Buttons::Lagrange_Buttons()
     {
       { "Mode Select", 0, 'M' },
       { "Arm/Disarm S4I", 0, 'A' },
+      { "S4I Calc Range", 0, 'R' },
       { "S4I Iterations", 0, 'I' },
       { "S4I Delta Time", 0, 'T' },
-      { "Iter Wait Time", 0, 'W' },
+      { "S4I Rq Calc Time", 0, 'T' },
+      { "S4I Itr Wait Time", 0, 'W' },
       { "Dump Logs", 0, 'L' },
       { "Dump Encounter", 0, 'E' },
       { "Set Hysteresis", 0, 'H' }
@@ -111,8 +113,10 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterPage(mnu4, sizeof(mnu4) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
     RegisterFunction("ARM", OAPI_KEY_A, &Lagrange::Button_S4IARM);
+    RegisterFunction("RNG", OAPI_KEY_R, &Lagrange::Button_RNG);
     RegisterFunction("ITR", OAPI_KEY_I, &Lagrange::Button_ITR);
     RegisterFunction("DT",  OAPI_KEY_T, &Lagrange::Button_TSP);
+    RegisterFunction("RCT",  OAPI_KEY_C, &Lagrange::Button_RCT);
     RegisterFunction("WT",  OAPI_KEY_W, &Lagrange::Button_WT);
     RegisterFunction("DML", OAPI_KEY_L, &Lagrange::Button_DML);
     RegisterFunction("DME", OAPI_KEY_E, &Lagrange::Button_DME);

@@ -26,8 +26,8 @@ Lagrange_AP::Lagrange_AP()
     one_ap[i].SetAccParams(0.01, 0.5, 0.8);
   }
   for (int i = 3; i < 6; i++) {
-    one_ap[i].SetDeadband(10000.0, 1.0, false);
-    one_ap[i].SetAccParams(0.01, 0.01, 0.2);
+    one_ap[i].SetDeadband(10.0, 1.0, false);
+    one_ap[i].SetAccParams(0.01, 0.05, 0.2);
   }
 }
 
@@ -50,13 +50,13 @@ VECTOR3 Lagrange_AP::ConvertTransXTarget(VESSEL *v, const VECTOR3 &trxVec, const
   if (!burnFrozen) {
     if (length(trxVec) == 0.0) {
       proHat = _V(0.0, 0.0, 1.0);
-      plcHat = _V(0.0, 1.0, 0.0);
+      plcHat = _V(0.0, -1.0, 0.0);
       outHat = _V(1.0, 0.0, 0.0);
       trxGbl = _V(0.0, 0.0, 0.0);
     } else {
       proHat = unit(Pr);
-      plcHat = crossp(proHat, unit(Qr));
-      outHat = crossp(plcHat, proHat);
+      plcHat = crossp(unit(Qr), proHat);
+      outHat = crossp(proHat, plcHat);
       trxGbl = unit(proHat * trxVec.x + plcHat * trxVec.z + outHat * trxVec.y);
     }
   }
@@ -66,7 +66,7 @@ VECTOR3 Lagrange_AP::ConvertTransXTarget(VESSEL *v, const VECTOR3 &trxVec, const
   v->Global2Local(gTgt, tgtVectorLocal);
   v->GetGlobalPos(gTgt);
   if (!burnFrozen) {
-    gTgt += plcHat;
+    gTgt -= plcHat;
     v->Global2Local(gTgt, upLcl);
   }
   return tgtVectorLocal;

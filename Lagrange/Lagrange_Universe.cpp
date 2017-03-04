@@ -1248,10 +1248,11 @@ void LagrangeUniverse::integrateUniverse() {
   dbg[wkg][0] = s4i[wkg][0].sec;
   dbg[wkg][1] = s4i[wkg][0].MJD;
   dbg[wkg][2] = s4i[wkg][s4int_count[wkg] - 1].MJD;
-  dbg[wkg][3] = s4int_timestep[wkg];
-  dbg[wkg][4] = ((double) ms_elap)/1000.0;
-  dbg[wkg][5] = ORB_PLOT_COUNT;
-  dbg[wkg][6] = s4int_count[wkg];
+  dbg[wkg][3] = s4int_refresh;
+  dbg[wkg][4] = s4int_count[wkg];
+  dbg[wkg][5] = s4int_timestep[wkg];
+  dbg[wkg][6] = ((double) ms_elap)/1000.0;
+  dbg[wkg][7] = ORB_PLOT_COUNT;
 
 
   {
