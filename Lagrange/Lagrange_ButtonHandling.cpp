@@ -74,11 +74,11 @@ void Lagrange::Button_PRO() {
 }
 // PLC = Plan Mode: Plane Change Var
 void Lagrange::Button_PLC() {
-  VC->burnVar = 2;
+  VC->burnVar = 3;
 }
 // OUT = Plan Mode: Outward Var
 void Lagrange::Button_OUT() {
-  VC->burnVar = 3;
+  VC->burnVar = 2;
 }
 // TDV = Plan Mode: Total DV
 void Lagrange::Button_TDV() {
@@ -118,10 +118,10 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
       vdata->burndV.x = 0.0;
       break;
     case 2:
-      vdata->burndV.z = 0.0;
+      vdata->burndV.y = 0.0;
       break;
     case 3:
-      vdata->burndV.y = 0.0;
+      vdata->burndV.z = 0.0;
       break;
     case 4:
       vdata->burndV = _V(0.0, 0.0, 0.0);
@@ -137,52 +137,30 @@ void Lagrange::ButtonHelper_AdjVar(double adj) {
       vdata->burndV.x += adj;
       break;
     case 2:
-      vdata->burndV.z += adj;
-      break;
-    case 3:
       vdata->burndV.y += adj;
       break;
+    case 3:
+      vdata->burndV.z += adj;
+      break;
     case 4:
-      ratio = (TdV + adj) / TdV;
-      vdata->burndV *= ratio;
+      if (TdV == 0.0) {
+        vdata->burndV = _V(TdV + adj, 0.0, 0.0);
+      } else {
+        ratio = (TdV + adj) / TdV;
+        vdata->burndV *= ratio;
+      }
     }
   }
-  if (VC->burnTdV_lock) {
-    switch (VC->burnVar) {
-    case 0:
-      break;
-    case 1:
-      if (vdata->burndV.x < TdV) {
-        ratio = sqrt(TdV * TdV - vdata->burndV.x * vdata->burndV.x) / sqrt(vdata->burndV.y * vdata->burndV.y + vdata->burndV.z * vdata->burndV.z);
-        vdata->burndV.y *= ratio;
-        vdata->burndV.z *= ratio;
-      } else {
-        vdata->burndV.y = 0.0;
-        vdata->burndV.z = 0.0;
-      }
-      break;
-    case 2:
-      if (vdata->burndV.y < TdV) {
-        ratio = sqrt(TdV * TdV - vdata->burndV.y * vdata->burndV.y) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.z * vdata->burndV.z);
-        vdata->burndV.x *= ratio;
-        vdata->burndV.y *= ratio;
-      } else {
-        vdata->burndV.x = 0.0;
-        vdata->burndV.y = 0.0;
-      }
-      break;
-    case 3:
-      if (vdata->burndV.z < TdV) {
-        ratio = sqrt(TdV * TdV - vdata->burndV.z * vdata->burndV.z) / sqrt(vdata->burndV.x * vdata->burndV.x + vdata->burndV.y * vdata->burndV.y);
-        vdata->burndV.x *= ratio;
-        vdata->burndV.z *= ratio;
-      } else {
-        vdata->burndV.x = 0.0;
-        vdata->burndV.z = 0.0;
-      }
-      break;
-    case 4:
-      break;
+  if (VC->burnTdV_lock && VC->burnVar > 0 && VC->burnVar < 4) {
+    double sq_other;
+    int i = VC->burnVar-1;
+    int j = (i + 1) % 3;
+    int k = (i + 2) % 3;
+    sq_other = vdata->burndV.data[j] * vdata->burndV.data[j] + vdata->burndV.data[k] * vdata->burndV.data[k];
+    if (sq_other > 1.0e-6) {
+      ratio = sqrt(TdV * TdV - vdata->burndV.data[i] * vdata->burndV.data[i]) / sqrt(sq_other);
+      vdata->burndV.data[j] *= ratio;
+      vdata->burndV.data[k] *= ratio;
     }
   }
 }
@@ -204,14 +182,14 @@ void Lagrange::Button_ENT() {
     oapiOpenInputBox("Enter Plan Prograde Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 2:
-    sprintf(GC->LU->buf, "%.6f", vdata->burndV.z);
-    ButtonHelper_TrimEntBox(GC->LU->buf);
-    oapiOpenInputBox("Enter Plan Plane Change Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
-    break;
-  case 3:
     sprintf(GC->LU->buf, "%.6f", vdata->burndV.y);
     ButtonHelper_TrimEntBox(GC->LU->buf);
     oapiOpenInputBox("Enter Plan Outward Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
+    break;
+  case 3:
+    sprintf(GC->LU->buf, "%.6f", vdata->burndV.z);
+    ButtonHelper_TrimEntBox(GC->LU->buf);
+    oapiOpenInputBox("Enter Plan Plane Change Delta-V", Lagrange_DialogFunc::clbkENT, GC->LU->buf, 20, LC);
     break;
   case 4:
     sprintf(GC->LU->buf, "%.6f", TdV);
@@ -233,50 +211,86 @@ void Lagrange::ButtonHelper_TrimEntBox(char *buf) {
 
 // TGT = Orbit Mode: Select Target - e.g. Sun Earth L2
 void Lagrange::Button_TGT() {
+  GC->LU->PrvNxtMode = 0;
   LC->mode = 6;
   LC->B.SwitchPage(this, LC->mode);
   return;
 }
-// FRM = Orbit Mode: Select Frame - i.e. EQU / ECL
+// FRM = Orbit Mode: Select Frame of Reference for PROGRADE calcs
 void Lagrange::Button_FRM() {
+  GC->LU->PrvNxtMode = 1;
   LC->mode = 7;
   LC->B.SwitchPage(this, LC->mode);
   return;
 }
+// FOC = Orbit Mode: Select Focus - 0 = Major, 1 = Minor, 2 = Vessel, 3 = Enc, 4 = Burn
+void Lagrange::Button_FOC() {
+  GC->LU->PrvNxtMode = 2;
+  LC->mode = 7;
+  LC->B.SwitchPage(this, LC->mode);
+  return;
+}
+// LEG = Orbit Mode: Legend off/on
+//void Lagrange::Button_LEG() {
+//  GC->LU->orbLegend = !GC->LU->orbLegend;
+//  return;
+//}
+
+// RST = Orbit Mode: Reset Pan/Zoom
+void Lagrange::Button_RST() {
+  GC->LU->orbZoom = 0;
+  for (int i = 0; i < 3; i++) {
+    GC->LU->orbPanHoriz[i] = 0.0;
+    GC->LU->orbPanVert[i] = 0.0;
+  }
+  return;
+}
+
+
 // PRJ = Orbit Mode: Select Projection
 void Lagrange::Button_PRJ() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  if (GC->LU->orbProj == 2) {
+    GC->LU->orbProj = 0;
+  } else {
+    GC->LU->orbProj++;
+  }
+  return;
 }
 // ZMU = Orbit Mode: Zoom Up
 void Lagrange::Button_ZMU() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  GC->LU->orbZoom--;
+  return ;
 }
 // ZMD = Orbit Mode: Zoom Down
 void Lagrange::Button_ZMD() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  GC->LU->orbZoom++;
+  return;
 }
 // MUP = Orbit Mode: Move Up
 void Lagrange::Button_MUP() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  double offset = 10000000.0; // 10000 km for Y-plane
+  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 10.0);
+  double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] + offset;
+  GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
+  return;
 }
 // MDN = Orbit Mode: Move Down
 void Lagrange::Button_MDN() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  double offset = 10000000.0; // 10000 km for Y-plane
+  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 10.0);
+  double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] - offset;
+  GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
+  return;
 }
 // MLF = Orbit Mode: Move Left
 void Lagrange::Button_MLF() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] - (GC->LU->LP.mradius / 10.0);
+  GC->LU->orbPanHoriz[GC->LU->orbProj] = new_pan;
 }
 // MRG = Orbit Mode: Move Right
 void Lagrange::Button_MRG() {
-  //TODO: Complete Function
-  return Button_NotImplementedYet();
+  double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] + (GC->LU->LP.mradius / 10.0);
+  GC->LU->orbPanHoriz[GC->LU->orbProj] = new_pan;
 }
 // AAB = AP Mode: Auto Burn
 void Lagrange::Button_AAB() {
@@ -331,26 +345,48 @@ void Lagrange::Button_S4IARM() {
   return;
 };
 
-// NXT = Lagrange Next Target
+// NXT = Lagrange Next LP, FrameRef, Focus Mode
 void Lagrange::Button_NXT() {
-  if (LC->mode == 6) {
+  int *prefEnt;
+  switch (GC->LU->PrvNxtMode) {
+  case 0:
     GC->LU->selectNextLP();
-  } else {
-    int *prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
+    break;
+  case 1:
+    prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
     (*prefEnt)++;
     if (*prefEnt == COUNT_BODY) *prefEnt = 0;
+    break;
+  case 2:
+    if (GC->LU->orbFocus == 4) {
+      GC->LU->orbFocus = 0;
+    } else {
+      GC->LU->orbFocus++;
+    }
+    break;
   }
   return;
 };
 
-// PRV = Lagrange Prev Target
+// PRV = Lagrange Prev LP, FrameRef, Focus Mode
 void Lagrange::Button_PRV() {
-  if (LC->mode == 6) {
+  int *prefEnt;
+  switch (GC->LU->PrvNxtMode) {
+  case 0:
     GC->LU->selectPrevLP();
-  } else {
-    int *prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
+    break;
+  case 1:
+    prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
     (*prefEnt)--;
     if (*prefEnt < 0) *prefEnt = COUNT_BODY - 1;
+    break;
+  case 2:
+    if (GC->LU->orbFocus == 0) {
+      GC->LU->orbFocus = 4;
+    } else {
+      GC->LU->orbFocus--;
+    }
+    break;
   }
   return;
 };
@@ -416,6 +452,11 @@ void Lagrange::Button_DML() {
 // DME = Trigger Dump Enc
 void Lagrange::Button_DME() {
   GC->LU->dmp_enc = true;
+}
+
+// DME = Trigger Dump Orb Plot
+void Lagrange::Button_DMO() {
+  GC->LU->dmp_orb = true;
 }
 
 // PMT = Put me There

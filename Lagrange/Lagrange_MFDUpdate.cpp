@@ -24,6 +24,7 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
 {
   LC->skp = skp;
   if (GC->LU == nullptr) return true;
+  GC->LU->orbFocVix = VC->vix;
   if (LC->showMessage) return DisplayMessageMode();
   switch (LC->mode) {
   case 0:
@@ -39,7 +40,7 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
   case 6:
     return DisplayTgtMode(); break;
   case 7:
-    return DisplayFrmMode(); break;
+    return DisplayFrmFocMode(); break;
   }
   return true;
 };
@@ -64,6 +65,16 @@ bool Lagrange::DisplayOrbitMode() {
 
   skpFormatText(0, l, "LP: %s", LP->name);
   skpFormatText(4, l++, "FRM: %s", LU->body[lvd->refEnt].name);
+
+  char *PrjTxt[3] = { "Std", "X-Edge", "Z-Edge" };
+  char FocTxt[5][32] = { "", "", "Ves Live", "Ves Enc", "Ves Burn"};
+  strcpy(FocTxt[0], LU->body[LP->maj].name);
+  strcpy(FocTxt[1], LU->body[LP->min].name);
+  skpFormatText(0, 24, "FOC: %s", FocTxt[LU->orbFocus]);
+  skpFormatText(4, 24, "PRJ: %s", PrjTxt[LU->orbProj]);
+  skpFormatText(0, 25, "ZM: %d", -LU->orbZoom);
+  skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.2, (double)LU->orbZoom), 1);
+  skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.2, (double)LU->orbZoom), 1);
 
 //  for (int i = 0; i < 10; i++) {
 //    skp->MoveTo(W * (i+1) / 12, H * 1/4);
@@ -216,8 +227,8 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
   skpFmtEngText(0, l++, " (Burn Point):  %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
   skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6fm/s", vdata->burndV.x);
-  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6fm/s", vdata->burndV.z);
-  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6fm/s", vdata->burndV.y);
+  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6fm/s", vdata->burndV.y);
+  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6fm/s", vdata->burndV.z);
   if (VC->burnTdV_lock) {
     skpFmtColText(0, l, (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV Lock:%14.6fm/s", length(vdata->burndV));
   } else {
@@ -395,7 +406,7 @@ bool Lagrange::DisplayS4IMode() {
   default:
     skpFormatText(0, l++, "S4I State");
   }
-
+  if (!GC->LU->s4i_valid) return true;
   l++;
   char *DiagText[12] = { "Last S4I Run     ",
                         "MJD From         ",
@@ -416,6 +427,7 @@ bool Lagrange::DisplayS4IMode() {
   }
   l++;
   double s4i_cp = (GC->LU->dbg[GC->LU->act][4] * GC->LU->dbg[GC->LU->act][5]) / 60.0 / 60.0 / 24.0;
+  if (s4i_cp > 1.0e64) return true;
   skpFormatText(0, l++, "%s %15.8f", DiagText[4], s4i_cp);
   s4i_cp *= 24.0;
   skpFormatText(0, l++, "%s %15.6f", DiagText[5], s4i_cp);
@@ -432,14 +444,32 @@ bool Lagrange::DisplayS4IMode() {
   return true;
 };
 
-bool Lagrange::DisplayFrmMode() {
-  skpTitle("Lagrange: FRM");
-  int l = 4;
-  int curRef = GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
-  skpColor(CLR_YELLOW);
-  skpFormatText(0, l + curRef, ">");
-  for (int i = 0; i<COUNT_BODY; i++) {
-    skpFmtColText(0, l++, (i == curRef), CLR_YELLOW, CLR_WHITE, "  %s", GC->LU->body[i].name);
+bool Lagrange::DisplayFrmFocMode() {
+  if (GC->LU->PrvNxtMode == 1) {
+    skpTitle("Lagrange: FRAME");
+    int l = 4;
+    int curRef = GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
+    skpColor(CLR_YELLOW);
+    skpFormatText(0, l + curRef, ">");
+    for (int i = 0; i<COUNT_BODY; i++) {
+      skpFmtColText(0, l++, (i == curRef), CLR_YELLOW, CLR_WHITE, "  %s", GC->LU->body[i].name);
+    }
+  } else if (GC->LU->PrvNxtMode == 2) {
+    skpTitle("Lagrange: FOCUS");
+    int l = 4;
+    char focusNames[5][32];
+    strcpy(focusNames[0], GC->LU->body[GC->LU->LP.maj].name);
+    strcpy(focusNames[1], GC->LU->body[GC->LU->LP.min].name);
+    strcpy(focusNames[2], "Vessel Live");
+    strcpy(focusNames[3], "Vessel Enc");
+    strcpy(focusNames[4], "Vessel Burn");
+
+    int curFoc = GC->LU->orbFocus;
+    skpColor(CLR_YELLOW);
+    skpFormatText(0, l + curFoc, ">");
+    for (int i = 0; i<5; i++) {
+      skpFmtColText(0, l++, (i == curFoc), CLR_YELLOW, CLR_WHITE, "  %s", focusNames[i]);
+    }
   }
   return true;
 };

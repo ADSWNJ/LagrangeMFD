@@ -36,7 +36,7 @@ public:
   bool DisplayAPMode();
   bool DisplayLPMode();
   bool DisplayS4IMode();
-  bool DisplayFrmMode();
+  bool DisplayFrmFocMode();
   bool DisplayTgtMode();
   bool DisplayMessageMode();
 
@@ -56,6 +56,8 @@ public:
   void Button_TGT();
   void Button_FRM();
   void Button_PRJ();
+  void Button_FOC();
+  void Button_RST();
   void Button_ZMU();
   void Button_ZMD();
   void Button_MUP();
@@ -79,6 +81,7 @@ public:
   void Button_WT();
   void Button_DML();
   void Button_DME();
+  void Button_DMO();
   void Button_HYS();
 
   void ButtonHelper_AdjVar(double adj);
@@ -100,8 +103,8 @@ protected:
   int _Col2(const int pos );
   void skpFormatText(const int col, const int line, const char* fmt, ...);
   void skpFmtColText(const int col, const int line, const bool test, const DWORD truecol, const DWORD falsecol, const char* fmt, ...);
-  void skpFmtEngText(const int col, const int line, const char* fmt, const char* sfx, const double val);
-  void skpFmtEngText(const int col, const int line, const char* fmt, const unsigned char* sfx, const double val);
+  void skpFmtEngText(const int col, const int line, const char* fmt, const char* sfx, const double val, const int dloB = 0);
+  void skpFmtEngText(const int col, const int line, const char* fmt, const unsigned char* sfx, const double val, const int dloB = 0);
   void skpTitle(const char* title);
   void skpColor(DWORD col);
   void showMessage();

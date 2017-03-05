@@ -114,7 +114,9 @@ struct Lagrange_s4i {                                       // Main symplectic i
 };
 
 struct Lagrange_orb_disp {
-  vector<VECTOR2> orb_km[ORB_MAX_LINES];                    // distances in km raltive to the major entity of this LP system
+  VECTOR2 origPlot;                                         // OriginPlot
+  double scale;                                             // Scale (for sizing celestial body)
+  vector<VECTOR2> orb_km[ORB_MAX_LINES];                    // distances in km relative to the major entity of this LP system
   vector<VECTOR2> orb_plot[ORB_MAX_LINES];                  // Line segments for plot lines for orb display in fraction of H / W (0 = MAJ, 1 = MIN, 2 = LP)
 };
 
@@ -150,6 +152,8 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       double mass;                                          // Mass of each body
       bool isBary;                                          // Is the body a barycenter?
       int b_e[COUNT_BODY+1];                                // If barycenter, composed of these bodies
+      double proxWarnDist;                                  // Distance for proximity alarms (e.g. rad + 120k for Earth)
+      double impactWarnDist;                                // Distance for impact alarms (e.g. rad + 10K for Earth)
     } body[COUNT_BODY];
 
 
@@ -161,6 +165,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       int ref;                                              // index of the refernce body for orientation
       int maj;                                              // index of the major body for this LP
       int min;                                              // index of the min body for this LP
+      double mradius;                                       // Mean radius between maj and min
       double alpha;                                         // Pre-calculated alpha for each LP per http://www.orbiter-forum.com/showthread.php?t=36110
       double gm1;                                           // GM for major                                       
       double gm2;                                           // GM for minor                                       
@@ -171,7 +176,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       int baryIx[COUNT_BODY+1];                             // barycenter indices for this system (-1 terminated)
       int Lnum;                                             // Lagrange number (1-5)
       int plotix[ORB_MAX_LINES];                            // Index of current LP, or -1 if not used. Note: lporb[0] is LP, both with ix = -2 (not used)
-      int plotixpen[ORB_MAX_LINES];                         // Pen color inxex
+      int plotixpen[ORB_MAX_LINES];                         // Pen color index
     } lptab[COUNT_LP];
 
     struct LagrangeUniverse_LP {
@@ -183,6 +188,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       int maj;                                              // index of the major body for this LP
       int min;                                              // index of the min body for this LP
       int Lnum;                                             // Lagrange number (1-5)
+      double mradius;                                       // Mean radius between maj and min
       double alpha;                                         // Pre-calculated alpha for each LP per http://www.orbiter-forum.com/showthread.php?t=36110
       double gm1;                                           // GM for major                                       
       double gm2;                                           // GM for minor                                       
@@ -210,6 +216,8 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     char buf[80];
     double next_s4i_time;
 
+    int PrvNxtMode;                                         // = 0 for LP, 1 for frame, 2 = focus
+
     // Public thread interface vars
     atomic<int> act;
     atomic<int> wkg;
@@ -219,15 +227,24 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<bool> s4i_waitrel;
     atomic<bool> dmp_log;
     atomic<bool> dmp_enc;
-    atomic<double> s4int_hysteresis;                          // Hysteresis value for encounters (needs to beat prev. enc. by this value to update it)
+    atomic<double> s4int_hysteresis;                        // Hysteresis value for encounters (needs to beat prev. enc. by this value to update it)
+    atomic<bool> dmp_orb;
 
+    // Orb Plot Controls
+    atomic<int> orbFocus;                                   // 0 = Maj, 1 = Min, 2 = Ves, 3 = Enc, 4 = Burn (or Ves if no burn)
+    atomic<int> orbProj;                                    // 0 = XZ (i.e. usual ecliptic plot), 1 = XY, 2 = ZY
+    atomic<int> orbZoom;                                    // Zoom bias. Zoom is zoom * 1.2^orbZoom
+    atomic<double> orbPanVert[3];                           // Vertical axis pan
+    atomic<double> orbPanHoriz[3];                          // Horizontal axis pan
+    atomic<bool> orbLegend;                                 // Plot legend
+    atomic<int> orbFocVix;                                  // Focus Vessel's Index
 
   protected:
   private:
 
-    void defBody(LagrangeUniverse_Body *body, int p0, char* p1);                                 // Sets initial constants for selected body
+    void defBody(LagrangeUniverse_Body *body, int p0, char* p1,double proxDist, double impactDist);                                 // Sets initial constants for selected body
     void defBary(LagrangeUniverse_Body *bary, int p0, char* p1, int maj, int min);               // Sets initial constants for 2-body barycenter
-    void defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, int Lnum, double a, int ref, int maj, int min,
+    void defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, int Lnum, double mr, double a, int ref, int maj, int min,
                                                int oth1=-1,int oth2=-1);     // Sets initial constants for selected LP
 
     void defOrbPlot(LagrangeUniverse_LP_Def *lptab, int lppen, int b1 = -1, 

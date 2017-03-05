@@ -65,6 +65,9 @@
     <Text Include="gpl-3_0.txt">
       <Filter>Source Files</Filter>
     </Text>
+    <Text Include="BuildingEphemerisEngine.txt">
+      <Filter>Source Files</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DisplayEngUnitFunctions.cpp">

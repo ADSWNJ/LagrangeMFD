@@ -176,6 +176,7 @@
     <ClInclude Include="ParseFunctions.h" />
   </ItemGroup>
   <ItemGroup>
+    <Text Include="BuildingEphemerisEngine.txt" />
     <Text Include="gpl-3_0.txt" />
   </ItemGroup>
   <ItemGroup>

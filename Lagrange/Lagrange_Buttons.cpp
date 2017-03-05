@@ -22,8 +22,10 @@ Lagrange_Buttons::Lagrange_Buttons()
     {
       {"Mode Select", 0, 'M'},
       {"Set Target", 0, 'T'},
-      {"Ref Frame", 0, 'F'},
+      {"Ref Frame", 0, 'R'},
       {"Projection", 0, 'P'},
+      {"Focus Point", 0, 'F' },
+      {"Reset Zoom/Pan", 0, 'C' },
       {"Zoom In", 0, 'I'},
       {"Zoom Out", 0, 'O'},
       {"Move Up", 0, 'U'}, 
@@ -34,8 +36,10 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterPage(mnu0, sizeof(mnu0) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
     RegisterFunction("TGT", OAPI_KEY_T, &Lagrange::Button_TGT);
-    RegisterFunction("FRM", OAPI_KEY_F, &Lagrange::Button_FRM);
+    RegisterFunction("FRM", OAPI_KEY_R, &Lagrange::Button_FRM);
     RegisterFunction("PRJ", OAPI_KEY_P, &Lagrange::Button_PRJ);
+    RegisterFunction("FOC", OAPI_KEY_P, &Lagrange::Button_FOC);
+    RegisterFunction("RST", OAPI_KEY_C, &Lagrange::Button_RST);
     RegisterFunction("ZM+", OAPI_KEY_I, &Lagrange::Button_ZMU);
     RegisterFunction("ZM-", OAPI_KEY_O, &Lagrange::Button_ZMD);
     RegisterFunction("UP",  OAPI_KEY_U, &Lagrange::Button_MUP);
@@ -59,8 +63,8 @@ Lagrange_Buttons::Lagrange_Buttons()
       { "Arm/Disarm Plan", 0, 'A' },
       { "Set Burn MJD", 0, 'D' },
       { "Set Prograde", 0, 'F' },
-      { "Set Plane Change", 0, 'P' },
       { "Set Outward", 0, 'O' },
+      { "Set Plane Change", 0, 'P' },
       { "Increase Increment", 0, 'U' },
       { "Decrease Increment", 0, 'D' },
       { "Increment Value", 0, '=' },
@@ -73,8 +77,8 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("ARM", OAPI_KEY_A, &Lagrange::Button_BURNARM);
     RegisterFunction("MJD", OAPI_KEY_D, &Lagrange::Button_MJD);
     RegisterFunction("PRO", OAPI_KEY_F, &Lagrange::Button_PRO);
-    RegisterFunction("PLC", OAPI_KEY_P, &Lagrange::Button_PLC);
     RegisterFunction("OUT", OAPI_KEY_O, &Lagrange::Button_OUT);
+    RegisterFunction("PLC", OAPI_KEY_P, &Lagrange::Button_PLC);
     RegisterFunction("ADJ", OAPI_KEY_U, &Lagrange::Button_ADJ);
     RegisterFunction("ADM", OAPI_KEY_D, &Lagrange::Button_ADM);
     RegisterFunction("++",  OAPI_KEY_EQUALS, &Lagrange::Button_AUP);
@@ -108,6 +112,7 @@ Lagrange_Buttons::Lagrange_Buttons()
       { "S4I Itr Wait Time", 0, 'W' },
       { "Dump Logs", 0, 'L' },
       { "Dump Encounter", 0, 'E' },
+      { "Dump Orb Plot", 0, 'O' },
       { "Set Hysteresis", 0, 'H' }
     };
     RegisterPage(mnu4, sizeof(mnu4) / sizeof(MFDBUTTONMENU));
@@ -120,6 +125,7 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("WT",  OAPI_KEY_W, &Lagrange::Button_WT);
     RegisterFunction("DML", OAPI_KEY_L, &Lagrange::Button_DML);
     RegisterFunction("DME", OAPI_KEY_E, &Lagrange::Button_DME);
+    RegisterFunction("DMO", OAPI_KEY_E, &Lagrange::Button_DMO);
     RegisterFunction("HYS", OAPI_KEY_H, &Lagrange::Button_HYS);
 
     // Acknowledge Message Mode

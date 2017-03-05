@@ -65,13 +65,13 @@ void Lagrange::skpColor(const DWORD col) {
   LC->skp->SetTextColor(col);
 }
 
-void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, const char* sfx, const double val) {
+void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, const char* sfx, const double val, const int dloB) {
   LC->skpColPix = _Col(col);
   LC->skpLinePix = _Line(line);
   char engUnit[12] = "pnum kMGTPE";
   double cnvVal = val;
   int i = 4;
-  int loB = LC->skpLoB;
+  int loB = LC->skpLoB + dloB;
 
   if (loB<-4) loB = -4;
   if (loB>6) loB = 6;
@@ -103,13 +103,13 @@ void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, con
 }
 
 
-void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, const unsigned char* sfx, const double val) {
+void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, const unsigned char* sfx, const double val, const int dloB) {
   LC->skpColPix = _Col(col);
   LC->skpLinePix = _Line(line);
   char engUnit[12] = "pnum kMGTPE";
   double cnvVal = val;
   int i = 4;
-  int loB = LC->skpLoB;
+  int loB = LC->skpLoB + dloB;
 
   if (loB<-4) loB = -4;
   if (loB>6) loB = 6;

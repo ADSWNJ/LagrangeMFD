@@ -1,0 +1,964 @@
+Building a simple ephemeris generating tool for short-run mission planning - Part 1
+(c) Keith Gelling July 21, 2016
+
+
+
+In Orbiter, to do anything useful, you need to know the future trajectory of your spacecraft so that you can ensure that you are 'on target'. Usually, the standard Orbiter MFDs of TransX and IMFD's Map program will give you the information that you want to achieve whatever you mission goal you have set yourself. But sometimes - either because these MFDs don't quite give you the information that you want, or because they don't quite do it with the accuracy that you would like - you may find you need to build your own trajectory planning tool.
+
+An example
+A case in point: recently, I was considering the technique for getting out to the Earth-Moon L1 Lagrange point (see Lagrange points/halo orbits? Are there any methods?). This Lagrange point is a point in space at which the gravitational pull of the Earth and Moon more or less balance each other and so, if you park a spacecraft there, then with minimal effort, it will tend to stay at the L1 Lagrange point. However, neither TransX nor IMFD recognise the Earth-Moon Lagrange points as valid 'targets' and so don't provide any information about how close your trajectory will take you to these points, nor do they provide any information about your speed when you get there. Without this information, it is difficult to plan a manoeuvre that 'targets' the Lagrange points.
+
+However, if you know the position of the Earth and Moon at any time in the future you can calculate where the Lagrange points are. And, by using an n-body integrator that takes into account the motion of the spacecraft, the Earth, the Moon and the Sun, you can work out (with considerable accuracy) where your planned trajectory will take you, and how far you will be from a Lagrange point at any time along that trajectory.
+
+But how does one calculate the position of the Earth and Moon so as to be able to calculate the position of the Lagrange point?
+
+Orbiter's internal ephemeris engine
+Well, to calculate the position of the Earth and the Moon, you can rely upon the ephemeris system built into Orbiter. This is probably the most accurate way to calculate the position of the Earth and the Moon since it's the same calculation that Orbiter uses, but accessing that information can be tricky - and slow. The calculation of the position of these bodies using Orbiter's ephemeris system requires the summation of a few thousand sine and cosine terms. For a computer, calculating sines and cosines is a slow mathematical operation - and to calculate thousands of sine and cosine terms is very slow. Every time you want to know the position of these bodies, you have to repeat this long-winded calculation.
+
+2-body physics engines
+You could also rely on more straightforward Keplerian, 2-body physics. This is essentially what TransX and IMFD's Course program do in making their trajectory projections. But if one is trying to get to a Lagrange point, this is precisely where the gravitational forces of two bodies (the Earth and Moon) more or less cancel out, so you would expect that standard 2-body physics may not work well if you are close to that point. Close to the Lagrange points, and when moving slowly relative to those Lagrange points, a full n-body integration is more or less essential.
+
+So what to do?
+
+The cheap and cheerful solution
+One way out of this dilemma is to build your own 'cheap and cheerful' (but still very accurate) short-run ephemeris engine which accurately calculates the position of the Earth and the Moon (and even your spacecraft) for around a week into the future - based solely on a snapshot of the current positions and velocities of the Earth, Moon and Sun. 
+
+(What kind of accuracies are we talking about here for an ephemeris engine of this kind? For the Earth and Moon, one can expect accuracies of a few centimetres for 1 hour into the future; a few metres one day into the future; and a few hundred metres a week into the future. For most Earth-Moon missions this provides ample accuracy.)
+
+So, what does it take to build this 'cheap and cheerful' (but accurate) short-run ephemeris engine? Well, you need:
+an ability to take a 'snapshot' of the position and velocity of the Earth, Moon and Sun;
+an n-body integrator that 'co-integrates' the motion of the spacecraft, the Earth, the Moon and the Sun from their starting positions to, say, a week into the future; and
+a tool that analyses these trajectories to allow you to calculate, say, your periapsis altitude at the Earth or the Moon; or your closest approach to L1.
+
+In this context co-integration means to use an n-body integration that calculates the positions of all the bodies at the same time. An example of n-body integrator is a 4th-order symplectic integrator described here Building a 4th order symplectic integrator. So, by co-integrating the motion of all the bodies, taking into account all of the (Newtonian) gravitational forces acting on all of the bodies, a co-integrator gets around the need for an external ephemeris generator by building its own ephemeris 'on the fly'.
+
+Of course, you could write an MFD to do all of this, but assuming that you don't want to write an MFD, then the simple, but slightly more manual way to do this is to:
+write a short Lua script that takes the snapshots of position and velocities and dumps the information to a text file;
+write an excel spreadsheet which performs the co-integration of the spacecraft Earth, Moon and Sun using the 4th order symplectic integrator;
+on the same spreadsheet, assume that the spacecraft executes a manoeuvre at some point in time in its trajectory and the recalculate what its new trajectory will be; and
+using all this information, and while still in the spreadsheet - calculate the information that you want (e.g., closest approach to L1, time of arrival at L1, periapsis altitude at the Moon, and so on).
+
+
+Coming soon
+Now, I don't have time right now to go through how to do all of this in detail - but each of the steps is quite straightforward. Progressively, I shall add to this thread detailed notes on how to implement each of these components. By the time I'm done, I should have:
+a template Lua script for extracting snapshot information from Orbiter;
+constructed a symplectic integrator in a spreadsheet (which will be available for download) that calculates the future trajectories in the Earth-Moon system (although the idea can easily be extended to other plant/moon systems); and
+a short video to describe how to use the Lua script and spreadsheet to do some 'real' mission planning.
+
+
+---------------
+
+Building a simple ephemeris generating tool for short-run mission planning - Part 2
+(c) Keith Gelling July 24, 2016
+
+
+Well, I've found a little time this weekend to work on this little project, so time for an addition the preceding post. First a quick recap:
+
+The goal here is to develop a spreadsheet-based, but highly accurate, co-integration scheme to help getting to difficult to reach places - such as the L1 and L2 Lagrange points of the Earth-Moon system. In many respects, this spreadsheet tool has the same type of functionality as IMFD's Map program but loses fidelity over time-scales of much more than a week or so. But over that one week, it can be very accurate.
+
+A couple of things are required to implement this:
+
+* the ability to take a snapshot of current state vectors of the certain bodies (in this case the Earth, Moon and Sun) as well as that of the focus vessel;
+
+* feeding this snapshot information into a fourth-order symplectic integrator and using that symplectic integrator to hep with planning a manoeuvre to take the focus vessel to the Lagrange points; and
+
+* translating the outputs of the symplectic integrator into something that tools such as TransX and IMFD can understand so that the manoeuvre can be executed in Orbiter.
+
+This post concentrates on taking the data snapshot. I have also finished building the spreadsheet-based integrator so I should be in a position to post that in the near future.
+
+Why use Microsoft Excel to build the integrator?
+Readers may be wondering why I want to build a high-fidelity numerical integrator in Microsoft Excel. Microsoft Excel is good for many things - budget planning, financial analysis and so on - but it isn't renown for being a cutting-edge astrodynamics planning program. And that's because it isn't. It is, however, ubiquitous. Almost everyone will have some passing familiarity with using Excel and most people have access to it - whereas C/C++ (and Python) programming skills are less common. In a way, this is an attempt to demonstrate that building these planning tools of this kind is something that most people have both the requisite skills and tools to implement.
+
+Interfacing with Excel
+Anyone that has worked with Orbiter for any length of time will appreciate that Orbiter does not natively talk to Excel. But in order to use Excel, we need a 'data bridge' that allows us to transfer relevant information from Obiter to Excel. The easiest way of building this bridge is by way of an intermediate text file: Orbiter is instructed to produce a text file with the relevant information from its internal tracking of the position and velocity of objects; and Excel is then instructed to pick up this text file and extract the relevant information from it. A simple process. Sometimes tedious to apply, but always robust.
+
+Producing the data file
+The easiest way of getting Orbiter to produce the relevant data is by way of a Lua script. This is a short Lua program that is run in Orbiter by way of the Lua Console Window. The Lua script that I am using to produce the bridge text file is as follows:
+
+Code:
+oapi.set_pause(true)
+
+mjd = oapi.get_simmjd()
+
+-- get the handle for the focus spacecraft
+ 		ves 	= vessel.get_focushandle()
+
+-- get the handles for the Earth, the Moon and the Sun
+		earth	= oapi.get_objhandle("Earth")
+		moon	= oapi.get_objhandle( "Moon")
+		sun  	= oapi.get_objhandle( "Sun")
+
+-- get the current location of the Earth
+		q_ear 	= oapi.get_globalpos(earth)
+		p_ear 	= oapi.get_globalvel(earth)
+		
+-- get the current location of the Moon
+		q_mon 	= oapi.get_globalpos(moon)
+		p_mon 	= oapi.get_globalvel(moon)
+		
+-- get the current location of the Moon
+		q_sun 	= oapi.get_globalpos(sun)
+		p_sun 	= oapi.get_globalvel(sun)
+		
+-- get the current location of the Vessel
+		q_ves   = oapi.get_globalpos(ves)
+		p_ves 	= oapi.get_globalvel(ves)
+
+io.write("-- MJD \n")
+io.write(mjd, "\n")
+io.write("\n")
+
+io.write("-- State vectors of the Earth \n")
+io.write(q_ear.x,"  ", q_ear.z, "  ", q_ear.y,  "\n")
+io.write(p_ear.x,"  ", p_ear.z, "  ", p_ear.y,  "\n")
+io.write("\n")
+
+io.write("-- State vectors of the Moon \n")		
+io.write(q_mon.x,"  ", q_mon.z, "  ", q_mon.y,  "\n")
+io.write(p_mon.x,"  ", p_mon.z, "  ", p_mon.y,  "\n")
+io.write("\n")
+
+io.write("-- State vectors of the Sun \n")		
+io.write(q_sun.x,"  ", q_sun.z, "  ", q_sun.y,  "\n")
+io.write(p_sun.x,"  ", p_sun.z, "  ", p_sun.y,  "\n")
+io.write("\n")
+
+io.write("-- State vectors of the Vessel \n")		
+io.write(q_ves.x,"  ", q_ves.z, "  ", q_ves.y,  "\n")
+io.write(p_ves.x,"  ", p_ves.z, "  ", p_ves.y,  "\n")
+io.write("\n")
+		
+oapi.set_pause(false)
+
+io.close(file)
+This file does the following things:
+
+* it opens a file called 'test.lua' for output
+
+* it temporarily pauses the Orbiter engine. (At the end of the script it starts the Orbiter engine again. This stopping and starting happens so quickly that it isn't discernible.)
+
+* it gets the 'handles' for the focus vessel, the Earth, the Moon and the Sun
+
+* with the integration engine pauses, it then takes a snapshot of the MJD of the snapshot, and the position and velocities of the focus vessel, the Earth, the Moon and the Sun
+
+* it then prints this information out to the bridge file 'test.lua'
+
+* it restarts Orbiter's integration engine
+
+* and, to be tidy, it then closes the bridge file 'test.lua'
+
+Simple, but effective.
+
+Now, you might be wondering: why does the Lua script need the position and velocities of the Sun, Earth and Moon as well as that of the focus vessel? The integration scheme that the spreadsheet will implement is a 'co-integration' scheme. The position of the (dominant) gravitating bodies is needed to know the forces acting on the focus vessel at any point in the future. And rather than carry around the computational overhead of a separate ephemeris generator for these bodies, the integration scheme calculates this ephemeris information 'on the fly' from the their snapshot positions and velocities. This type of integration scheme produces high accuracy in the near-term but does not perform well over long time-scales.
+
+Running the Lua script
+The Lua script file needs to be placed in the "Script" directory located under the Orbiter 2010 root directory with a ".lua" suffix. To run the script, load up Orbiter 2010 and open the Lua Console Window. (To do this you will have to enable the module.) Then, in the Console Window type "run 'XXXXX' " where XXXX is the name of the script without the '.lua' suffix. That should be sufficient.
+
+The output of the Lua script
+A sample of the snapshot output file is shown below:
+
+Code:
+-- MJD 
+51987.250220876
+
+-- State vectors of the Earth 
+-149508665534.05  2635582735.6114  21269682.320874
+-1162.176500679  -29901.58660315  0.78700526732017
+
+-- State vectors of the Moon 
+-149339150764.12  2268244892.3456  13600127.396682
+-281.13300397464  -29510.988872506  -82.803656389856
+
+-- State vectors of the Sun 
+-598586284.83708  -775318010.03728  21094585.025077
+14.440446183745  -5.1243342754206  -0.32898982217866
+
+-- State vectors of the Vessel 
+-149506285915.75  2633449799.5878  27193356.262695
+5897.4800025109  -30415.309360392  -3025.5718902154
+This output file contains 25 useful numbers:
+
+* the MJD of the snapshot
+
+* four times six numbers that capture the X-Y-Z components of the position and velocities of the Sun, Earth, Moon and the focus vessel.
+
+This information is given in Orbiter's global coordinate system and, more or less, the origin of that coordinate system is located at the Solar System Barycentre (i.e., the Centre of Mass of the Solar System). Positions are give in metres, and velocities are given in m/s.
+
+Nest step
+The next step is to feed this data into the Excel spreadsheet integrator - but this will be the subject of the next post.
+
+
+-------------------
+
+Building a simple ephemeris generating tool for short-run mission planning - Part 3
+(c) Keith Gelling July 26, 2016
+
+
+This is the third post in a short series setting out how to use Microsoft Excel to build a high-fidelity trajectory integration engine with a view to using that engine to target, say, the Lagrange points of the Earth-Moon system. Microsoft Excel has been chosen in this instance because most people have some familiarity with, and access to, Excel and so should be able to build and implement these tools themselves - should they so wish to do so.
+
+In the previous post (above), a data bridge was constructed that extracted the relevant information from Orbiter and posted that information to a text file. The next step ini the process is to load the data into the integration engine spreadsheet so as to project spacecraft trajectories into the future. The heart of that spreadsheet, though, is the Visual Basic User-Defined-Function (aka 'a macro') that performs a single time-step of the symplectic integrator. This not focuses on that User-Defined-Function which is presented in the code block below for the four-bodyEarth/Moon/Sun/Vessel system:
+
+Code:
+Public Function S4INTEGRATOR(QP As Object) As Variant
+
+    Dim QX_E, QY_E, QZ_E, PX_E, PY_E, PZ_E As Double
+    Dim QX_M, QY_M, QZ_M, PX_M, PY_M, PZ_M As Double
+    Dim QX_S, QY_S, QZ_S, PX_S, PY_S, PZ_S As Double
+    Dim QX_V, QY_V, QZ_V, PX_V, PY_V, PZ_V As Double
+
+    Dim PX_I, PY_I, PZ_I As Double
+
+    Dim dt, w0, w1 As Double
+
+    dt = 30
+    w0 = 1.35120719195966
+    w1 = -1.70241438391932
+
+
+    QX_E = QP(1): QY_E = QP(2): QZ_E = QP(3)
+    QX_M = QP(4): QY_M = QP(5): QZ_M = QP(6)
+    QX_S = QP(7): QY_S = QP(8): QZ_S = QP(9)
+    QX_V = QP(10): QY_V = QP(11): QZ_V = QP(12)
+
+    PX_E = QP(13): PY_E = QP(14): PZ_E = QP(15)
+    PX_M = QP(16): PY_M = QP(17): PZ_M = QP(18)
+    PX_S = QP(19): PY_S = QP(20): PZ_S = QP(21)
+    PX_V = QP(22): PY_V = QP(23): PZ_V = QP(24)
+    PX_I = QP(25): PY_I = QP(26): PZ_I = QP(27)
+
+
+    ' Add in the impulse
+    PX_V = PX_V + PX_I
+    PY_V = PY_V + PY_I
+    PZ_V = PZ_V + PZ_I
+
+
+
+    ' Step 1 - A
+    QX_E = QX_E + 0.5 * w0 * dt * PX_E
+    QY_E = QY_E + 0.5 * w0 * dt * PY_E
+    QZ_E = QZ_E + 0.5 * w0 * dt * PZ_E
+
+    QX_M = QX_M + 0.5 * w0 * dt * PX_M
+    QY_M = QY_M + 0.5 * w0 * dt * PY_M
+    QZ_M = QZ_M + 0.5 * w0 * dt * PZ_M
+
+    QX_S = QX_S + 0.5 * w0 * dt * PX_S
+    QY_S = QY_S + 0.5 * w0 * dt * PY_S
+    QZ_S = QZ_S + 0.5 * w0 * dt * PZ_S
+
+    QX_V = QX_V + 0.5 * w0 * dt * PX_V
+    QY_V = QY_V + 0.5 * w0 * dt * PY_V
+    QZ_V = QZ_V + 0.5 * w0 * dt * PZ_V
+
+
+
+    ' Step 1 - B
+    PX_E = PX_E + w0 * dt * FX_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_E = PY_E + w0 * dt * FY_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_E = PZ_E + w0 * dt * FZ_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_M = PX_M + w0 * dt * FX_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_M = PY_M + w0 * dt * FY_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_M = PZ_M + w0 * dt * FZ_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_S = PX_S + w0 * dt * FX_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_S = PY_S + w0 * dt * FY_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_S = PZ_S + w0 * dt * FZ_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_V = PX_V + w0 * dt * FX_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+    PY_V = PY_V + w0 * dt * FY_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+    PZ_V = PZ_V + w0 * dt * FZ_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+
+
+    ' Step 1 - C
+    QX_E = QX_E + 0.5 * w0 * dt * PX_E
+    QY_E = QY_E + 0.5 * w0 * dt * PY_E
+    QZ_E = QZ_E + 0.5 * w0 * dt * PZ_E
+
+    QX_M = QX_M + 0.5 * w0 * dt * PX_M
+    QY_M = QY_M + 0.5 * w0 * dt * PY_M
+    QZ_M = QZ_M + 0.5 * w0 * dt * PZ_M
+
+    QX_S = QX_S + 0.5 * w0 * dt * PX_S
+    QY_S = QY_S + 0.5 * w0 * dt * PY_S
+    QZ_S = QZ_S + 0.5 * w0 * dt * PZ_S
+
+    QX_V = QX_V + 0.5 * w0 * dt * PX_V
+    QY_V = QY_V + 0.5 * w0 * dt * PY_V
+    QZ_V = QZ_V + 0.5 * w0 * dt * PZ_V
+
+
+
+
+    ' Step 2 - A
+    QX_E = QX_E + 0.5 * w1 * dt * PX_E
+    QY_E = QY_E + 0.5 * w1 * dt * PY_E
+    QZ_E = QZ_E + 0.5 * w1 * dt * PZ_E
+
+    QX_M = QX_M + 0.5 * w1 * dt * PX_M
+    QY_M = QY_M + 0.5 * w1 * dt * PY_M
+    QZ_M = QZ_M + 0.5 * w1 * dt * PZ_M
+
+    QX_S = QX_S + 0.5 * w1 * dt * PX_S
+    QY_S = QY_S + 0.5 * w1 * dt * PY_S
+    QZ_S = QZ_S + 0.5 * w1 * dt * PZ_S
+
+    QX_V = QX_V + 0.5 * w1 * dt * PX_V
+    QY_V = QY_V + 0.5 * w1 * dt * PY_V
+    QZ_V = QZ_V + 0.5 * w1 * dt * PZ_V
+
+
+
+    ' Step 2 - B
+    PX_E = PX_E + w1 * dt * FX_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_E = PY_E + w1 * dt * FY_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_E = PZ_E + w1 * dt * FZ_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_M = PX_M + w1 * dt * FX_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_M = PY_M + w1 * dt * FY_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_M = PZ_M + w1 * dt * FZ_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_S = PX_S + w1 * dt * FX_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_S = PY_S + w1 * dt * FY_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_S = PZ_S + w1 * dt * FZ_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_V = PX_V + w1 * dt * FX_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+    PY_V = PY_V + w1 * dt * FY_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+    PZ_V = PZ_V + w1 * dt * FZ_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+
+
+    ' Step 2 - C
+    QX_E = QX_E + 0.5 * w1 * dt * PX_E
+    QY_E = QY_E + 0.5 * w1 * dt * PY_E
+    QZ_E = QZ_E + 0.5 * w1 * dt * PZ_E
+
+    QX_M = QX_M + 0.5 * w1 * dt * PX_M
+    QY_M = QY_M + 0.5 * w1 * dt * PY_M
+    QZ_M = QZ_M + 0.5 * w1 * dt * PZ_M
+
+    QX_S = QX_S + 0.5 * w1 * dt * PX_S
+    QY_S = QY_S + 0.5 * w1 * dt * PY_S
+    QZ_S = QZ_S + 0.5 * w1 * dt * PZ_S
+
+    QX_V = QX_V + 0.5 * w1 * dt * PX_V
+    QY_V = QY_V + 0.5 * w1 * dt * PY_V
+    QZ_V = QZ_V + 0.5 * w1 * dt * PZ_V
+
+
+
+
+    ' Step 3 - A
+    QX_E = QX_E + 0.5 * w0 * dt * PX_E
+    QY_E = QY_E + 0.5 * w0 * dt * PY_E
+    QZ_E = QZ_E + 0.5 * w0 * dt * PZ_E
+
+    QX_M = QX_M + 0.5 * w0 * dt * PX_M
+    QY_M = QY_M + 0.5 * w0 * dt * PY_M
+    QZ_M = QZ_M + 0.5 * w0 * dt * PZ_M
+
+    QX_S = QX_S + 0.5 * w0 * dt * PX_S
+    QY_S = QY_S + 0.5 * w0 * dt * PY_S
+    QZ_S = QZ_S + 0.5 * w0 * dt * PZ_S
+
+    QX_V = QX_V + 0.5 * w0 * dt * PX_V
+    QY_V = QY_V + 0.5 * w0 * dt * PY_V
+    QZ_V = QZ_V + 0.5 * w0 * dt * PZ_V
+
+
+
+    ' Step 3 - B
+    PX_E = PX_E + w0 * dt * FX_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_E = PY_E + w0 * dt * FY_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_E = PZ_E + w0 * dt * FZ_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_M = PX_M + w0 * dt * FX_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_M = PY_M + w0 * dt * FY_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_M = PZ_M + w0 * dt * FZ_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_S = PX_S + w0 * dt * FX_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PY_S = PY_S + w0 * dt * FY_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+    PZ_S = PZ_S + w0 * dt * FZ_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    PX_V = PX_V + w0 * dt * FX_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+    PY_V = PY_V + w0 * dt * FY_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+    PZ_V = PZ_V + w0 * dt * FZ_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+
+
+    ' Step 3 - C
+    QX_E = QX_E + 0.5 * w0 * dt * PX_E
+    QY_E = QY_E + 0.5 * w0 * dt * PY_E
+    QZ_E = QZ_E + 0.5 * w0 * dt * PZ_E
+
+    QX_M = QX_M + 0.5 * w0 * dt * PX_M
+    QY_M = QY_M + 0.5 * w0 * dt * PY_M
+    QZ_M = QZ_M + 0.5 * w0 * dt * PZ_M
+
+    QX_S = QX_S + 0.5 * w0 * dt * PX_S
+    QY_S = QY_S + 0.5 * w0 * dt * PY_S
+    QZ_S = QZ_S + 0.5 * w0 * dt * PZ_S
+
+    QX_V = QX_V + 0.5 * w0 * dt * PX_V
+    QY_V = QY_V + 0.5 * w0 * dt * PY_V
+    QZ_V = QZ_V + 0.5 * w0 * dt * PZ_V
+
+
+
+
+    ' Return the results
+    Test = Array(QX_E, QY_E, QZ_E, _
+                 QX_M, QY_M, QZ_M, _
+                 QX_S, QY_S, QZ_S, _
+                 QX_V, QY_V, QZ_V, _
+                 PX_E, PY_E, PZ_E, _
+                 PX_M, PY_M, PZ_M, _
+                 PX_S, PY_S, PZ_S, _
+                 PX_V, PY_V, PZ_V)
+
+End Function
+
+
+Private Function FX_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+    
+    temp1 = ((QX_E - QX_M) * (QX_E - QX_M) + (QY_E - QY_M) * (QY_E - QY_M) + (QZ_E - QZ_M) * (QZ_E - QZ_M)) ^ 1.5
+    temp2 = ((QX_E - QX_S) * (QX_E - QX_S) + (QY_E - QY_S) * (QY_E - QY_S) + (QZ_E - QZ_S) * (QZ_E - QZ_S)) ^ 1.5
+    FX_E = -mu_M * (QX_E - QX_M) / temp1 - mu_S * (QX_E - QX_S) / temp2
+
+End Function
+
+
+Private Function FY_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+    
+    temp1 = ((QX_E - QX_M) * (QX_E - QX_M) + (QY_E - QY_M) * (QY_E - QY_M) + (QZ_E - QZ_M) * (QZ_E - QZ_M)) ^ 1.5
+    temp2 = ((QX_E - QX_S) * (QX_E - QX_S) + (QY_E - QY_S) * (QY_E - QY_S) + (QZ_E - QZ_S) * (QZ_E - QZ_S)) ^ 1.5
+    FY_E = -mu_M * (QY_E - QY_M) / temp1 - mu_S * (QY_E - QY_S) / temp2
+
+End Function
+
+
+Private Function FZ_E(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+    
+    temp1 = ((QX_E - QX_M) * (QX_E - QX_M) + (QY_E - QY_M) * (QY_E - QY_M) + (QZ_E - QZ_M) * (QZ_E - QZ_M)) ^ 1.5
+    temp2 = ((QX_E - QX_S) * (QX_E - QX_S) + (QY_E - QY_S) * (QY_E - QY_S) + (QZ_E - QZ_S) * (QZ_E - QZ_S)) ^ 1.5
+    FZ_E = -mu_M * (QZ_E - QZ_M) / temp1 - mu_S * (QZ_E - QZ_S) / temp2
+
+End Function
+
+
+Private Function FX_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_M - QX_E) * (QX_M - QX_E) + (QY_M - QY_E) * (QY_M - QY_E) + (QZ_M - QZ_E) * (QZ_M - QZ_E)) ^ 1.5
+    temp2 = ((QX_M - QX_S) * (QX_M - QX_S) + (QY_M - QY_S) * (QY_M - QY_S) + (QZ_M - QZ_S) * (QZ_M - QZ_S)) ^ 1.5
+    FX_M = -mu_E * (QX_M - QX_E) / temp1 - mu_S * (QX_M - QX_S) / temp2
+
+End Function
+
+
+Private Function FY_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_M - QX_E) * (QX_M - QX_E) + (QY_M - QY_E) * (QY_M - QY_E) + (QZ_M - QZ_E) * (QZ_M - QZ_E)) ^ 1.5
+    temp2 = ((QX_M - QX_S) * (QX_M - QX_S) + (QY_M - QY_S) * (QY_M - QY_S) + (QZ_M - QZ_S) * (QZ_M - QZ_S)) ^ 1.5
+    FY_M = -mu_E * (QY_M - QY_E) / temp1 - mu_S * (QY_M - QY_S) / temp2
+
+End Function
+
+
+Private Function FZ_M(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_M - QX_E) * (QX_M - QX_E) + (QY_M - QY_E) * (QY_M - QY_E) + (QZ_M - QZ_E) * (QZ_M - QZ_E)) ^ 1.5
+    temp2 = ((QX_M - QX_S) * (QX_M - QX_S) + (QY_M - QY_S) * (QY_M - QY_S) + (QZ_M - QZ_S) * (QZ_M - QZ_S)) ^ 1.5
+    FZ_M = -mu_E * (QZ_M - QZ_E) / temp1 - mu_S * (QZ_M - QZ_S) / temp2
+
+End Function
+
+
+
+Private Function FX_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_S - QX_E) * (QX_S - QX_E) + (QY_S - QY_E) * (QY_S - QY_E) + (QZ_S - QZ_E) * (QZ_S - QZ_E)) ^ 1.5
+    temp2 = ((QX_S - QX_M) * (QX_S - QX_M) + (QY_S - QY_M) * (QY_S - QY_M) + (QZ_S - QZ_M) * (QZ_S - QZ_M)) ^ 1.5
+    FX_S = -mu_E * (QX_S - QX_E) / temp1 - mu_M * (QX_S - QX_M) / temp2
+
+End Function
+
+
+Private Function FY_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_S - QX_E) * (QX_S - QX_E) + (QY_S - QY_E) * (QY_S - QY_E) + (QZ_S - QZ_E) * (QZ_S - QZ_E)) ^ 1.5
+    temp2 = ((QX_S - QX_M) * (QX_S - QX_M) + (QY_S - QY_M) * (QY_S - QY_M) + (QZ_S - QZ_M) * (QZ_S - QZ_M)) ^ 1.5
+    FY_S = -mu_E * (QY_S - QY_E) / temp1 - mu_M * (QY_S - QY_M) / temp2
+
+End Function
+
+
+Private Function FZ_S(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S)
+
+    Dim mu_E, mu_M, temp1, temp2 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_S - QX_E) * (QX_S - QX_E) + (QY_S - QY_E) * (QY_S - QY_E) + (QZ_S - QZ_E) * (QZ_S - QZ_E)) ^ 1.5
+    temp2 = ((QX_S - QX_M) * (QX_S - QX_M) + (QY_S - QY_M) * (QY_S - QY_M) + (QZ_S - QZ_M) * (QZ_S - QZ_M)) ^ 1.5
+    FZ_S = -mu_E * (QZ_S - QZ_E) / temp1 - mu_M * (QZ_S - QZ_M) / temp2
+
+End Function
+
+
+Private Function FX_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+
+    Dim mu_E, mu_M, temp1, temp2, temp3 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_V - QX_E) * (QX_V - QX_E) + (QY_V - QY_E) * (QY_V - QY_E) + (QZ_V - QZ_E) * (QZ_V - QZ_E)) ^ 1.5
+    temp2 = ((QX_V - QX_M) * (QX_V - QX_M) + (QY_V - QY_M) * (QY_V - QY_M) + (QZ_V - QZ_M) * (QZ_V - QZ_M)) ^ 1.5
+    temp3 = ((QX_V - QX_S) * (QX_V - QX_S) + (QY_V - QY_S) * (QY_V - QY_S) + (QZ_V - QZ_S) * (QZ_V - QZ_S)) ^ 1.5
+
+    FX_V = -mu_E * (QX_V - QX_E) / temp1 - mu_M * (QX_V - QX_M) / temp2 - mu_S * (QX_V - QX_S) / temp3
+    
+
+End Function
+
+
+Private Function FY_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+
+    Dim mu_E, mu_M, temp1, temp2, temp3 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_V - QX_E) * (QX_V - QX_E) + (QY_V - QY_E) * (QY_V - QY_E) + (QZ_V - QZ_E) * (QZ_V - QZ_E)) ^ 1.5
+    temp2 = ((QX_V - QX_M) * (QX_V - QX_M) + (QY_V - QY_M) * (QY_V - QY_M) + (QZ_V - QZ_M) * (QZ_V - QZ_M)) ^ 1.5
+    temp3 = ((QX_V - QX_S) * (QX_V - QX_S) + (QY_V - QY_S) * (QY_V - QY_S) + (QZ_V - QZ_S) * (QZ_V - QZ_S)) ^ 1.5
+
+    FY_V = -mu_E * (QY_V - QY_E) / temp1 - mu_M * (QY_V - QY_M) / temp2 - mu_S * (QY_V - QY_S) / temp3
+    
+
+End Function
+
+
+Private Function FZ_V(QX_E, QY_E, QZ_E, QX_M, QY_M, QZ_M, QX_S, QY_S, QZ_S, QX_V, QY_V, QZ_V)
+
+    Dim mu_E, mu_M, temp1, temp2, temp3 As Double
+
+    mu_E = 398600440157821#
+    mu_M = 4902794935300#
+    mu_S = 1.32712440018E+20
+
+    temp1 = ((QX_V - QX_E) * (QX_V - QX_E) + (QY_V - QY_E) * (QY_V - QY_E) + (QZ_V - QZ_E) * (QZ_V - QZ_E)) ^ 1.5
+    temp2 = ((QX_V - QX_M) * (QX_V - QX_M) + (QY_V - QY_M) * (QY_V - QY_M) + (QZ_V - QZ_M) * (QZ_V - QZ_M)) ^ 1.5
+    temp3 = ((QX_V - QX_S) * (QX_V - QX_S) + (QY_V - QY_S) * (QY_V - QY_S) + (QZ_V - QZ_S) * (QZ_V - QZ_S)) ^ 1.5
+
+    FZ_V = -mu_E * (QZ_V - QZ_E) / temp1 - mu_M * (QZ_V - QZ_M) / temp2 - mu_S * (QZ_V - QZ_S) / temp3
+    
+
+End Function
+
+
+A brief description of the macro
+OK, so what does this macro do? Basically this is a function that takes an Excel data range as an input and returns a vector-valued result. The input are the starting positions and velocities of the Earth, Moon, Sun and Vessel; and the outputs are the updated positions and velocities of the same. Repeated application of this function produces the integrated trajectory.
+
+
+Inputs
+The macro assumes that the input data range is a contiguous set of 27 numbers. That's quite a few - so here is a description of them;
+
+* the first three are the starting X, Y and Z coordinates of the Earth's position. For the first time-step these values come from the Lua script described in the previous post. For subsequent time-steps, the input is (in the main) the outputs from the previous time-step;
+
+* the next three are the starting X Y, Z coordinates of the Moon's position;
+
+* the next three are the starting X,Y, Z coordinates of the Sun's position; and
+
+* the next three are the starting X,Y,Z coordinates of the Vessel's position.
+
+So far, that makes 12 input numbers. Now for the next 12:
+
+* the next three are the starting X, Y, Z coordinates of the Earth's velocity;
+
+* the next three are the starting X, Y, Z coordinates of the Moon's velocity; 
+
+* the next three are the starting X, Y, Z coordinates of the Sun's velocity;
+
+* the next three are the starting X, Y, Z coordinates of the Vessel's velocity.
+
+In total the positions and velocity inputs make 24 data inputs. What about the remaining three? Well, these are discretionary user inputs that define the X-Y-Z co-ordinates of a velocity impulse (e.g., an impulsive manoeuvre that takes place at the start of the time-step. It is here that one would enter an optional user-defined impulsive burn. If no burn is planned for that time-step, then the user must set these values to zero.
+
+
+The integration process
+So, having specified a data range, the first thing that the integration macro does is to pars the input data into these 27 separate values. Here a notation we use a shorthand notation to specify the various values. For example, 'QY_S' is shorthand for the y-coordinate of the Sun's position; and 'PX_V' is shorthand for the x-coordinate of the Vessel's velocity.
+
+Having parsed the inputs, the macro then runs the symplectic integration step. In this macro, the time-step is fixed to a 30 second update which means that the output of the macro is the position and velocity of the Earth, Moon, Sun and Vessel 30 seconds after the timestamp of the input data. For most purposes, this afford sufficient precision.
+
+In executing the integration step, the macro needs to know the gravitational forces acting on the four bodies of our system. To calculate these, 12 force functions have been defined. These calculate the gravitational forces assuming spherical symmetry. In this integrator, non-spherical gravity sources have been ignored, although if one wanted to be pedantic, one could include those in the force functions as well.
+
+
+Outputs
+The output of the macro is an array with 24 values. These are the updated positions and velocities of the four bodies. And the order that they appear in the vector is the same as in the input data range.
+
+What about the remaining three impulsive manoeuvre components of the input data range? These are not updated by the macro. Being discretionary, they need to be specified by the user.
+
+
+Next steps
+The heart of the integration engine is precisely the single-step macro set out above. In the next step, I'll present the macro which contains the working integration engine and trajectory planner.
+
+
+---------------------------
+
+Building a simple ephemeris generating tool for short-run mission planning - Part 4
+(c) Keith Gelling July 26, 2016
+
+
+Well, here it is: the first iteration of the Excel speadsheet-based integration engine (download from https://www.dropbox.com/s/56qfw8zex9...S4INT.xls?dl=0). 
+
+Believe it or, this is a usable, precision trajectory planning tool. It is accurate (some might even say very accurate), but as with all things Excel, it doesn't calculate quickly, so some patience is required to use properly. But still, it shows how these sort of tools can be built and if one wishes a more responsive tool, then one would have to transcribe this know-how into a 'proper' computer language - e.g., C/C++.
+
+This is the first iteration of the spreadsheet, largely as a demonstration (and because I have limited time at the moment), and this version's core function is planning Trans Lunar Injection (TLI) burns. Of course, there are many ways of using Orbiter that achieve much the same - although aside from IMFD's Map Program, none I suspect will be as accurate. The second iteration of this spreadsheet, however, O plan to make more useful. It will incorporate the location of the Earth-Moon L1/L2 Lagrange points. This will make it a precision tool for planning Trans Earth-Moon L1/L2 injection burns from Low Earth Orbit - as well as subsequent mid-course corrections so as to achieve near pin-point L1/L2 targeting.
+
+
+First iteration
+The first iteration spreadsheet has two worksheets - a control sheet; and a integration sheet. On the control sheet (screen image below), there is a grey area into which the output of the Lua script that takes position and velocity snapshots is pasted into and then parsed using Excel's text editor. (Yes, a very manual process, I know.)
+
+On the right of the control sheet, is a graph showing the trajectories of the spacecraft and Moon over the next seven days (after the date of the snapshot). Earth is in the centre of the image; and trajectories are projected into the plane of the ecliptic. This isn't useful for precision work, but it does help clarify what is going on.
+
+And on the bottom left of the control sheet, the spreadsheet allows input of one impulse manoeuvre described in the usual TransX components of 'prograde', 'outward' and 'plane'. At the moment, the limitation is that this impulsive manoeuvre must take place on the dates of the integration time-steps - spaced at 30 second intervals. This date limitation reflects more my programming convenience than a limitation of the underlying method. In this area of the worksheet,the closest approach to the Moon (and date of closest approach) is reported. This information is used to refine the impulsive manoeuvre. For anyone familiar with TransX, this should be a familiar procedure.
+
+	Click this bar to view the full image.
+ 
+
+The second sheet, contains the integrator itself. This sheet picks up the snapshot information from the control sheet and then uses the integration macro to integrate forward for 20,000 time-steps. Since each time-step is 30 seconds, that works out as a total integration period of 6.94 days - i.e., a shade under one week. Since each time-step means updating 24 worksheet cells (12 that define the position of the Earth, Moon, Sun and Vessel; and 12 that define the velocities of the Earth, Moon, Sun and Vessel), this means that the integrator calculates half a million spreadsheet cells. It is this extensive calculation effort that give the integrator its accuracy, but also its poor performance
+
+On this sheet, a few ancillary calculations are performed allow lunar closest approach to be calculated, and to provide the graphical trajectory information for the first sheet.
+
+
+Second iteration
+The next iteration of this spreadsheet will do much the same as this, except that it will contain targeting information for the Lagrange points, L1 and L2.
+
+
+A couple pf caveats
+A spreadsheet isn't the natural way to do these trajectory calculations. This is due largely to its sluggishness in performing the calculations. To avoid some frustration in use, you may wish to make sure you have access to a reasonably modern (and powerful - i.e., multicore) laptop or desktop - and, if you can, turn multi-threading 'on' in Excel. 
+
+Next steps
+The next obvious step is to provide some instruction in use of this targeting tool. This will be by way of a shortish video. But not today, I'm afraid. And after that I'll provide a video demonstration of the use of the tool to get to the Moon. Then after that, I'll repeat the whole exercise for the second iteration spreadsheet - and targeting Lagrange points.
+
+
+
+
+---------------------------
+
+Building a simple ephemeris generating tool for short-run mission planning - Part 5
+(c) Keith Gelling Aug 9, 2016
+
+
+
+So far, a spreadsheet-based trajectory planning tool has been developed that incorporates an accurate fourth-order symplectic integrator along with some rudimentary visualisation and targeting information for getting to the Moon. However, the original purpose of this too development was to develop a workable (albeit sluggish) tool with which to target the Lagrange points of the Earth-Moon system.
+
+To be able to do that, the spreadsheet tool needs to have a way of working out where the L1 and L2 Lagrange points are at any point in time. Fortunately, the basic theory of this calculation has already been worked out and described in this Forum. See A reference orbit for the Earth-Moon Lagrange points (Elliptic Restricted Three-Body. That thread sets out the calculations needed to work out the location of the Lagrange points if the position of the Earth and the Moon are known. And since the spreadsheet symplectic integrator of this thread calculates the position of the Earth and the Moon as part of its calculations, this information can be fed into the Lagrange point calculation via another Visual Basic user-defined function.
+
+And here is the Visual Basic user-defined function for the L1 Lagrange point:
+
+Code:
+Public Function L1Test(QE As Object, QM As Object, PE As Object, PM As Object) As Variant
+
+    Dim QX_E, QY_E, QZ_E, PX_E, PY_E, PZ_E As Double
+    Dim QX_M, QY_M, QZ_M, PX_M, PY_M, PZ_M As Double
+
+    QX_E = QE(1): QY_E = QE(2): QZ_E = QE(3)
+    QX_M = QM(1): QY_M = QM(2): QZ_M = QM(3)
+
+    PX_E = PE(1): PY_E = PE(2): PZ_E = PE(3)
+    PX_M = PM(1): PY_M = PM(2): PZ_M = PM(3)
+
+
+    Dim GM1, GM2, GM, MU1, MU2, alpha As Double
+
+    GM1 = 398600440157821#
+    GM2 = 4902794935300#
+    GM = GM1 + GM2
+    MU1 = GM1 / GM
+    MU2 = GM2 / GM
+    alpha = 0.83691519487206
+
+
+    Dim COMX, COMY, COMZ As Double
+    Dim COVX, COVY, COVZ As Double
+
+    COMX = MU1 * QX_E + MU2 * QX_M
+    COMY = MU1 * QY_E + MU2 * QY_M
+    COMZ = MU1 * QZ_E + MU2 * QZ_M
+
+    COVX = MU1 * PX_E + MU2 * PX_M
+    COVY = MU1 * PY_E + MU2 * PY_M
+    COVZ = MU1 * PZ_E + MU2 * PZ_M
+
+
+    Dim RX, RY, RZ As Double
+    Dim VX, VY, VZ As Double
+
+    RX = QX_M - QX_E
+    RY = QY_M - QY_E
+    RZ = QZ_M - QZ_E
+
+    VX = PX_M - PX_E
+    VY = PY_M - PY_E
+    VZ = PZ_M - PZ_E
+
+
+    Dim vsq, rln, rv, eX, eY, eZ, ecc, a, nu As Double
+
+    vsq = VX * VX + VY * VY + VZ * VZ
+    rln = Sqr(RX * RX + RY * RY + RZ * RZ)
+    rv = RX * VX + RY * VY + RZ * VZ
+
+    eX = RX * vsq / GM - VX * rv / GM - RX / rln
+    eY = RY * vsq / GM - VY * rv / GM - RY / rln
+    eZ = RZ * vsq / GM - VZ * rv / GM - RZ / rln
+    ecc = Sqr(eX * eX + eY * eY + eZ * eZ)
+    a = GM / (2# * GM / rln - vsq)
+    nu = Application.Acos((eX * RX + eY * RY + eZ * RZ) / ecc / rln)
+    If rv < 0 Then nu = 2# * Application.Pi() - nu
+
+
+    Dim xhat_X, xhat_Y, xhat_Z As Double
+    Dim yhat_X, yhat_Y, yhat_Z As Double
+    Dim zhat_X, zhat_Y, zhat_Z As Double
+    Dim temp As Double
+
+    xhat_X = eX / ecc
+    xhat_Y = eY / ecc
+    xhat_Z = eZ / ecc
+
+    zhat_X = RY * VZ - RZ * VY
+    zhat_Y = RZ * VX - RX * VZ
+    zhat_Z = RX * VY - RY * VX
+
+    temp = Sqr(zhat_X * zhat_X + zhat_Y * zhat_Y + zhat_Z * zhat_Z)
+
+    zhat_X = zhat_X / temp
+    zhat_Y = zhat_Y / temp
+    zhat_Z = zhat_Z / temp
+
+    yhat_X = zhat_Y * xhat_Z - zhat_Z * xhat_Y
+    yhat_Y = zhat_Z * xhat_X - zhat_X * xhat_Z
+    yhat_Z = zhat_X * xhat_Y - zhat_Y * xhat_X
+
+
+    Dim k1, k2, cnu, snu, k3 As Double
+
+    k1 = a * (1# - ecc * ecc)
+    k2 = Sqr(GM / k1)
+    cnu = Cos(nu)
+    snu = Sin(nu)
+    k3 = 1# + ecc * cnu
+
+
+    Dim qx, qy, px, py As Double
+
+    qx = alpha * k1 * cnu / k3
+    qy = alpha * k1 * snu / k3
+    px = -alpha * snu * k2
+    py = alpha * (ecc + cnu) * k2
+
+
+    Dim L1q_X, L1q_Y, L1q_Z As Double
+    Dim L1p_X, L1p_Y, L1p_Z As Double
+
+    L1q_X = qx * xhat_X + qy * yhat_X + COMX
+    L1q_Y = qx * xhat_Y + qy * yhat_Y + COMY
+    L1q_Z = qx * xhat_Z + qy * yhat_Z + COMZ '
+
+    L1p_X = px * xhat_X + py * yhat_X + COVX
+    L1p_Y = px * xhat_Y + py * yhat_Y + COVY
+    L1p_Z = px * xhat_Z + py * yhat_Z + COVZ
+
+    L1Test = Array(L1q_X, L1q_Y, L1q_Z, L1p_X, L1p_Y, L1p_Z)
+
+End Function
+The inputs to this macro are the positions of the Earth and the Moon; and the velocities of the Earth and the Moon. Each of these inputs is a 3-vector, i.e., a list of three numbers describing the X, Y and Z coordinates of the position or velocity.
+
+The outputs of the macro is a list of six number: the first three specify the position of the L1 point; and the second thee numbers the velocity of that point in Orbiter's inertial global coordinate system.
+
+
+The user-defined for the L2 Lagrange point is very similar to that for the L1 Lagrange point. In fact, aside from a few label changes, the only material change is a change in one coefficient. So, for completeness, here is the VBA user-defined function for the L2 Lagrange point:
+
+Code:
+Public Function L2Test(QE As Object, QM As Object, PE As Object, PM As Object) As Variant
+
+    Dim QX_E, QY_E, QZ_E, PX_E, PY_E, PZ_E As Double
+    Dim QX_M, QY_M, QZ_M, PX_M, PY_M, PZ_M As Double
+
+    QX_E = QE(1): QY_E = QE(2): QZ_E = QE(3)
+    QX_M = QM(1): QY_M = QM(2): QZ_M = QM(3)
+
+    PX_E = PE(1): PY_E = PE(2): PZ_E = PE(3)
+    PX_M = PM(1): PY_M = PM(2): PZ_M = PM(3)
+
+
+    Dim GM1, GM2, GM, MU1, MU2, alpha As Double
+
+    GM1 = 398600440157821#
+    GM2 = 4902794935300#
+    GM = GM1 + GM2
+    MU1 = GM1 / GM
+    MU2 = GM2 / GM
+    alpha = 1.15568211143362
+
+
+    Dim COMX, COMY, COMZ As Double
+    Dim COVX, COVY, COVZ As Double
+
+    COMX = MU1 * QX_E + MU2 * QX_M
+    COMY = MU1 * QY_E + MU2 * QY_M
+    COMZ = MU1 * QZ_E + MU2 * QZ_M
+
+    COVX = MU1 * PX_E + MU2 * PX_M
+    COVY = MU1 * PY_E + MU2 * PY_M
+    COVZ = MU1 * PZ_E + MU2 * PZ_M
+
+
+    Dim RX, RY, RZ As Double
+    Dim VX, VY, VZ As Double
+
+    RX = QX_M - QX_E
+    RY = QY_M - QY_E
+    RZ = QZ_M - QZ_E
+
+    VX = PX_M - PX_E
+    VY = PY_M - PY_E
+    VZ = PZ_M - PZ_E
+
+
+    Dim vsq, rln, rv, eX, eY, eZ, ecc, a, nu As Double
+
+    vsq = VX * VX + VY * VY + VZ * VZ
+    rln = Sqr(RX * RX + RY * RY + RZ * RZ)
+    rv = RX * VX + RY * VY + RZ * VZ
+
+    eX = RX * vsq / GM - VX * rv / GM - RX / rln
+    eY = RY * vsq / GM - VY * rv / GM - RY / rln
+    eZ = RZ * vsq / GM - VZ * rv / GM - RZ / rln
+    ecc = Sqr(eX * eX + eY * eY + eZ * eZ)
+    a = GM / (2# * GM / rln - vsq)
+    nu = Application.Acos((eX * RX + eY * RY + eZ * RZ) / ecc / rln)
+    If rv < 0 Then nu = 2# * Application.Pi() - nu
+
+
+    Dim xhat_X, xhat_Y, xhat_Z As Double
+    Dim yhat_X, yhat_Y, yhat_Z As Double
+    Dim zhat_X, zhat_Y, zhat_Z As Double
+    Dim temp As Double
+
+    xhat_X = eX / ecc
+    xhat_Y = eY / ecc
+    xhat_Z = eZ / ecc
+
+    zhat_X = RY * VZ - RZ * VY
+    zhat_Y = RZ * VX - RX * VZ
+    zhat_Z = RX * VY - RY * VX
+
+    temp = Sqr(zhat_X * zhat_X + zhat_Y * zhat_Y + zhat_Z * zhat_Z)
+
+    zhat_X = zhat_X / temp
+    zhat_Y = zhat_Y / temp
+    zhat_Z = zhat_Z / temp
+
+    yhat_X = zhat_Y * xhat_Z - zhat_Z * xhat_Y
+    yhat_Y = zhat_Z * xhat_X - zhat_X * xhat_Z
+    yhat_Z = zhat_X * xhat_Y - zhat_Y * xhat_X
+
+
+    Dim k1, k2, cnu, snu, k3 As Double
+
+    k1 = a * (1# - ecc * ecc)
+    k2 = Sqr(GM / k1)
+    cnu = Cos(nu)
+    snu = Sin(nu)
+    k3 = 1# + ecc * cnu
+
+
+    Dim qx, qy, px, py As Double
+
+    qx = alpha * k1 * cnu / k3
+    qy = alpha * k1 * snu / k3
+    px = -alpha * snu * k2
+    py = alpha * (ecc + cnu) * k2
+
+
+    Dim L2q_X, L2q_Y, L2q_Z As Double
+    Dim L2p_X, L2p_Y, L2p_Z As Double
+
+    L2q_X = qx * xhat_X + qy * yhat_X + COMX
+    L2q_Y = qx * xhat_Y + qy * yhat_Y + COMY
+    L2q_Z = qx * xhat_Z + qy * yhat_Z + COMZ '
+
+    L2p_X = px * xhat_X + py * yhat_X + COVX
+    L2p_Y = px * xhat_Y + py * yhat_Y + COVY
+    L2p_Z = px * xhat_Z + py * yhat_Z + COVZ
+
+    L2Test = Array(L2q_X, L2q_Y, L2q_Z, L2p_X, L2p_Y, L2p_Z)
+
+
+End Function
+
+In much the same way, one can set up user-defined functions for the other Lagrange points L3, L4 and L5. But most of the time, users are likely to be more interested in L1 and L2.
+
+---------- Post added at 07:40 AM ---------- Previous post was at 03:23 AM ----------
+
+I have created two targeting spreadsheets which anyone should be able to download from Dropbox. The first is set up to target the Earth-Moon L1 Lagrange point. The link to the spreadsheet is S4INT-EML1.xls. And the second is set up to target the Earth-Moon L2 Lagrange point. The link to the second spreadsheet is S4INT-EML2.xls. (Yes, 'boogabooga', I'll get around to putting these on Orbit Hangar - but not just yet.)
+
+As with the earlier spreadsheet designed to get out to the Moon only, these spreadsheets provide rudimentary techniques for setting up a manoeuvre to target the relevant Lagrange point from Low Earth Orbit. As before, the spreadsheet tool may be basic (and slow!) but it is very accurate. Each spreadsheet also contains information about the MJD of closest approach to the relevant Lagrange point and the speed relative to the Lagrange point at the point of closet approach. This information allows one to null out one's velocity upon arrival at the Lagrange point. With these tools, it should be possible (with a little effort and patience) to target L1 and L2 with high precision.
+
+As with the earlier spreadsheet, I'll put together a short video series showcasing use of one of the spreadsheets (the L1 version in fact). Just to make life interesting I will park one Deltaglider at the L1 Lagrange point, and take a second Deltaglider from Low Earth Orbit to rendezvous with it. Although I haven't done this yet, I fully expect to arrive at L1 with a few hundred metres of the first Deltaglider.
+
+Again, as with the earlier spreadsheet targeting tool, it can do with some enterprising developer converting the VBA code into a faster and more robust C/C++ MFD form....

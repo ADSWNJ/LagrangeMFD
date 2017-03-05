@@ -138,8 +138,8 @@ double OneAxis_AP::CalcThrust(double P, double V, double simT, double dT) {
   sign = (P < 0.0) ? 1.0 : -1.0;
 
   if (m_ix == -2) {                                     // First burn with no calibration ... see what happens
-    m_thrustPct = 1.0 / warp;
-    if (sign < 0.0) m_thrustPct = -1.0 / warp;
+    m_thrustPct = 0.1 / warp;
+    if (sign < 0.0) m_thrustPct = -0.1 / warp;
     m_A = 1.0;
     if (m_dumping) {
       //              "Warp, Ix, SimT, SimDT, AvgDT, A, P, V, TH%, Mode, OptT, OptA, LoV, GoV, TrimAd, TrimAv, FinA ");
