@@ -101,7 +101,7 @@ bool Lagrange::DisplayOrbitMode() {
     LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
   }
 
-  for (int s = 1; s < ORB_MAX_LINES; s++) {
+  for (int s = 0; s < ORB_MAX_LINES; s++) {
     if (LP->plotix[s] == -1) break;
     for (int i = 1; i < ORB_PLOT_COUNT; i++) {
       iv[i-1].x = (long)((double)W * lod->orb_plot[s][i].x);
@@ -112,8 +112,8 @@ bool Lagrange::DisplayOrbitMode() {
     LC->skp->Polyline(iv, ORB_PLOT_COUNT-1);
 
     if (lvd->enc_ix >= 0) {
-      if (abs(lvd->orb_plot_body_enc[s].x - lvd->orb_plot_origin.x) > 0.02 ||
-        abs(lvd->orb_plot_body_enc[s].y - lvd->orb_plot_origin.y) > 0.02) {
+      if (abs(lvd->orb_plot_body_enc[s].x - lvd->orb_plot_origin.x) >= 0.00 ||
+        abs(lvd->orb_plot_body_enc[s].y - lvd->orb_plot_origin.y) >= 0.00) {
         enc_x = (int)((double)W * lvd->orb_plot_body_enc[s].x);
         enc_y = (int)((double)H * lvd->orb_plot_body_enc[s].y);
         LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
@@ -150,16 +150,16 @@ bool Lagrange::DisplayLPMode() {
 
   skpFormatText(2, l++, "Rel. Pos.");
   skpFmtEngText(0, l++, "Prograde:  %8.3f", "m", vesLP->Q.x);
-  skpFmtEngText(0, l++, "Plane:     %8.3f", "m", vesLP->Q.y);
   skpFmtEngText(0, l++, "Outward:   %8.3f", "m", vesLP->Q.z);
+  skpFmtEngText(0, l++, "Plane Chg: %8.3f", "m", vesLP->Q.y);
   skpFmtEngText(0, l++, "TOTAL:     %8.3f", "m", vs4i->dQ);
 
   l++;
   LC->skpLoB = 0;
   skpFormatText(2, l++, "Rel. Vel.");
   skpFmtEngText(0, l++, "Prograde:  %8.3f", "m/s", vesLP->P.x);
-  skpFmtEngText(0, l++, "Plane:     %8.3f", "m/s", vesLP->P.y);
   skpFmtEngText(0, l++, "Outward:   %8.3f", "m/s", vesLP->P.z);
+  skpFmtEngText(0, l++, "Plane Chg: %8.3f", "m/s", vesLP->P.y);
   skpFmtEngText(0, l++, "TOTAL:     %8.3f", "m/s", vs4i->dP);
 
   l++;
@@ -167,16 +167,16 @@ bool Lagrange::DisplayLPMode() {
     LC->skpLoB = 1;
     skpFormatText(4, rl++, "Enc. Pos.");
     skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->Q.x);
-    skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->Q.y);
     skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->Q.z);
+    skpFmtEngText(4, rl++, "%8.3f", "m", vesLP_e->Q.y);
     skpFmtEngText(4, rl++, "%8.3f", "m", vs4i_e->dQ);
 
     rl++;
     LC->skpLoB = 0;
     skpFormatText(4, rl++, "Enc. Vel.");
     skpFmtEngText(4, rl++, "%8.3f", "m/s", vesLP_e->P.x);
-    skpFmtEngText(4, rl++, "%8.3f", "m/s", vesLP_e->P.y);
     skpFmtEngText(4, rl++, "%8.3f", "m/s", vesLP_e->P.z);
+    skpFmtEngText(4, rl++, "%8.3f", "m/s", vesLP_e->P.y);
     skpFmtEngText(4, rl++, "%8.3f", "m/s", vs4i_e->dP);
 
     rl++;
@@ -198,7 +198,7 @@ bool Lagrange::DisplayLPMode() {
   if (rl > l) l = rl+1;
   l++; 
   double vm = VC->v->GetMass();
-  skpFormatText(0, l++, "Mass: %10.6fkg", vm);
+  skpFormatText(0, l++, "Mass: %10.3fkg", vm);
   return true;
 };
 bool Lagrange::DisplayPlanMode() {
@@ -225,7 +225,7 @@ bool Lagrange::DisplayPlanMode() {
   if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD() + (1 / (10 * 60 * 24));
   skpFmtColText(0, VC->burnVar==0? l : l + 1 + VC->burnVar, true,   CLR_YELLOW, CLR_WHITE, ">");
   skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
-  skpFmtEngText(0, l++, " (Burn Point):  %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
+  skpFmtEngText(0, l++, "  Burn Point:   %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
   skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6fm/s", vdata->burndV.x);
   skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6fm/s", vdata->burndV.y);
   skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6fm/s", vdata->burndV.z);
@@ -255,13 +255,13 @@ bool Lagrange::DisplayPlanMode() {
   skpFormatText(0, l++, "       Enc. Pos.");
 
   skpFmtEngText(0, l++, "  Pro:%8.3f", "m", vesLP_e->Q.x);
-  skpFmtEngText(0, l++, "  PlC:%8.3f", "m", vesLP_e->Q.y);
   skpFmtEngText(0, l++, "  Out:%8.3f", "m", vesLP_e->Q.z);
+  skpFmtEngText(0, l++, "  PlC:%8.3f", "m", vesLP_e->Q.y);
   skpFmtEngText(0, l++, "  TOT:%8.3f", "m", vs4i_e->dQ);
   skpFormatText(3, rl++, " Enc. dVel.");
   skpFmtEngText(3, rl++, "%9.4f", "m/s", vesLP_e->P.x);
-  skpFmtEngText(3, rl++, "%9.4f", "m/s", vesLP_e->P.y);
   skpFmtEngText(3, rl++, "%9.4f", "m/s", vesLP_e->P.z);
+  skpFmtEngText(3, rl++, "%9.4f", "m/s", vesLP_e->P.y);
   skpFmtEngText(3, rl++, "%9.4f", "m/s", vs4i_e->dP);
 
   l++; l++;
@@ -460,7 +460,7 @@ bool Lagrange::DisplayFrmFocMode() {
     char focusNames[5][32];
     strcpy(focusNames[0], GC->LU->body[GC->LU->LP.maj].name);
     strcpy(focusNames[1], GC->LU->body[GC->LU->LP.min].name);
-    strcpy(focusNames[2], "Vessel Live");
+    strcpy(focusNames[2], "Vessel Rel");
     strcpy(focusNames[3], "Vessel Enc");
     strcpy(focusNames[4], "Vessel Burn");
 

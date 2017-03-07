@@ -269,16 +269,16 @@ void Lagrange::Button_ZMD() {
 // MUP = Orbit Mode: Move Up
 void Lagrange::Button_MUP() {
   double offset = 10000000.0; // 10000 km for Y-plane
-  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 10.0);
-  double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] + offset;
+  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0);
+  double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] - offset;
   GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
   return;
 }
 // MDN = Orbit Mode: Move Down
 void Lagrange::Button_MDN() {
   double offset = 10000000.0; // 10000 km for Y-plane
-  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 10.0);
-  double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] - offset;
+  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0);
+  double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] + offset;
   GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
   return;
 }
