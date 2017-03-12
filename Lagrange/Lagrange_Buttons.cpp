@@ -81,8 +81,8 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("PLC", OAPI_KEY_P, &Lagrange::Button_PLC);
     RegisterFunction("ADJ", OAPI_KEY_U, &Lagrange::Button_ADJ);
     RegisterFunction("ADM", OAPI_KEY_D, &Lagrange::Button_ADM);
-    RegisterFunction("++",  OAPI_KEY_EQUALS, &Lagrange::Button_AUP);
-    RegisterFunction("--",  OAPI_KEY_MINUS, &Lagrange::Button_ADN);
+    RegisterFunctionCont("++",  OAPI_KEY_EQUALS, &Lagrange::Button_AUP);
+    RegisterFunctionCont("--",  OAPI_KEY_MINUS, &Lagrange::Button_ADN);
     RegisterFunction("ENT", OAPI_KEY_E, &Lagrange::Button_ENT);
     RegisterFunction("TDV", OAPI_KEY_F, &Lagrange::Button_TDV);
 

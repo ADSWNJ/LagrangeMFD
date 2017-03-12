@@ -50,7 +50,7 @@ bool Lagrange::ConsumeKeyBuffered (DWORD key) {
 void Lagrange::Button_MOD() {
   LC->mode++;
   if (LC->mode > 4) LC->mode = 0;
-  LC->B.SwitchPage(this, LC->mode);
+  LC->B.SelectPage(this, LC->mode);
   return;
 };
 // ARM = Plan Mode: Arm/Disarm the burn planning
@@ -213,21 +213,21 @@ void Lagrange::ButtonHelper_TrimEntBox(char *buf) {
 void Lagrange::Button_TGT() {
   GC->LU->PrvNxtMode = 0;
   LC->mode = 6;
-  LC->B.SwitchPage(this, LC->mode);
+  LC->B.SelectPage(this, LC->mode);
   return;
 }
 // FRM = Orbit Mode: Select Frame of Reference for PROGRADE calcs
 void Lagrange::Button_FRM() {
   GC->LU->PrvNxtMode = 1;
   LC->mode = 7;
-  LC->B.SwitchPage(this, LC->mode);
+  LC->B.SelectPage(this, LC->mode);
   return;
 }
 // FOC = Orbit Mode: Select Focus - 0 = Major, 1 = Minor, 2 = Vessel, 3 = Enc, 4 = Burn
 void Lagrange::Button_FOC() {
   GC->LU->PrvNxtMode = 2;
   LC->mode = 7;
-  LC->B.SwitchPage(this, LC->mode);
+  LC->B.SelectPage(this, LC->mode);
   return;
 }
 // LEG = Orbit Mode: Legend off/on
@@ -329,13 +329,13 @@ void Lagrange::Button_AAH() {
 // OK = Message Acknowledge
 void Lagrange::Button_OK() {
   LC->showMessage = false;
-  LC->B.SwitchPage(this, LC->mode);
+  LC->B.SelectPage(this, LC->mode);
   return;
 }
 void Lagrange::Button_NotImplementedYet() {
   LC->Message = "Function not yet implemented in this version of Lagrange MFD!";
   LC->showMessage = true;
-  LC->B.SwitchPage(this, 5);
+  LC->B.SelectPage(this, 5);
   return;
 }
 
@@ -394,7 +394,7 @@ void Lagrange::Button_PRV() {
 // TOK = Target Acknowledge
 void Lagrange::Button_TOK() {
   LC->mode = 0;
-  LC->B.SwitchPage(this, LC->mode);
+  LC->B.SelectPage(this, LC->mode);
   return;
 }
 

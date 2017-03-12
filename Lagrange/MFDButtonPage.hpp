@@ -3,7 +3,7 @@
 //             http://sf.net/projects/enjomitchsorbit
 //                  Part of the ORBITER SDK
 //
-// Copyright (C) 2012-2016 Szymon "Enjo" Ender
+// Copyright (C) 2012      Szymon "Enjo" Ender
 //
 //                         All rights reserved
 //
@@ -22,8 +22,8 @@
 // <http://www.gnu.org/licenses/>.
 // ==============================================================
 
-#ifndef MFDBUTTONPAGE_H
-#define MFDBUTTONPAGE_H
+#ifndef MFDButtonPage_H
+#define MFDButtonPage_H
 
 #include <OrbiterSDK.h>
 #include <map>
@@ -48,7 +48,7 @@ class MFDButtonPage
         /**
             A button for this method needs to be registered through RegisterFunction(),
             which should call MFDClass' method, which then calls this method. Example:
-            \code{.cpp}
+            \code
             MFDButtonPageLaunchMFD::MFDButtonPageLaunchMFD()
             {
                 // ... add menu first, then functions
@@ -56,21 +56,34 @@ class MFDButtonPage
                 // ...
             }
             \endcode
-            \code{.cpp}
+            \code
             void LaunchMFD::SwitchButtonsPage()
             {
                 m_buttonPages.SwitchPage(this);
             }
             \endcode
-
             \param mfdInstance - Instance of your MFD class
         */
-        void SwitchPage( MFDClass * mfdInstance, int page = -1 ) const;
+        void SwitchPage( MFDClass * mfdInstance ) const;
+
+        /// Selects a specific buttons page
+        /**
+            Could be used instead of SwitchPage(). Example:
+            \code
+            void LaunchMFD::SomeFunction( int pageIndex )
+            {
+                m_buttonPages.SelectPage(this, pageIndex);
+            }
+            \endcode
+            \param mfdInstance - Instance of your MFD class
+            \param pageIndex - Index of page to switch to.
+        */
+        void SelectPage( MFDClass * mfdInstance, int pageIndex ) const;
 
         /// Reacts on mouse clicks on buttons
         /**
             Call from MFD::ConsumeButton(). Example:
-            \code{.cpp}
+            \code
             bool LaunchMFD::ConsumeButton (int bt, int event)
             {
                 return m_buttonPages.ConsumeButton(this, bt, event);
@@ -87,7 +100,7 @@ class MFDButtonPage
             Searches for the provided key in a map for the selected page and fires associated function.
             If SearchForKeysInOtherPages() returns true, then other pages are searched for as well.
             Call from MFD::ConsumeKeyBuffered(). Example:
-            \code{.cpp}
+            \code
             bool LaunchMFD::ConsumeKeyBuffered(DWORD key)
             {
                 return m_buttonPages.ConsumeKeyBuffered(this, key);
@@ -98,10 +111,27 @@ class MFDButtonPage
         */
         bool ConsumeKeyBuffered( MFDClass * mfdInstance, DWORD key ) const;
 
+        /// Reacts on continuous keyboard presses
+        /**
+            Searches for the provided key in a map for the selected page and fires associated function.
+            If SearchForKeysInOtherPages() returns true, then other pages are searched for as well.
+            The function's execution is continuous.
+            Call from MFD::ConsumeKeyImmediate(). Example:
+            \code
+            bool LaunchMFD::ConsumeKeyImmediate(char * kstate)
+            {
+                return m_buttonPages.ConsumeKeyImmediate(this, kstate);
+            }
+            \endcode
+            \param mfdInstance - Instance of your MFD class (this)
+            \param kstate - key state from Orbiter
+        */
+        bool ConsumeKeyImmediate( MFDClass * mfdInstance, char * kstate ) const;
+
         /// Returns button menu of the current page
         /**
             Call from MFD::ButtonMenu(). Example:
-            \code{.cpp}
+            \code
             int LaunchMFD::ButtonMenu (const MFDBUTTONMENU **menu) const
             {
                 return m_buttonPages.ButtonMenu( menu );
@@ -114,7 +144,7 @@ class MFDButtonPage
         /// Returns button labels of the current page
         /**
             Call from MFD::ButtonLabel(). Example:
-            \code{.cpp}
+            \code
             char * LaunchMFD::ButtonLabel (int bt)
             {
                 return m_buttonPages.ButtonLabel(bt);
@@ -139,26 +169,42 @@ class MFDButtonPage
         /**
             Before this method has any effect, a button page needs to be registered first with
             RegisterPage(). The keys may be repeated in different pages.
-            \code{.cpp}
+            \code
             MFDButtonPageLaunchMFD::MFDButtonPageLaunchMFD()
             {
                 // ... add menu first, then functions
                 RegisterFunction("TGT", OAPI_KEY_T, &LaunchMFD::OpenDialogTarget);
                 RegisterFunction("ALT", OAPI_KEY_A, &LaunchMFD::OpenDialogAltitude);
                 RegisterFunction("PG", OAPI_KEY_P, &LaunchMFD::SwitchButtonsPage);
+                RegisterFuncCont("I +", OAPI_KEY_EQUALS, &LaunchMFD::IncreaseInclination, &LaunchMFD::DecreaseInclination);
+                RegisterFuncCont("I -", OAPI_KEY_MINUS,  &LaunchMFD::DecreaseInclination, &LaunchMFD::IncreaseInclination);
             }
             \endcode
-            \param label - 3 char long label of button. Example: "TGT"
+            \param label - max 3 char long label of button. Example: "TGT"
             \param key - associated key on keyboard, one of OAPI_KEY_*. Example: OAPI_KEY_T
-            \param f - MFD function pointer (handler). Example: & MyMFD::OpenDialogTarget. The handler can"t take any arguments.
+            \param funLClick - on left click MFD function pointer (handler). Example: & MyMFD::OpenDialogTarget. The handler can"t take any arguments.
+            \param funRClick - on right click MFD function pointer (handler). Optional
         */
-        void RegisterFunction( const std::string & label, DWORD key, MFDFunctionPtr f );
+        void RegisterFunction( const std::string & label, DWORD key,
+                              MFDFunctionPtr funLClick, MFDFunctionPtr funRClick = NULL );
+
+        /// Registeres handler in MFD scope for buttons that should have a continous reaction
+        /**
+            Same as RegisterFunction(), but allows for continuous reaction on the keys,
+            like for example, when you want to continuously modify a variable.
+            \param label - max 3 char long label of button. Example: "TGT"
+            \param key - associated key on keyboard, one of OAPI_KEY_*. Example: OAPI_KEY_T
+            \param funLClick - on left click MFD function pointer (handler). Example: & MyMFD::OpenDialogTarget. The handler can"t take any arguments.
+            \param funRClick - on right click MFD function pointer (handler). Optional
+        */
+        void RegisterFunctionCont( const std::string & label, DWORD key,
+                              MFDFunctionPtr funLClick, MFDFunctionPtr funRClick = NULL );
 
         /// Registeres button page, and buttons menu
         /**
             Must be called before RegisterFunction() is called.
             The menu must be \b STATICALLY declared. For example:
-            \code{.cpp}
+            \code
             static const MFDBUTTONMENU mnu1[] =
             {
                 {"Select target", 0, 'T'},
@@ -180,12 +226,21 @@ class MFDButtonPage
             const MFDBUTTONMENU * m_menu;
             int m_menuSize;
             std::vector<std::string> m_labels;
-            std::vector<MFDFunctionPtr> m_buttons;
+            std::vector<bool> m_continuousClick;
+            std::vector<MFDFunctionPtr> m_buttonsLeftClick;
+            std::vector<MFDFunctionPtr> m_buttonsRightClick;
             std::map<DWORD, MFDFunctionPtr> m_keys;
+            std::map<DWORD, bool> m_continuousKey;
         };
+
+        bool PressKey( MFDClass * mfdInstance, DWORD key ) const;
+        void RegisterFuncPriv( bool continuous, const std::string & label, DWORD key,
+                              MFDFunctionPtr funLClick, MFDFunctionPtr funRClick);
 
         std::vector<Page> m_pages; ///< Current page index
         mutable size_t m_i; ///< Current page index
+
+        typedef std::map<DWORD, bool>::const_iterator MapBoolIterator;
 };
 
 // Public:
@@ -199,21 +254,44 @@ template <class MFDClass>
 MFDButtonPage<MFDClass>::~MFDButtonPage() {}
 
 template <class MFDClass>
-void MFDButtonPage<MFDClass>::SwitchPage( MFDClass * mfdInstance, int page = -1 )  const
+void MFDButtonPage<MFDClass>::SwitchPage( MFDClass * mfdInstance )  const
 {
-    if (page == -1) page = (m_i++); // e.g. use SwitchPage(mfd) to increment page, and SwitchPage(mfd,2) to select specific page 2. 
-    m_i = (page) % m_pages.size(); // increment index, but not beyond the size
+    m_i = (++m_i) % m_pages.size(); // increment index, but not beyond the size
     mfdInstance->InvalidateButtons(); // redraw buttons
+}
+
+template <class MFDClass>
+void MFDButtonPage<MFDClass>::SelectPage( MFDClass * mfdInstance, int pageIndex ) const
+{
+    if (pageIndex >= 0 && pageIndex < (int)m_pages.size())
+    {
+        m_i = pageIndex;
+        mfdInstance->InvalidateButtons(); // redraw buttons
+    }
+    else
+        sprintf_s(oapiDebugString(), 512, "MFDButtonPage::SwitchPage():"
+                  " Page index %d is beyond pages size %d!", pageIndex, m_pages.size());
 }
 
 template <class MFDClass>
 bool MFDButtonPage<MFDClass>::ConsumeButton( MFDClass * mfdInstance, int button, int event ) const
 {
-    if (event & PANEL_MOUSE_LBDOWN) // Left mouse button just clicked
+    if ( button >= (int)m_pages.at(m_i).m_buttonsLeftClick.size())
+        return false;
+
+    if (event & PANEL_MOUSE_LBDOWN ||
+        (event & PANEL_MOUSE_LBPRESSED && m_pages.at(m_i).m_continuousClick[button]) )
+    {   // Left mouse button just clicked
+        (mfdInstance->*(m_pages.at(m_i).m_buttonsLeftClick[button]))(); // Call the function
+        return true;
+    }
+    else  if ( event & PANEL_MOUSE_RBDOWN ||
+            ( event & PANEL_MOUSE_RBPRESSED && m_pages.at(m_i).m_continuousClick[button] ) )
     {
-        if ( button < (int)m_pages.at(m_i).m_buttons.size())
+        MFDFunctionPtr fun = m_pages.at(m_i).m_buttonsRightClick[button];
+        if ( fun ) // If function was registered at all
         {
-            (mfdInstance->*(m_pages.at(m_i).m_buttons[button]))(); // Call the function
+            (mfdInstance->*(fun))(); // Call the function
             return true;
         }
     }
@@ -224,12 +302,9 @@ template <class MFDClass>
 bool MFDButtonPage<MFDClass>::ConsumeKeyBuffered( MFDClass * mfdInstance, DWORD key ) const
 {
     // First search for the key on this page
-    std::map<DWORD, MFDFunctionPtr>::const_iterator it = m_pages.at(m_i).m_keys.find(key);
-    if (it != m_pages.at(m_i).m_keys.end() )
-    {
-        (mfdInstance->*(it->second))(); // Call the function
-        return true;
-    }
+    MapBoolIterator it = m_pages.at(m_i).m_continuousKey.find(key);
+    if (it != m_pages.at(m_i).m_continuousKey.end() && ! it->second )
+        return PressKey(mfdInstance, key);
 
     if ( SearchForKeysInOtherPages() )
     {
@@ -238,15 +313,39 @@ bool MFDButtonPage<MFDClass>::ConsumeKeyBuffered( MFDClass * mfdInstance, DWORD 
         {
             if ( m_i == j )
                 continue; // The current page was already queried
-            std::map<DWORD, MFDFunctionPtr>::const_iterator it2 = m_pages.at(j).m_keys.find(key);
-            if (it2 != m_pages.at(j).m_keys.end() )
+            MapBoolIterator it = m_pages.at(j).m_continuousKey.find(key);
+            if (it != m_pages.at(j).m_continuousKey.end() && ! it->second )
+                return PressKey(mfdInstance, key);
+        }
+    }
+    return false;
+}
+
+template <class MFDClass>
+bool MFDButtonPage<MFDClass>::ConsumeKeyImmediate( MFDClass * mfdInstance, char * kstate ) const
+{
+    for (MapBoolIterator it = m_pages.at(m_i).m_continuousKey.begin();
+    it != m_pages.at(m_i).m_continuousKey.end(); ++it)
+    {
+        if ( KEYDOWN(kstate, it->first ) && it->second )
+            return PressKey(mfdInstance, it->first);
+    }
+
+    if ( SearchForKeysInOtherPages() )
+    {
+        for ( size_t j = 0; j < m_pages.size(); ++j )
+        {
+             if ( m_i == j )
+                continue; // The current page was already queried
+
+            for (MapBoolIterator it = m_pages.at(j).m_continuousKey.begin();
+            it != m_pages.at(j).m_continuousKey.end(); ++it)
             {
-                (mfdInstance->*(it2->second))();  // Call the function
-                return true;
+                if ( KEYDOWN(kstate, it->first ) && it->second )
+                    return PressKey(mfdInstance, it->first);
             }
         }
     }
-
     return false;
 }
 
@@ -264,20 +363,19 @@ char * MFDButtonPage<MFDClass>::ButtonLabel (int bt) const
              (char*)m_pages.at(m_i).m_labels[bt].c_str() : NULL);
 }
 
-// Private:
+// Protected:
 template <class MFDClass>
-void MFDButtonPage<MFDClass>::RegisterFunction( const std::string & label, DWORD key, MFDFunctionPtr f )
+void MFDButtonPage<MFDClass>::RegisterFunction( const std::string & label, DWORD key,
+                                               MFDFunctionPtr funLClick, MFDFunctionPtr funRClick )
 {
-    if ( m_pages.empty() )
-    {
-        sprintf_s(oapiDebugString(), 512, "MFDButtonPage::RegisterFunction(): No pages registered yet!");
-        return;
-    }
-    Page & p = m_pages.back();
+    RegisterFuncPriv( false, label, key, funLClick, funRClick);
+}
 
-    p.m_labels.push_back(label);
-    p.m_buttons.push_back(f);
-    p.m_keys[key] = f;
+template <class MFDClass>
+void MFDButtonPage<MFDClass>::RegisterFunctionCont( const std::string & label, DWORD key,
+                                               MFDFunctionPtr funLClick, MFDFunctionPtr funRClick )
+{
+    RegisterFuncPriv( true, label, key, funLClick, funRClick);
 }
 
 template <class MFDClass>
@@ -289,4 +387,54 @@ void MFDButtonPage<MFDClass>::RegisterPage( const MFDBUTTONMENU * menu, int size
     m_pages.push_back(p);
 }
 
-#endif // MFDBUTTONPAGE_H
+// Private:
+template <class MFDClass>
+bool MFDButtonPage<MFDClass>::PressKey( MFDClass * mfdInstance, DWORD key ) const
+{
+    typedef std::map<DWORD, MFDFunctionPtr>::const_iterator MapFuncIterator;
+    // First search for the key on this page
+    MapFuncIterator it = m_pages.at(m_i).m_keys.find(key);
+    if (it != m_pages.at(m_i).m_keys.end() )
+    {
+        (mfdInstance->*(it->second))(); // Call the function
+        return true;
+    }
+
+    if ( SearchForKeysInOtherPages() )
+    {
+        // Then, if required, search in other pages
+        for ( size_t j = 0; j < m_pages.size(); ++j )
+        {
+            if ( m_i == j )
+                continue; // The current page was already queried
+            MapFuncIterator it = m_pages.at(j).m_keys.find(key);
+            if (it != m_pages.at(j).m_keys.end() )
+            {
+                (mfdInstance->*(it->second))();  // Call the function
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+template <class MFDClass>
+void MFDButtonPage<MFDClass>::RegisterFuncPriv( bool continuous, const std::string & label, DWORD key,
+                              MFDFunctionPtr funLClick, MFDFunctionPtr funRClick)
+{
+    if ( m_pages.empty() )
+    {
+        sprintf_s(oapiDebugString(), 512, "MFDButtonPage::RegisterFuncPriv(): No pages registered yet!");
+        return;
+    }
+    Page & p = m_pages.back();
+    p.m_labels.push_back(label);
+    p.m_continuousClick.push_back(continuous);
+    p.m_buttonsLeftClick.push_back(funLClick);
+    p.m_buttonsRightClick.push_back(funRClick);
+    p.m_keys[key] = funLClick;
+    p.m_continuousKey[key] = continuous;
+}
+
+
+#endif // MFDButtonPage_H

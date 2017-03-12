@@ -142,7 +142,7 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
       if (sscanf(val, "%u %d", &p_ui1, &p_i2) == 2) {
         if (this->LC->m == p_ui1) {
           this->LC->mode = p_i2;
-          LC->B.SwitchPage(this, this->LC->mode);
+          LC->B.SelectPage(this, this->LC->mode);
         }
       }
     } else if (!_stricmp(line, "LP")) {

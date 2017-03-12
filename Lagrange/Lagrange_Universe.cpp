@@ -825,8 +825,8 @@ void LagrangeUniverse::integrateUniverse() {
         fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", s4i[wkg][0].body[LU_SUN].P.x, s4i[wkg][0].body[LU_SUN].P.z, s4i[wkg][0].body[LU_SUN].P.y);
         fprintf(dump_s4i, "\n");
         fprintf(dump_s4i, "\"\"-- State vectors of Vessel\"\n");
-        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.Q.x, vdata[wkg][0].vs4i[0].ves.Q.z, vdata[wkg][0].vs4i[0].ves.Q.y);
-        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.P.x, vdata[wkg][0].vs4i[0].ves.P.z, vdata[wkg][0].vs4i[0].ves.P.y);
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.Q.x, vdata[wkg][orbFocVix].vs4i[0].ves.Q.z, vdata[wkg][0].vs4i[0].ves.Q.y);
+        fprintf(dump_s4i, "%.15lf, %.15lf, %.15lf\n", vdata[wkg][0].vs4i[0].ves.P.x, vdata[wkg][orbFocVix].vs4i[0].ves.P.z, vdata[wkg][0].vs4i[0].ves.P.y);
         fprintf(dump_s4i, "\n\n");
 
         fclose(dump_s4i);
@@ -839,7 +839,8 @@ void LagrangeUniverse::integrateUniverse() {
       if (fopen_s(&dump_enc, ".\\Config\\MFD\\Lagrange\\Diags\\ENC.csv", "w") != 0) {
         _dmp_enc = false;
       } else {
-        fprintf(dump_enc, "Reason, Chop, CSec, VIx, Ix1, Ix2, Ix3, Sec1, Sec2, Sec3, Dis1, Dis2, Dis3\n");
+        fprintf(dump_enc, "Reason, Chop, Interval, VIx, S4Ix1, S4Ix2, S4Ix3, SimT1, SimT2, SimT3, D1, D2, D3, D2-D1, D3-D2, TREND\n");
+        fprintf(dump_enc, "Using hysteresis %f\n", (double) s4int_hysteresis);
         fflush(dump_enc);
       }
     }
@@ -1027,20 +1028,35 @@ void LagrangeUniverse::integrateUniverse() {
         double SECM0 = s4i[wkg][cur - 0].sec;
 
         bool minDeltaRange = abs(EDM1 - EDM0) < 1e-5;
-
+        if (_dmp_enc) {
+          double EDM12 = EDM1 - EDM2;
+          double EDM01 = EDM0 - EDM1;
+          fprintf(dump_enc, "HUNT, %d, %.15lf, %u, ", interpolation_chop, dt / (double)interpolation_chop, s);
+          fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
+          fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
+          fprintf(dump_enc, "%.15f, %.15f, %.15f, %+.15f, %+.15f,", EDM2, EDM1, EDM0, EDM12, EDM01);
+          if (EDM12 <= 0.0) {
+            if (EDM01 >= 0.0) {
+              fprintf(dump_enc, ">> Min <<\n");
+            } else {
+              fprintf(dump_enc, "Reducing\n");
+            }
+          } else {
+            if (EDM01 > 0.0) {
+              fprintf(dump_enc, "Increasing\n");
+            } else {
+              fprintf(dump_enc, "Local Max\n");
+            }
+          }
+        }
         if ((EDM2 >= EDM1 && EDM1 <= EDM0) ||               // Inversion found
             (interpolation_chop > 64 && minDeltaRange) ||   // Inside min range
             (EDM1 <= EDM0 && interpolation_chop > 1)) {     // Beyond inversion at higher search
+
+
           if (interpolation_chop < 16384 && !minDeltaRange) {
             if (interpolation_chop == 1) {
               last_regix = cur - 2;
-            }
-            if (_dmp_enc) {
-              fprintf(dump_enc, "HUNT, %d, %.15lf, %u, ", interpolation_chop, dt / (double)interpolation_chop, s);
-              fprintf(dump_enc, "%u, %u, %u, ",           cur - 2, cur - 1, cur);
-              fprintf(dump_enc, "%.15f, %.15f, %.15f, ",  s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec );
-              fprintf(dump_enc, "%.15f, %.15f, %.15f\n",  EDM2, EDM1, EDM0);
-              fflush(dump_enc);
             }
 
             interpolation_chop *= 2;  // Double the resolution (up to max of 1024)
@@ -1049,12 +1065,7 @@ void LagrangeUniverse::integrateUniverse() {
             break;
           } else {
             if (_dmp_enc) {
-              fprintf(dump_enc, "HUNT, %d, %.15lf, %u, ", interpolation_chop, dt / (double)interpolation_chop, s);
-              fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
-              fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
-              fprintf(dump_enc, "%.15f, %.15f, %.15f\n", EDM2, EDM1, EDM0);
               fprintf(dump_enc, "END\n");
-              fflush(dump_enc);
             }
             interpolation_chop = 1; // Release the pressure ... we have enough accuracy now on the search
             for (unsigned int ss = 0; ss < vdata[wkg].size(); ss++) vdata[wkg][ss].block_scan = 2;
@@ -1069,7 +1080,6 @@ void LagrangeUniverse::integrateUniverse() {
                   intervening_burn = true;
                   if (_dmp_enc) {
                     fprintf(dump_enc, "BURN,,,%u,,,%u,,,%.6lf\n", s, kk, s4i[wkg][kk].sec);
-                    fflush(dump_enc);
                   }
                   break;
                 }
@@ -1094,7 +1104,6 @@ void LagrangeUniverse::integrateUniverse() {
                   fprintf(dump_enc, ", , %u, ", last_regix);
                   fprintf(dump_enc, ", , %.15f, ", s4i[wkg][last_regix].sec);
                   fprintf(dump_enc, ", , %.15f\n", vdata[wkg][c].enc_Q);
-                  fflush(dump_enc);
                 }
               }
 
@@ -1108,9 +1117,6 @@ void LagrangeUniverse::integrateUniverse() {
               fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
               fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
               fprintf(dump_enc, ", , \n");
-              fflush(dump_enc);
-              fclose(dump_enc);
-              fopen_s(&dump_enc, ".\\Config\\MFD\\Lagrange\\Diags\\ENC.csv", "a");
             }
             break;
           }
@@ -1364,6 +1370,8 @@ void LagrangeUniverse::integrateUniverse() {
     if (enc_ix == -1) {
       if (vdata[wkg][_orbFocVix].vs4i[0].dQ < vdata[wkg][_orbFocVix].vs4i[s4int_count[wkg] - 1].dQ) {
         enc_ix = 0;
+      } else {
+        enc_ix = s4int_count[wkg] - 1;
       }
     };
     VECTOR2 Q_foc;
