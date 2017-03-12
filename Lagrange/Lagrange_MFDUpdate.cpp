@@ -265,7 +265,7 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtEngText(3, rl++, "%9.4f", "m/s", vs4i_e->dP);
 
   l++; l++;
-  if (vdata->burnArmed && vdata->burn_ix < 0) {
+  if (vdata->burnArmed && vdata->enc_count == 0) {
     skpColor(CLR_YELLOW);
     skpFormatText(0, l++, "NOTE: Burn Time not in S4I range");
   }

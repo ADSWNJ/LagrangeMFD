@@ -164,6 +164,7 @@
     <ClInclude Include="Lagrange.hpp" />
     <ClInclude Include="Lagrange_AP.hpp" />
     <ClInclude Include="Lagrange_Buttons.hpp" />
+    <ClInclude Include="Lagrange_Drawing.hpp" />
     <ClInclude Include="Lagrange_DialogFunc.hpp" />
     <ClInclude Include="Lagrange_GCore.hpp" />
     <ClInclude Include="Lagrange_Interface.hpp" />
@@ -185,6 +186,7 @@
     <ClCompile Include="Lagrange_AP.cpp" />
     <ClCompile Include="Lagrange_ButtonHandling.cpp" />
     <ClCompile Include="Lagrange_Buttons.cpp" />
+    <ClCompile Include="Lagrange_Drawing.cpp" />
     <ClCompile Include="Lagrange_DialogFunc.cpp" />
     <ClCompile Include="Lagrange_GCore.cpp" />
     <ClCompile Include="Lagrange_Interface.cpp" />

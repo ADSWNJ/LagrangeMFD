@@ -41,7 +41,10 @@ using namespace std;
 #define ORB_PEN_LIGHT_GREEN 8
 #define ORB_PEN_DASHED_GREEN 9
 #define ORB_PEN_BRIGHT_GREEN 10
-#define ORB_PEN_BRIGHT_YELLOW 11
+#define ORB_PEN_SUN_COLOR 11
+#define ORB_PEN_EARTH_COLOR 12
+#define ORB_PEN_MOON_COLOR 13
+#define ORB_PEN_EMB_COLOR 14
 
 #define COUNT_LP 10
 #define COUNT_BODY 4
@@ -96,6 +99,7 @@ public:
   int burn_ix;                                              // index for burn
   double enc_Q;                                             // Min encounter distance
   double enc_P;                                             // Min encounter dV
+  int enc_count;                                            // Number of encounters found (i.e. minima distances)
   int enc_typ;                                              // -1 if constantly growing encounter, +1 if constantly decreasing, 0 if enc found
   int enc_ix;                                               // s4i index of min encounter
   int refEnt;                                               // entity code for the frame reference for orbits and burns
@@ -146,6 +150,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     struct LagrangeUniverse_Body {
     public:
       int ix;                                               // Index of current body
+      int pen_ix;                                           // Index to the pen color for this body
       char name[32];                                        // Display names of each body
       double gm;                                            // GGRAV * mass of body (or of sum of bodies in bary)
       OBJHANDLE hObj;                                       // Handles to each body
@@ -242,14 +247,12 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
   protected:
   private:
 
-    void defBody(LagrangeUniverse_Body *body, int p0, char* p1,double proxDist, double impactDist);                                 // Sets initial constants for selected body
-    void defBary(LagrangeUniverse_Body *bary, int p0, char* p1, int maj, int min);               // Sets initial constants for 2-body barycenter
+    void defBody(LagrangeUniverse_Body *body, int p0, int p1, char* p2,double proxDist, double impactDist);        // Sets initial constants for selected body
+    void defBary(LagrangeUniverse_Body *bary, int p0, int p1, char* p2, int maj, int min);                         // Sets initial constants for 2-body barycenter
     void defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, int Lnum, double mr, double a, int ref, int maj, int min,
                                                int oth1=-1,int oth2=-1);     // Sets initial constants for selected LP
 
-    void defOrbPlot(LagrangeUniverse_LP_Def *lptab, int lppen, int b1 = -1, 
-                                                               int b2 = -1, int b2pen = 0,
-                                                               int b3 = -1, int b3pen = 0);     // Sets plot lines and colors for each LP
+    void defOrbPlot(LagrangeUniverse_LP_Def *lptab, int b1 = -1, int b2 = -1, int b3 = -1);     // Sets plot lines and colors for each LP
                                          
     // Private thread interface vars
     atomic<bool> s4i_finished;

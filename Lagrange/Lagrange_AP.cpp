@@ -115,7 +115,7 @@ void Lagrange_AP::Update_PlanMode(VESSEL* v, const int apState, const double Sim
   }
   m_angleToTarget = GetRotationToTarget(m_targetVectorLocal, m_upVectorLocal);
 
-  char buf[256];
+  /*char buf[256];
   sprintf_s(buf, 256, "ALPHA DBG: burnFrozen:%d G-tgt:{%+.4f,%+.4f,%+.4f} L-tgt:{%+.4f,%+.4f,%+.4f}  Angle-tgt:{%+.4f,%+.4f,%+.4f}  UpVector:{%+.4f,%+.4f,%+.4f}",
     (m_burnFrozen?1:0),
     m_targetVectorGlobal.x, m_targetVectorGlobal.y, m_targetVectorGlobal.z,
@@ -123,7 +123,7 @@ void Lagrange_AP::Update_PlanMode(VESSEL* v, const int apState, const double Sim
     m_angleToTarget.x*DEG, m_angleToTarget.y*DEG, m_angleToTarget.z*DEG,
     m_upVectorLocal.x, m_upVectorLocal.y, m_upVectorLocal.z
   );
-  strcpy(oapiDebugString(), buf);
+  strcpy(oapiDebugString(), buf);*/
 
   if (apState > 1) { // point enabled
     if (!IsEnabled()) Enable(v);

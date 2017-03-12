@@ -17,6 +17,7 @@
 #include "Lagrange_GCore.hpp"   
 #include "Lagrange_VCore.hpp" 
 #include "Lagrange_LCore.hpp" 
+#include "Lagrange_Drawing.hpp"
 
 extern "C" 
 class Lagrange: public MFD2
@@ -98,6 +99,8 @@ protected:
   Lagrange_LCore* LC;
   Lagrange_VCore* VC;
 
+  Lagrange_Drawing draw;
+
   int _Line(const int row );
   int _Col(const int pos );
   int _Col2(const int pos );
@@ -110,7 +113,7 @@ protected:
   void showMessage();
 
   oapi::Font *font;
-  oapi::Pen *pen[12];
+  oapi::Pen *pen[15];
 
 };
 

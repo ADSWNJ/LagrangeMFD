@@ -40,26 +40,11 @@ LagrangeUniverse::LagrangeUniverse() {
   }
   s4int_hysteresis = 10.0;
 
-  defBody(&body[0], 0, "Sun", 750000000, 696700000);
-  defBody(&body[1], 1, "Earth", 6491000, 6381000);
-  defBody(&body[2], 2, "Moon", 1767000, 1747000);
-  defBary(&body[3], 3, "E-M B", LU_EARTH, LU_MOON);
+  defBody(&body[0], 0, ORB_PEN_SUN_COLOR, "Sun", 750000000, 696700000);
+  defBody(&body[1], 1, ORB_PEN_EARTH_COLOR, "Earth", 6491000, 6381000);
+  defBody(&body[2], 2, ORB_PEN_MOON_COLOR, "Moon", 1767000, 1747000);
+  defBary(&body[3], 3, ORB_PEN_EMB_COLOR, "E-M B", LU_EARTH, LU_MOON);
 
-/*
-  #define ORB_MAX_LINES 4
-  #define ORB_PEN_WHITE 0
-  #define ORB_PEN_YELLOW 1
-  #define ORB_PEN_ORANGE 2
-  #define ORB_PEN_RED 3
-  #define ORB_PEN_MAGENTA 4
-  #define ORB_PEN_DASHED_AQUA 5
-  #define ORB_PEN_DASHED_BLUE 6
-  #define ORB_PEN_DASHED_VIOLET 7
-  #define ORB_PEN_LIGHT_GREEN 8
-  #define ORB_PEN_DASHED_GREEN 9
-  #define ORB_PEN_BRIGHT_GREEN 10
-  #define ORB_PEN_BRIGHT_YELLOW 11
-*/
 
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
   // Meanings:
@@ -77,17 +62,17 @@ LagrangeUniverse::LagrangeUniverse() {
 
   // LP Orbit plot definitions
   // Meanings:
-  //                      LP Pen                 Plot Center       Ent 1     Ent 1 Pen       Ent 2       Ent 2 Pen            
-  defOrbPlot(&lptab[0], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW); 
-  defOrbPlot(&lptab[1], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[2], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[3], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[4], ORB_PEN_DASHED_VIOLET, LU_EARTH,         LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[5], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_MAGENTA, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[6], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_MAGENTA, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[7], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_MAGENTA, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[8], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_MAGENTA, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
-  defOrbPlot(&lptab[9], ORB_PEN_DASHED_VIOLET, LU_SUN,           LU_EARTH, ORB_PEN_MAGENTA, LU_MOON, ORB_PEN_BRIGHT_YELLOW);
+  //                     Plot 1     Plot 2    Plot 3          
+  defOrbPlot(&lptab[0], LU_EARTH,  LU_MOON); 
+  defOrbPlot(&lptab[1], LU_EARTH,  LU_MOON);
+  defOrbPlot(&lptab[2], LU_EARTH,  LU_MOON);
+  defOrbPlot(&lptab[3], LU_EARTH,  LU_MOON);
+  defOrbPlot(&lptab[4], LU_EARTH,  LU_MOON);
+  defOrbPlot(&lptab[5], LU_SUN,    LU_EARTH, LU_MOON);
+  defOrbPlot(&lptab[6], LU_SUN,    LU_EARTH, LU_MOON);
+  defOrbPlot(&lptab[7], LU_SUN,    LU_EARTH, LU_MOON);
+  defOrbPlot(&lptab[8], LU_SUN,    LU_EARTH, LU_MOON);
+  defOrbPlot(&lptab[9], LU_SUN,    LU_EARTH, LU_MOON);
 
   for (int i = 0; i < 2; i++) {
     s4i[i].resize(s4int_count[0]);
@@ -139,10 +124,11 @@ int getMilliSpan(int nTimeStart){   // Credit http://www.firstobject.com/getmill
 	return nSpan;
 }
 
-void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p1, double proxDist, double impactDist) {
+void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, int p1, char* p2, double proxDist, double impactDist) {
   // Initialize each celestial body
   pbodyinst->ix = p0;
-  strcpy(pbodyinst->name, p1);
+  pbodyinst->pen_ix = p1;
+  strcpy(pbodyinst->name, p2);
   pbodyinst->hObj = oapiGetGbodyByName(pbodyinst->name);
   pbodyinst->mass = oapiGetMass(pbodyinst->hObj);
   pbodyinst->gm = pbodyinst->mass * GGRAV;
@@ -153,10 +139,11 @@ void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   return;
 }
 
-void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, char* p1, int maj, int min) {
+void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, int p1, char* p2, int maj, int min) {
   // Initialize each barycenter
   pbodyinst->ix = p0;
-  strcpy(pbodyinst->name, p1);
+  pbodyinst->pen_ix = p1;
+  strcpy(pbodyinst->name, p2);
   pbodyinst->mass = body[maj].mass + body[min].mass;
   pbodyinst->gm = pbodyinst->mass * GGRAV;
   pbodyinst->isBary = true;
@@ -229,15 +216,15 @@ void LagrangeUniverse::defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, i
   return;
 }
 
-void LagrangeUniverse::defOrbPlot(LagrangeUniverse_LP_Def *lptab, int lppen, int b1, int b2, int b2pen, int b3, int b3pen) {
+void LagrangeUniverse::defOrbPlot(LagrangeUniverse_LP_Def *lptab, int b1, int b2, int b3) {
   lptab->plotix[0] = b1;        // Body 1
-  lptab->plotixpen[0] = 0;
+  lptab->plotixpen[0] = b1 < 0? 0 : body[b1].pen_ix;
   lptab->plotix[1] = -2;        // LP
-  lptab->plotixpen[1] = lppen;
+  lptab->plotixpen[1] = ORB_PEN_DASHED_VIOLET;
   lptab->plotix[2] = b2;        // Body 2
-  lptab->plotixpen[2] = b2pen;
+  lptab->plotixpen[2] = b2 < 0 ? 0 : body[b2].pen_ix;
   lptab->plotix[3] = b3;        // Body 3
-  lptab->plotixpen[3] = b3pen;
+  lptab->plotixpen[3] = b3 < 0 ? 0 : body[b3].pen_ix;
 }
 
 int LagrangeUniverse::selectNextLP() {
@@ -796,9 +783,11 @@ void LagrangeUniverse::integrateUniverse() {
       vdata[wkg][s].vs4i.resize(s4int_count[wkg]);
     }
     Lagrange_ves_s4i *vs4i0 = &vdata[wkg][s].vs4i[0];
-    vdata[wkg][s].enc_Q = DBL_MAX;
-    vdata[wkg][s].enc_P = DBL_MAX;
-    vdata[wkg][s].enc_ix = -1;    // if -1 by end of scan, then either the encounter is before or after our scan
+
+    vdata[wkg][s].enc_Q = vdata[wkg][s].vs4i[0].dQ;;
+    vdata[wkg][s].enc_P = vdata[wkg][s].vs4i[0].dP;;
+    vdata[wkg][s].enc_count = 0;
+    vdata[wkg][s].enc_ix = 0;
     vdata[wkg][s].block_scan = 2;
     vdata[wkg][s].burn_ix = -1;
   }
@@ -839,8 +828,8 @@ void LagrangeUniverse::integrateUniverse() {
       if (fopen_s(&dump_enc, ".\\Config\\MFD\\Lagrange\\Diags\\ENC.csv", "w") != 0) {
         _dmp_enc = false;
       } else {
+        fprintf(dump_enc, "Encounter Trace taken at Sim Time %f using hysteresis %f\n", oapiGetSimTime(), (double)s4int_hysteresis);
         fprintf(dump_enc, "Reason, Chop, Interval, VIx, S4Ix1, S4Ix2, S4Ix3, SimT1, SimT2, SimT3, D1, D2, D3, D2-D1, D3-D2, TREND\n");
-        fprintf(dump_enc, "Using hysteresis %f\n", (double) s4int_hysteresis);
         fflush(dump_enc);
       }
     }
@@ -1031,21 +1020,26 @@ void LagrangeUniverse::integrateUniverse() {
         if (_dmp_enc) {
           double EDM12 = EDM1 - EDM2;
           double EDM01 = EDM0 - EDM1;
-          fprintf(dump_enc, "HUNT, %d, %.15lf, %u, ", interpolation_chop, dt / (double)interpolation_chop, s);
+          if (interpolation_chop > 1) {
+            fprintf(dump_enc, "HUNT, ");
+          } else {
+            fprintf(dump_enc, "Normal, ");
+          }
+          fprintf(dump_enc, "%d, %.15lf, %u, ", interpolation_chop, dt / (double)interpolation_chop, s);
           fprintf(dump_enc, "%u, %u, %u, ", cur - 2, cur - 1, cur);
           fprintf(dump_enc, "%.15f, %.15f, %.15f, ", s4i[wkg][cur - 2].sec, s4i[wkg][cur - 1].sec, s4i[wkg][cur].sec);
           fprintf(dump_enc, "%.15f, %.15f, %.15f, %+.15f, %+.15f,", EDM2, EDM1, EDM0, EDM12, EDM01);
           if (EDM12 <= 0.0) {
             if (EDM01 >= 0.0) {
-              fprintf(dump_enc, ">> Min <<\n");
+              fprintf(dump_enc, "INVERSION\n");
             } else {
-              fprintf(dump_enc, "Reducing\n");
+              fprintf(dump_enc, "Reduce\n");
             }
           } else {
             if (EDM01 > 0.0) {
-              fprintf(dump_enc, "Increasing\n");
+              fprintf(dump_enc, "Increase\n");
             } else {
-              fprintf(dump_enc, "Local Max\n");
+              fprintf(dump_enc, "SADDLE\n");
             }
           }
         }
@@ -1064,6 +1058,7 @@ void LagrangeUniverse::integrateUniverse() {
             rewind = true;
             break;
           } else {
+            vdata[wkg][s].enc_count++;
             if (_dmp_enc) {
               fprintf(dump_enc, "END\n");
             }
@@ -1094,17 +1089,24 @@ void LagrangeUniverse::integrateUniverse() {
             for (unsigned int c = 0; c < vdata[wkg].size(); c++) {
               vdata[wkg][c].vs4i[last_regix] = vdata[wkg][c].vs4i[kk];
 
-              if (vdata[wkg][c].vs4i[last_regix].dQ < vdata[wkg][c].enc_Q - s4int_hysteresis) {
+              if (vdata[wkg][c].vs4i[last_regix].dQ < vdata[wkg][c].enc_Q - (vdata[wkg][s].enc_count > 0)?(double) s4int_hysteresis:0.0) {
                 vdata[wkg][c].enc_Q = vdata[wkg][c].vs4i[last_regix].dQ;
                 vdata[wkg][c].enc_P = vdata[wkg][c].vs4i[last_regix].dP;
                 vdata[wkg][c].enc_ix = last_regix;
                 vdata[wkg][c].block_scan = 2;
                 if (_dmp_enc) {
-                  fprintf(dump_enc, "BESTENC, , , %u, ", c);
-                  fprintf(dump_enc, ", , %u, ", last_regix);
-                  fprintf(dump_enc, ", , %.15f, ", s4i[wkg][last_regix].sec);
-                  fprintf(dump_enc, ", , %.15f\n", vdata[wkg][c].enc_Q);
+                  fprintf(dump_enc, "BESTENC,");
                 }
+              } else {
+                if (_dmp_enc) {
+                  fprintf(dump_enc, "NOTBEST,");
+                }
+              }
+              if (_dmp_enc) {
+                fprintf(dump_enc, " , , %u, ", c);
+                fprintf(dump_enc, "%u, %u, , ", vdata[wkg][c].enc_ix, last_regix);
+                fprintf(dump_enc, "%.15f, %.15f, , ", s4i[wkg][vdata[wkg][c].enc_ix].sec,  s4i[wkg][last_regix].sec);
+                fprintf(dump_enc, "%.15f, %.15f, %.15f, ,%f, \n", vdata[wkg][c].enc_Q, vdata[wkg][c].vs4i[last_regix].dQ, vdata[wkg][c].vs4i[last_regix].dQ - vdata[wkg][c].enc_Q, (vdata[wkg][s].enc_count > 0) ? (double)s4int_hysteresis : 0.0);
               }
 
             }
@@ -1406,7 +1408,8 @@ void LagrangeUniverse::integrateUniverse() {
     // Finish up the encounter X Y plots
     for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
       int venc_ix = vdata[wkg][v].enc_ix;
-      if (venc_ix == -1) {
+      int venc_count = vdata[wkg][v].enc_count;
+      if (venc_count == 0) {
         if (vdata[wkg][v].vs4i[0].dQ < vdata[wkg][v].vs4i[s4int_count[wkg] - 1].dQ) {
           venc_ix = 0;
           vdata[wkg][v].enc_typ = -1;

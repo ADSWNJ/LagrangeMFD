@@ -99,7 +99,10 @@ Lagrange::Lagrange (DWORD w, DWORD h, VESSEL *vessel, UINT mfd)
   pen[8] = oapiCreatePen(1, 1, 0x8FB03B); // LIGHT GREEN
   pen[9] = oapiCreatePen(2, 1, 0x14F91D); // DASHED GREEN
   pen[10] = oapiCreatePen(1, 1, 0x00FF00); // BRIGHT GREEN
-  pen[11] = oapiCreatePen(1, 1, 0x00FFFF); // BRIGHT YELLOW
+  pen[11] = oapiCreatePen(1, 1, 0x00FFFF); // SUN (Yellow)
+  pen[12] = oapiCreatePen(1, 1, 0xFF764B); // Earth (Bluey Green)
+  pen[13] = oapiCreatePen(1, 1, 0xBEBEBE); // Moon (Grey white)
+  pen[14] = oapiCreatePen(2, 1, 0xFF764B); // Earth-Moon-Bary (Dashed Bluey Green)
 
 
   return;
@@ -119,6 +122,47 @@ Lagrange::~Lagrange ()
 // ====================================================================================================================
 // Save/load from .scn functions
 void Lagrange::ReadStatus(FILEHANDLE scn) {
+
+  // Read the color map first
+ // FILE *CM;
+ // if (fopen_s(&CM, ".\\Config\\MFD\\Lagrange\\Colors.cfg", "r") == 0) {
+//
+ //   fprintf(dump_s4i, "\"\"--MJD\"\n");
+//
+
+  if (!draw.GoodInit()) {
+    char buf[128];
+    sprintf(buf, "   >>> Bad data or missing Lagrange Colors.cfg: reverting to defaults\n");
+    oapiWriteLog(buf);
+
+    draw.Reset();
+    draw.DefColor("White", 255, 255, 255);
+    draw.DefColor("Yellow", 252, 252, 116);
+    draw.DefColor("Red", 238, 32, 77);
+    draw.DefColor("Magenta", 255, 29, 206);
+    draw.DefColor("Bright Green", 0, 255, 0);
+    draw.DefColor("Sun Yellow", 255, 255, 0);
+    draw.DefColor("Earth Blue-Green", 75, 118, 255);
+    draw.DefColor("Moon Grey", 190, 190, 190);
+#define _SOLID true
+#define _DASHED false
+    draw.DefPlot("Sun", "Sun Yellow", _SOLID);
+    draw.DefPlot("Earth", "Earth Blue-Green", _SOLID);
+    draw.DefPlot("Moon", "Moon Grey", _SOLID);
+    draw.DefPlot("EMB", "Earth Blue-Green", _DASHED);
+    draw.DefPlot("LP", "Magenta", _DASHED);
+    draw.DefPlot("VL", "Bright Green", _SOLID);
+    draw.DefPlot("VP", "Bright Green", _DASHED);
+    draw.DefMFDCol("DEF", "White");
+    draw.DefMFDCol("HI", "Yellow");
+    draw.DefMFDCol("WARN", "Red");
+  }
+  if (!draw.GoodInit()) {
+    char buf[128];
+    sprintf(buf, "   >>> Bad data in Lagrange Color defaults!!\n");
+    oapiWriteLog(buf);
+  }
+
   char *line;
   char *val;
   int p_i1, p_i2;
