@@ -266,30 +266,36 @@ void Lagrange::Button_ZMD() {
   GC->LU->orbZoom++;
   return;
 }
+
+#define OFS_POW 1.05
+#define OFS_INC 0.1
+
 // MUP = Orbit Mode: Move Up
 void Lagrange::Button_MUP() {
-  double offset = 10000000.0; // 10000 km for Y-plane
-  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0);
+  double offset = 1000000.0 * pow(OFS_POW, (double)GC->LU->orbZoom); // 1000 km for Y-plane
+  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
   double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] - offset;
   GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
   return;
 }
 // MDN = Orbit Mode: Move Down
 void Lagrange::Button_MDN() {
-  double offset = 10000000.0; // 10000 km for Y-plane
-  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0);
+  double offset = 1000000.0 * pow(OFS_POW, (double)GC->LU->orbZoom); // 1000 km for Y-plane
+  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
   double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] + offset;
   GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
   return;
 }
 // MLF = Orbit Mode: Move Left
 void Lagrange::Button_MLF() {
-  double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] - (GC->LU->LP.mradius / 10.0);
+  double offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
+  double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] - offset;
   GC->LU->orbPanHoriz[GC->LU->orbProj] = new_pan;
 }
 // MRG = Orbit Mode: Move Right
 void Lagrange::Button_MRG() {
-  double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] + (GC->LU->LP.mradius / 10.0);
+  double offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
+  double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] + offset;
   GC->LU->orbPanHoriz[GC->LU->orbProj] = new_pan;
 }
 // AAB = AP Mode: Auto Burn

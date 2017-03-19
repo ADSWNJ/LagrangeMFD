@@ -76,8 +76,8 @@ bool Lagrange::DisplayOrbitMode() {
   skpFormatText(0, 24, "FOC: %s", FocTxt[LU->orbFocus]);
   skpFormatText(4, 24, "PRJ: %s", PrjTxt[LU->orbProj]);
   skpFormatText(0, 25, "ZM: %d", -LU->orbZoom);
-  skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.2, (double)LU->orbZoom), 1);
-  skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.2, (double)LU->orbZoom), 1);
+  skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
+  skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
 
 
   if (!GC->LU->s4i_valid) return true;

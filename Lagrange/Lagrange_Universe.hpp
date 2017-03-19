@@ -239,7 +239,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     // Orb Plot Controls
     atomic<int> orbFocus;                                   // 0 = Maj, 1 = Min, 2 = Ves, 3 = Enc, 4 = Burn (or Ves if no burn)
     atomic<int> orbProj;                                    // 0 = XZ (i.e. usual ecliptic plot), 1 = XY, 2 = ZY
-    atomic<int> orbZoom;                                    // Zoom bias. Zoom is zoom * 1.2^orbZoom
+    atomic<int> orbZoom;                                    // Zoom bias. Zoom is zoom * 1.02^orbZoom
     atomic<double> orbPanVert[3];                           // Vertical axis pan
     atomic<double> orbPanHoriz[3];                          // Horizontal axis pan
     atomic<bool> orbLegend;                                 // Plot legend

@@ -1175,14 +1175,14 @@ void LagrangeUniverse::integrateUniverse() {
       fprintf(dump_orb, "PRJ: %s\n", PrjTxt[orbProj]);
       fprintf(dump_orb, "Zoom: %d\n", (int)orbZoom);
       fprintf(dump_orb, "PanRightLeft:,%f,%f,%f\n",
-        orbPanHoriz[0] / pow(1.2, (double)orbZoom),
-        orbPanHoriz[1] / pow(1.2, (double)orbZoom),
-        orbPanHoriz[2] / pow(1.2, (double)orbZoom)
+        orbPanHoriz[0] / pow(1.1, (double)orbZoom),
+        orbPanHoriz[1] / pow(1.1, (double)orbZoom),
+        orbPanHoriz[2] / pow(1.1, (double)orbZoom)
       );
       fprintf(dump_orb, "PanUpDown:,%f,%f,%f\n",
-        orbPanVert[0] / pow(1.2, (double)orbZoom),
-        orbPanVert[1] / pow(1.2, (double)orbZoom),
-        orbPanVert[2] / pow(1.2, (double)orbZoom)
+        orbPanVert[0] / pow(1.1, (double)orbZoom),
+        orbPanVert[1] / pow(1.1, (double)orbZoom),
+        orbPanVert[2] / pow(1.1, (double)orbZoom)
       );
 
 
@@ -1324,7 +1324,7 @@ void LagrangeUniverse::integrateUniverse() {
     if ((max_Q.y - min_Q.y) > scale) {
       scale = max_Q.y - min_Q.y;
     }
-    scale *= 1.2 * pow(1.2,(double)orbZoom);
+    scale *= 1.2 * pow(1.1,(double)orbZoom);
     double halfway = min_Q.x + (max_Q.x - min_Q.x) / 2.0;
     min_Q.x = halfway - 0.5 * scale + hPan;
     max_Q.x = halfway + 0.5 * scale + hPan;

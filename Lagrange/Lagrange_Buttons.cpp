@@ -42,10 +42,10 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("RST", OAPI_KEY_C, &Lagrange::Button_RST);
     RegisterFunction("ZM+", OAPI_KEY_I, &Lagrange::Button_ZMU);
     RegisterFunction("ZM-", OAPI_KEY_O, &Lagrange::Button_ZMD);
-    RegisterFunction("UP",  OAPI_KEY_U, &Lagrange::Button_MUP);
-    RegisterFunction("DN",  OAPI_KEY_D, &Lagrange::Button_MDN);
-    RegisterFunction("<",   OAPI_KEY_COMMA, &Lagrange::Button_MLF);
-    RegisterFunction(">",   OAPI_KEY_PERIOD, &Lagrange::Button_MRG);
+    RegisterFunctionCont("UP",  OAPI_KEY_U, &Lagrange::Button_MUP);
+    RegisterFunctionCont("DN",  OAPI_KEY_D, &Lagrange::Button_MDN);
+    RegisterFunctionCont("<",   OAPI_KEY_COMMA, &Lagrange::Button_MLF);
+    RegisterFunctionCont(">",   OAPI_KEY_PERIOD, &Lagrange::Button_MRG);
 
     // LP Mode
     static const MFDBUTTONMENU mnu1[] =
