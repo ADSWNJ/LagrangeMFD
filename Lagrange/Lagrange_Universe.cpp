@@ -19,6 +19,7 @@ using namespace std;
 #include <thread>
 #include <limits>
 #include "orbitersdk.h"
+#include "Lagrange_GCore.hpp"
 #include "Lagrange_Universe.hpp"
 
 
@@ -31,7 +32,14 @@ inline VECTOR3 operator* (const double f, const VECTOR3 &a)
   return c;
 }
 
+// ====================================================================================================================
+// Global variables
+
+extern Lagrange_GCore *g_SC;    // points to the static persistence core
+
 LagrangeUniverse::LagrangeUniverse() {
+
+  draw = &(g_SC->draw);
 
   s4i_canstart = false;
   for (int i = 0; i < 2; i++) {
@@ -40,10 +48,10 @@ LagrangeUniverse::LagrangeUniverse() {
   }
   s4int_hysteresis = 10.0;
 
-  defBody(&body[0], 0, ORB_PEN_SUN_COLOR, "Sun", 750000000, 696700000);
-  defBody(&body[1], 1, ORB_PEN_EARTH_COLOR, "Earth", 6491000, 6381000);
-  defBody(&body[2], 2, ORB_PEN_MOON_COLOR, "Moon", 1767000, 1747000);
-  defBary(&body[3], 3, ORB_PEN_EMB_COLOR, "E-M B", LU_EARTH, LU_MOON);
+  defBody(&body[0], 0, "Sun", 750000000, 696700000);
+  defBody(&body[1], 1, "Earth", 6491000, 6381000);
+  defBody(&body[2], 2, "Moon", 1767000, 1747000);
+  defBary(&body[3], 3, "E-M B", LU_EARTH, LU_MOON);
 
 
   // LP Definitions: see http://www.orbiter-forum.com/showthread.php?t=36110 for commentary on these values
@@ -124,11 +132,11 @@ int getMilliSpan(int nTimeStart){   // Credit http://www.firstobject.com/getmill
 	return nSpan;
 }
 
-void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, int p1, char* p2, double proxDist, double impactDist) {
+void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p1, double proxDist, double impactDist) {
   // Initialize each celestial body
   pbodyinst->ix = p0;
-  pbodyinst->pen_ix = p1;
-  strcpy(pbodyinst->name, p2);
+  pbodyinst->pen = draw->GetPen(p1);
+  strcpy(pbodyinst->name, p1);
   pbodyinst->hObj = oapiGetGbodyByName(pbodyinst->name);
   pbodyinst->mass = oapiGetMass(pbodyinst->hObj);
   pbodyinst->gm = pbodyinst->mass * GGRAV;
@@ -139,11 +147,11 @@ void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, int p1,
   return;
 }
 
-void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, int p1, char* p2, int maj, int min) {
+void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, char* p1, int maj, int min) {
   // Initialize each barycenter
   pbodyinst->ix = p0;
-  pbodyinst->pen_ix = p1;
-  strcpy(pbodyinst->name, p2);
+  pbodyinst->pen = draw->GetPen(p1);
+  strcpy(pbodyinst->name, p1);
   pbodyinst->mass = body[maj].mass + body[min].mass;
   pbodyinst->gm = pbodyinst->mass * GGRAV;
   pbodyinst->isBary = true;
@@ -218,13 +226,13 @@ void LagrangeUniverse::defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, i
 
 void LagrangeUniverse::defOrbPlot(LagrangeUniverse_LP_Def *lptab, int b1, int b2, int b3) {
   lptab->plotix[0] = b1;        // Body 1
-  lptab->plotixpen[0] = b1 < 0? 0 : body[b1].pen_ix;
+  lptab->plotPen[0] = b1 < 0 ? NULL : draw->GetPen(body[b1].name);
   lptab->plotix[1] = -2;        // LP
-  lptab->plotixpen[1] = ORB_PEN_DASHED_VIOLET;
+  lptab->plotPen[1] = draw->GetPen("LP");
   lptab->plotix[2] = b2;        // Body 2
-  lptab->plotixpen[2] = b2 < 0 ? 0 : body[b2].pen_ix;
+  lptab->plotPen[2] = b2 < 0 ? NULL : draw->GetPen(body[b2].name);
   lptab->plotix[3] = b3;        // Body 3
-  lptab->plotixpen[3] = b3 < 0 ? 0 : body[b3].pen_ix;
+  lptab->plotPen[3] = b3 < 0 ? NULL : draw->GetPen(body[b3].name);
 }
 
 int LagrangeUniverse::selectNextLP() {
@@ -265,7 +273,7 @@ inline LagrangeUniverse::LagrangeUniverse_LP& LagrangeUniverse::LagrangeUniverse
   this->baryIx[i] = -1;
   for (i = 0; i < ORB_MAX_LINES; i++) {
     this->plotix[i] = x.plotix[i];
-    this->plotixpen[i] = x.plotixpen[i];
+    this->plotPen[i] = x.plotPen[i];
   }
 
   return *this;
@@ -1104,7 +1112,7 @@ void LagrangeUniverse::integrateUniverse() {
               }
               if (_dmp_enc) {
                 fprintf(dump_enc, " , , %u, ", c);
-                fprintf(dump_enc, "%u, %u, , ", vdata[wkg][c].enc_ix, last_regix);
+                fprintf(dump_enc, "%d, %u, , ", vdata[wkg][c].enc_ix, last_regix);
                 fprintf(dump_enc, "%.15f, %.15f, , ", s4i[wkg][vdata[wkg][c].enc_ix].sec,  s4i[wkg][last_regix].sec);
                 fprintf(dump_enc, "%.15f, %.15f, %.15f, ,%f, \n", vdata[wkg][c].enc_Q, vdata[wkg][c].vs4i[last_regix].dQ, vdata[wkg][c].vs4i[last_regix].dQ - vdata[wkg][c].enc_Q, (vdata[wkg][s].enc_count > 0) ? (double)s4int_hysteresis : 0.0);
               }
@@ -1178,29 +1186,15 @@ void LagrangeUniverse::integrateUniverse() {
       );
 
 
-      char* lineColors[12] = {
-        "WHITE",
-        "YELLOW",
-        "ORANGE",
-        "RED",
-        "MAGENTA",
-        "DASHED AQUA",
-        "DASHED BLUE",
-        "DASHED VIOLET",
-        "LIGHT GREEN", 
-        "DASHED GREEN",
-        "BRIGHT GREEN",
-        "BRIGHT YELLOW",
-      };
-
       for (int i = 0; i < ORB_MAX_LINES; i++) {
         if (LP.plotix[i] >= 0) {
-          fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n", i, body[LP.plotix[i]].name, lineColors[LP.plotixpen[i]]);
+          fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n", i, body[LP.plotix[i]].name, draw->GetPlotColor(body[LP.plotix[i]].name));
         } else if (lptab->plotix[i] == -2) {
-          fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n", i, "LP", lineColors[LP.plotixpen[i]]);
+          fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n", i, "LP", draw->GetPlotColor("LP"));
         }
       }
-      fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n\n", ORB_MAX_LINES, "Vessel", lineColors[10]);
+      fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n\n", ORB_MAX_LINES, "Vessel Live", draw->GetPlotColor("VL"));
+      fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n\n", ORB_MAX_LINES, "Vessel Plan", draw->GetPlotColor("VP"));
       fprintf(dump_orb, "OrbIx,S4IIx,FocX,FocY,VX,VY,LPX,LPY,MajX,MajY,MinX,MinY,OthX,OthY,LoX,HiX,LoY,HiY\n");
     }
   }

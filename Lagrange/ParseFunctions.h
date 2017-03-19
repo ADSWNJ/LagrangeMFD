@@ -49,6 +49,6 @@
 // Skips leading space, tabs or comments (; found in whitespace parse)
 // Returns false if all whitespace
 //
-  bool ParseWhiteSpace(char **bp, char **ret);
+  bool ParseWhiteSpace(char **bp);
 
   #endif // __ParseFunctions

@@ -50,6 +50,7 @@
 #include "Lagrange_VCore.hpp"
 #include "Lagrange_LCore.hpp"
 #include "Lagrange_DialogFunc.hpp"
+#include "ParseFunctions.h"
 #include "MFDPersist.hpp"
 
 // ====================================================================================================================
@@ -66,8 +67,11 @@ Lagrange::Lagrange (DWORD w, DWORD h, VESSEL *vessel, UINT mfd)
 {
   if (g_SC == nullptr) {
     g_SC = new Lagrange_GCore();
+    GC = g_SC;
+    ReadColors();
   }
   GC = g_SC;
+
   if (GC->LU == nullptr) {
     GC->LU = new LagrangeUniverse;
   }
@@ -87,31 +91,13 @@ Lagrange::Lagrange (DWORD w, DWORD h, VESSEL *vessel, UINT mfd)
   // Any construction for the display side of this MFD instance
   font = oapiCreateFont (h/25, true, "Fixed", FONT_NORMAL, 0);
 
-  // Orbiter: BGR colors, not RGB
-  pen[0] = oapiCreatePen(1, 1, 0xFFFFFF); // WHITE
-  pen[1] = oapiCreatePen(1, 1, 0x74FCFD); // YELLOW
-  pen[2] = oapiCreatePen(1, 1, 0x4382FF); // ORANGE
-  pen[3] = oapiCreatePen(1, 1, 0x4D20EE); // RED
-  pen[4] = oapiCreatePen(1, 1, 0xCE1DFF); // MAGENTA
-  pen[5] = oapiCreatePen(2, 1, 0xE2DB78); // DASHED AQUA
-  pen[6] = oapiCreatePen(2, 1, 0xFE751F); // DASHED BLUE
-  pen[7] = oapiCreatePen(2, 1, 0xD97398); // DASHED VIOLET
-  pen[8] = oapiCreatePen(1, 1, 0x8FB03B); // LIGHT GREEN
-  pen[9] = oapiCreatePen(2, 1, 0x14F91D); // DASHED GREEN
-  pen[10] = oapiCreatePen(1, 1, 0x00FF00); // BRIGHT GREEN
-  pen[11] = oapiCreatePen(1, 1, 0x00FFFF); // SUN (Yellow)
-  pen[12] = oapiCreatePen(1, 1, 0xFF764B); // Earth (Bluey Green)
-  pen[13] = oapiCreatePen(1, 1, 0xBEBEBE); // Moon (Grey white)
-  pen[14] = oapiCreatePen(2, 1, 0xFF764B); // Earth-Moon-Bary (Dashed Bluey Green)
-
-
   return;
 }
 
 Lagrange::~Lagrange ()
 {
   oapiReleaseFont(font);
-  for (int i = 0; i < 12; i++) oapiReleasePen(pen[i]);
+  //for (int i = 0; i < 12; i++) oapiReleasePen(pen[i]);
   return;
 }
 
@@ -123,45 +109,6 @@ Lagrange::~Lagrange ()
 // Save/load from .scn functions
 void Lagrange::ReadStatus(FILEHANDLE scn) {
 
-  // Read the color map first
- // FILE *CM;
- // if (fopen_s(&CM, ".\\Config\\MFD\\Lagrange\\Colors.cfg", "r") == 0) {
-//
- //   fprintf(dump_s4i, "\"\"--MJD\"\n");
-//
-
-  if (!draw.GoodInit()) {
-    char buf[128];
-    sprintf(buf, "   >>> Bad data or missing Lagrange Colors.cfg: reverting to defaults\n");
-    oapiWriteLog(buf);
-
-    draw.Reset();
-    draw.DefColor("White", 255, 255, 255);
-    draw.DefColor("Yellow", 252, 252, 116);
-    draw.DefColor("Red", 238, 32, 77);
-    draw.DefColor("Magenta", 255, 29, 206);
-    draw.DefColor("Bright Green", 0, 255, 0);
-    draw.DefColor("Sun Yellow", 255, 255, 0);
-    draw.DefColor("Earth Blue-Green", 75, 118, 255);
-    draw.DefColor("Moon Grey", 190, 190, 190);
-#define _SOLID true
-#define _DASHED false
-    draw.DefPlot("Sun", "Sun Yellow", _SOLID);
-    draw.DefPlot("Earth", "Earth Blue-Green", _SOLID);
-    draw.DefPlot("Moon", "Moon Grey", _SOLID);
-    draw.DefPlot("EMB", "Earth Blue-Green", _DASHED);
-    draw.DefPlot("LP", "Magenta", _DASHED);
-    draw.DefPlot("VL", "Bright Green", _SOLID);
-    draw.DefPlot("VP", "Bright Green", _DASHED);
-    draw.DefMFDCol("DEF", "White");
-    draw.DefMFDCol("HI", "Yellow");
-    draw.DefMFDCol("WARN", "Red");
-  }
-  if (!draw.GoodInit()) {
-    char buf[128];
-    sprintf(buf, "   >>> Bad data in Lagrange Color defaults!!\n");
-    oapiWriteLog(buf);
-  }
 
   char *line;
   char *val;
@@ -256,3 +203,90 @@ void Lagrange::WriteStatus(FILEHANDLE scn) const {
 
 
 
+void Lagrange::ReadColors() {
+  // Read the color map first
+
+  Lagrange_Drawing& draw = GC->draw;
+  draw.Reset();
+  FILE *CM;
+  if (fopen_s(&CM, ".\\Config\\MFD\\Lagrange\\Colors.cfg", "r") == 0) {
+    char buf[256];
+    char *bp, *p, *p1, *p2, *p3;
+    int r, g, b;
+
+    while (fgets(buf, 255, CM)) {
+      bp = p = buf;
+      if (!ParseWhiteSpace(&bp)) continue;
+      if (!ParseString(&bp, &p)) break;
+      if (!strcmp(p, "COLOR")) {
+        if (!ParseQuotedString(&bp, &p1)) break;
+        if (!ParseInt(&bp, &r)) break;
+        if (!ParseInt(&bp, &g)) break;
+        if (!ParseInt(&bp, &b)) break;
+        if (!draw.DefColor(p1, r, g, b)) break;
+      } else if (!strcmp(p, "PLOT")) {
+        if (!ParseString(&bp, &p1)) break;
+        if (!ParseQuotedString(&bp, &p2)) break;
+        if (!ParseString(&bp, &p3)) break;
+        if (strcmp(p3, "SOLID") && strcmp(p3, "DASHED")) break;
+        bool is_solid = !strcmp(p3, "SOLID");
+        if (!strcmp(p1, "SUN")) {
+          if (!draw.DefPlot("Sun", p2, is_solid)) break;
+        } else if (!strcmp(p1, "EARTH")) {
+          if (!draw.DefPlot("Earth", p2, is_solid)) break;
+        } else if (!strcmp(p1, "MOON")) {
+          if (!draw.DefPlot("Moon", p2, is_solid)) break;
+        } else if (!strcmp(p1, "EMB")) {
+          if (!draw.DefPlot("E-M B", p2, is_solid)) break;
+        } else if (!strcmp(p1, "LP")) {
+          if (!draw.DefPlot("LP", p2, is_solid)) break;
+        } else if (!strcmp(p1, "VESLIVE")) {
+          if (!draw.DefPlot("VL", p2, is_solid)) break;
+        } else if (!strcmp(p1, "VESPLAN")) {
+          if (!draw.DefPlot("VP", p2, is_solid)) break;
+        } else break;
+      } else if (!strcmp(p, "MFD")) {
+        if (!ParseString(&bp, &p1)) break;
+        if (!ParseQuotedString(&bp, &p2)) break;
+        if (strcmp(p1, "DEF") && strcmp(p1, "HI") && strcmp(p1, "WARN")) break;
+        if (!draw.DefMFDCol(p1, p2)) break;
+      } else break;
+    }
+
+    fclose(CM);
+  }
+
+
+  if (!draw.GoodInit()) {
+    char buf[128];
+    sprintf(buf, "   >>> Bad data or missing Lagrange Colors.cfg: reverting to defaults\n");
+    oapiWriteLog(buf);
+
+    draw.Reset();
+    draw.DefColor("White", 255, 255, 255);
+    draw.DefColor("Yellow", 252, 252, 116);
+    draw.DefColor("Red", 238, 32, 77);
+    draw.DefColor("Magenta", 255, 29, 206);
+    draw.DefColor("Bright Green", 0, 255, 0);
+    draw.DefColor("Sun Yellow", 255, 255, 0);
+    draw.DefColor("Earth Blue-Green", 72, 246, 238);
+    draw.DefColor("Moon Grey", 190, 190, 190);
+#define _SOLID true
+#define _DASHED false
+    draw.DefPlot("Sun", "Sun Yellow", _SOLID);
+    draw.DefPlot("Earth", "Earth Blue-Green", _SOLID);
+    draw.DefPlot("Moon", "Moon Grey", _SOLID);
+    draw.DefPlot("E-M B", "Earth Blue-Green", _DASHED);
+    draw.DefPlot("LP", "Magenta", _DASHED);
+    draw.DefPlot("VL", "Bright Green", _SOLID);
+    draw.DefPlot("VP", "Magenta", _DASHED);
+    draw.DefMFDCol("DEF", "White");
+    draw.DefMFDCol("HI", "Yellow");
+    draw.DefMFDCol("WARN", "Red");
+  } else {
+    char buf[128];
+    sprintf(buf, "   >>> Lagrange colors successfully loaded from Colors.cfg!!\n");
+    oapiWriteLog(buf);
+  }
+
+}

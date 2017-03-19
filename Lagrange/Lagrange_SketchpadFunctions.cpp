@@ -16,9 +16,8 @@
 #include "DisplayEngUnitFunctions.h"
 #include <math.h>
 #include <stdarg.h>
-
-#define CLR_YELLOW 0x00FFFF
-#define CLR_WHITE 0xFFFFFF
+#define CLR_DEF   GC->LU->draw->GetMFDColor("DEF")
+#define CLR_HI   GC->LU->draw->GetMFDColor("HI")
 
 // MFD Positioning Helper Functions
 int Lagrange::_Line(const int row) {  // row is 0-24, for 24 rows. e.g. Line(12)
@@ -146,5 +145,5 @@ void Lagrange::skpFmtEngText(const int col, const int line, const char* fmt, con
 void Lagrange::skpTitle(const char *title) {
   Title(LC->skp, title);
   LC->skp->SetTextAlign(oapi::Sketchpad::LEFT, oapi::Sketchpad::BOTTOM);
-  LC->skp->SetTextColor(CLR_WHITE);
+  LC->skp->SetTextColor(CLR_DEF);
 }

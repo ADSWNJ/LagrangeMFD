@@ -16,6 +16,7 @@
 #include "orbitersdk.h"
 #include "Lagrange_Buttons.hpp"
 #include "Lagrange_Universe.hpp"
+#include "Lagrange_Drawing.hpp"
 #include "MFDPersist.hpp"
 #include <EnjoLib/ModuleMessagingExtBase.hpp>
 #include <EnjoLib/ModuleMessagingExtPut.hpp>
@@ -40,7 +41,7 @@ class Lagrange_GCore {
     MFDPersist P;
 
     LagrangeUniverse *LU; 
-
+    Lagrange_Drawing draw;
 
   private:
     double coreSimT;

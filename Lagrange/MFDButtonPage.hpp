@@ -270,7 +270,7 @@ void MFDButtonPage<MFDClass>::SelectPage( MFDClass * mfdInstance, int pageIndex 
     }
     else
         sprintf_s(oapiDebugString(), 512, "MFDButtonPage::SwitchPage():"
-                  " Page index %d is beyond pages size %d!", pageIndex, m_pages.size());
+                  " Page index %d is beyond pages size %u!", pageIndex, m_pages.size());
 }
 
 template <class MFDClass>
@@ -313,8 +313,8 @@ bool MFDButtonPage<MFDClass>::ConsumeKeyBuffered( MFDClass * mfdInstance, DWORD 
         {
             if ( m_i == j )
                 continue; // The current page was already queried
-            MapBoolIterator it = m_pages.at(j).m_continuousKey.find(key);
-            if (it != m_pages.at(j).m_continuousKey.end() && ! it->second )
+            MapBoolIterator _it = m_pages.at(j).m_continuousKey.find(key);
+            if (_it != m_pages.at(j).m_continuousKey.end() && ! _it->second )
                 return PressKey(mfdInstance, key);
         }
     }
@@ -407,10 +407,10 @@ bool MFDButtonPage<MFDClass>::PressKey( MFDClass * mfdInstance, DWORD key ) cons
         {
             if ( m_i == j )
                 continue; // The current page was already queried
-            MapFuncIterator it = m_pages.at(j).m_keys.find(key);
-            if (it != m_pages.at(j).m_keys.end() )
+            MapFuncIterator _it = m_pages.at(j).m_keys.find(key);
+            if (_it != m_pages.at(j).m_keys.end() )
             {
-                (mfdInstance->*(it->second))();  // Call the function
+                (mfdInstance->*(_it->second))();  // Call the function
                 return true;
             }
         }

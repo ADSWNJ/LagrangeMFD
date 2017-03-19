@@ -26,6 +26,7 @@ using namespace std;
 #include "orbitersdk.h"
 #include "EnjoLib/ModuleMessagingExtPut.hpp"
 #include "EnjoLib/ModuleMessagingExt.hpp"
+#include "Lagrange_Drawing.hpp"
 
 #define S4INT_ENTITIES 5
 #define ORB_PLOT_COUNT 1000
@@ -150,7 +151,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     struct LagrangeUniverse_Body {
     public:
       int ix;                                               // Index of current body
-      int pen_ix;                                           // Index to the pen color for this body
+      oapi::Pen* pen;                                       // Display pen
       char name[32];                                        // Display names of each body
       double gm;                                            // GGRAV * mass of body (or of sum of bodies in bary)
       OBJHANDLE hObj;                                       // Handles to each body
@@ -181,7 +182,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       int baryIx[COUNT_BODY+1];                             // barycenter indices for this system (-1 terminated)
       int Lnum;                                             // Lagrange number (1-5)
       int plotix[ORB_MAX_LINES];                            // Index of current LP, or -1 if not used. Note: lporb[0] is LP, both with ix = -2 (not used)
-      int plotixpen[ORB_MAX_LINES];                         // Pen color index
+      oapi::Pen* plotPen[ORB_MAX_LINES];                    // Pen handle
     } lptab[COUNT_LP];
 
     struct LagrangeUniverse_LP {
@@ -203,7 +204,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       int bodyIx[COUNT_BODY + 1];                           // body indices for this system (-1 terminated)
       int baryIx[COUNT_BODY + 1];                           // barycenter indices for this system (-1 terminated)
       int plotix[ORB_MAX_LINES];                            // Index of current LP, or -1 if not used. Note: lporb[0] is vessel, and lporb[1] is LP, both with ix = -2 (not used)
-      int plotixpen[ORB_MAX_LINES];                         // Pen color inxex
+      oapi::Pen* plotPen[ORB_MAX_LINES];                    // Pen handle
       LagrangeUniverse_LP& operator=(const LagrangeUniverse_LP_Def& x);
     } LP;
 
@@ -243,12 +244,14 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<double> orbPanHoriz[3];                          // Horizontal axis pan
     atomic<bool> orbLegend;                                 // Plot legend
     atomic<int> orbFocVix;                                  // Focus Vessel's Index
+    Lagrange_Drawing* draw;
 
   protected:
   private:
 
-    void defBody(LagrangeUniverse_Body *body, int p0, int p1, char* p2,double proxDist, double impactDist);        // Sets initial constants for selected body
-    void defBary(LagrangeUniverse_Body *bary, int p0, int p1, char* p2, int maj, int min);                         // Sets initial constants for 2-body barycenter
+
+    void defBody(LagrangeUniverse_Body *body, int p0, char* p1, double proxDist, double impactDist);        // Sets initial constants for selected body
+    void defBary(LagrangeUniverse_Body *bary, int p0, char* p1, int maj, int min);                         // Sets initial constants for 2-body barycenter
     void defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, int Lnum, double mr, double a, int ref, int maj, int min,
                                                int oth1=-1,int oth2=-1);     // Sets initial constants for selected LP
 

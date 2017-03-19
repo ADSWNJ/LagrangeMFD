@@ -17,7 +17,7 @@
 #include "Lagrange_GCore.hpp"   
 #include "Lagrange_VCore.hpp" 
 #include "Lagrange_LCore.hpp" 
-#include "Lagrange_Drawing.hpp"
+
 
 extern "C" 
 class Lagrange: public MFD2
@@ -93,13 +93,14 @@ public:
   // Persistence functions
   void ReadStatus(FILEHANDLE scn);
   void WriteStatus(FILEHANDLE scn) const;
+  void ReadColors();
 
 protected:
   Lagrange_GCore* GC;
   Lagrange_LCore* LC;
   Lagrange_VCore* VC;
 
-  Lagrange_Drawing draw;
+
 
   int _Line(const int row );
   int _Col(const int pos );
@@ -113,7 +114,6 @@ protected:
   void showMessage();
 
   oapi::Font *font;
-  oapi::Pen *pen[15];
 
 };
 

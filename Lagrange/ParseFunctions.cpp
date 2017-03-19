@@ -40,6 +40,7 @@ bool ParseString(char **bp, char **ret) {
 
 	char *b = *bp;
 	while ((*b==' ')||(*b=='\t')) b++;
+  if (*b == ';' || *b == '\0' || *b == '\n') return false;
 	*ret = b;
 	while ((*b!='\"')&&(*b!='\0')&&(*b!='\n')&&(*b!=' ')&&(*b!='\'')&&(*b!='\t')) b++;
 	if ((*b=='\"')||(*b=='\'')) return false; // No quotes allowed in string
@@ -62,7 +63,9 @@ bool ParseDouble(char **bp, double *ret) {
 	int i;
 
 	while ((*b==' ')||(*b=='\t')) b++;
-	t = b;
+  if (*b == ';' || *b == '\0' || *b == '\n') return false;
+
+  t = b;
 	i = strspn(t, "+-0123456789e.");
 	b = t+i;
 	if ((*b!=' ')&&(*b!='\t')&&(*b!='\n')&&(*b!='\0')) return false; // End of parse must be whitespace
@@ -111,11 +114,11 @@ bool ParseBool(char **bp, bool *ret) {
 // Skips leading space, tabs or comments (; found in whitespace parse)
 // Returns false if all whitespace
 //
-bool ParseWhiteSpace(char **bp, char **ret) {
+bool ParseWhiteSpace(char **bp) {
 	char *b = *bp;
 	while ((*b==' ')||(*b=='\t')) b++;
-	*ret = b;
   *bp = b;
-  if ((*b==';')||(*b=='\0')) return false;
+  if (*b == ';' || *b == '\0' || *b == '\n') return false;
+
   return true;
 }

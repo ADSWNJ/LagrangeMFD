@@ -21,44 +21,63 @@ Lagrange_Drawing::~Lagrange_Drawing() {
 void Lagrange_Drawing::Reset() {
   _color.clear();
   for (auto& it : _pen) {
-    oapiReleasePen(it.second);
+    if (it.first[0] != '\t') oapiReleasePen(it.second);
   }
   _pen.clear();
 }
 
-oapi::Pen* Lagrange_Drawing::GetPen(const string s) {
-  string key = s;
-  if (!_pen.count(key)) std::invalid_argument("Key not found");
-  return _pen[key];
+oapi::Pen* Lagrange_Drawing::GetPen(const char* key, const bool force_solid ) {
+  string _key = key;
+  if (force_solid) _key = (string) "\t=" + key;
+  if (!_pen.count(_key)) throw std::invalid_argument("Key not found");
+  return _pen[_key];
 }
 
-DWORD Lagrange_Drawing::GetMFDColor(const string s) {
-  if (!_color.count(s)) std::invalid_argument("Color not found");
-  return _color[_mfdcol[s]];
+DWORD Lagrange_Drawing::GetMFDColor(const char* key) {
+  if (!_mfdcol.count(key)) throw std::invalid_argument("Color not found");
+  if (!_color.count(_mfdcol[key])) throw std::invalid_argument("Color not found");
+  return _color[_mfdcol[key]];
 }
 
-void Lagrange_Drawing::DefColor(const string s, const int r, const int g, const int b) {
-  DWORD bgr = b * 256 * 256 + g * 256 + r;
-  _color[s] = bgr;
+bool Lagrange_Drawing::DefColor(const char* key, const int r, const int g, const int b) {
+  if (!_color.count(key)) {
+    int _r = r < 0 ? 0 : r > 255 ? 255 : r;
+    int _g = g < 0 ? 0 : g > 255 ? 255 : g;
+    int _b = b < 0 ? 0 : b > 255 ? 255 : b;
+    DWORD bgr = _b * 256 * 256 + _g * 256 + _r;
+    _color[key] = bgr;
+    return true;
+  } else {
+    return false;
+  }
+
 }
 
-void Lagrange_Drawing::DefPlot(const string s, const string col, const bool solid) {
-  string key = s;
-  if (!_color.count(col)) std::invalid_argument("Color not found");
+bool Lagrange_Drawing::DefPlot(const char* key, const char* col, const bool solid) {
+  if (!_color.count(col)) return false;
+  string solid_key = "\t=" + (string)key;
   if (!_pen.count(key)) {
     _pen[key] = oapiCreatePen(solid? 1 : 2, 1, _color[col]);
+    _plotcol[key] = (solid? "" : "Dashed ") + (string) col;
+    if (!solid) {
+      _pen[solid_key] = oapiCreatePen(1, 1, _color[col]);
+    } else {
+      _pen[solid_key] = _pen[key];
+    }
   } else {
-    throw std::invalid_argument("Attempted redefinition");
+    return false;
   }
+  return true;
 }
 
-void Lagrange_Drawing::DefMFDCol(string s, const string col) {
-  if (!_color.count(col)) throw std::invalid_argument("Color not found");
-  if (!_mfdcol.count(s)) {
-    _mfdcol[s] = col;
+bool Lagrange_Drawing::DefMFDCol(const char* key, const char* col) {
+  if (!_color.count(col)) return false;
+  if (!_mfdcol.count(key)) {
+    _mfdcol[key] = col;
   } else {
-    throw std::invalid_argument("Attempted redefinition");
+    return false;
   }
+  return true;
 }
 
 bool Lagrange_Drawing::GoodInit() {
@@ -72,4 +91,11 @@ bool Lagrange_Drawing::GoodInit() {
   if (!_pen.count("VL")) return false;
   if (!_pen.count("VP")) return false;
   return true;
+}
+
+const char* Lagrange_Drawing::GetPlotColor(const char* key) {
+  if (!_plotcol.count(key)) {
+    throw std::invalid_argument("Color not found");
+  }
+  return _plotcol[key].c_str();
 }

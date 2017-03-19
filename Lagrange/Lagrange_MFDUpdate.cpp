@@ -16,14 +16,17 @@
 #include <math.h>
 #include <stdarg.h>
 
-#define CLR_RED 0x0000FF
-#define CLR_YELLOW 0x00FFFF
-#define CLR_WHITE 0xFFFFFF
+#define CLR_DEF   GC->LU->draw->GetMFDColor("DEF")
+#define CLR_HI GC->LU->draw->GetMFDColor("HI")
+#define CLR_WARN GC->LU->draw->GetMFDColor("WARN")
 
 bool Lagrange::Update(oapi::Sketchpad *skp)
 {
   LC->skp = skp;
   if (GC->LU == nullptr) return true;
+
+  LC->skp->SetTextColor(CLR_DEF);
+
   GC->LU->orbFocVix = VC->vix;
   if (LC->showMessage) return DisplayMessageMode();
   switch (LC->mode) {
@@ -76,11 +79,6 @@ bool Lagrange::DisplayOrbitMode() {
   skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.2, (double)LU->orbZoom), 1);
   skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.2, (double)LU->orbZoom), 1);
 
-//  for (int i = 0; i < 10; i++) {
-//    skp->MoveTo(W * (i+1) / 12, H * 1/4);
-//    skp->SetPen(pen[i]);
-//    skp->LineTo(W * (i+1) / 12, H * 3/4);
-//  }
 
   if (!GC->LU->s4i_valid) return true;
   if (lvd->orb_plot.size() != ORB_PLOT_COUNT) return true;
@@ -91,10 +89,21 @@ bool Lagrange::DisplayOrbitMode() {
     iv[i-1].y = (long) ((double) H * lvd->orb_plot[i].y);
   }
 
-  LC->skp->SetPen(pen[ORB_PEN_BRIGHT_GREEN]);
+  if (vdata->burnArmed) {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VP"));
+  } else {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VL"));
+  }
+
+
   LC->skp->MoveTo((long)((double)W * lvd->orb_plot[1].x), (long)((double)H * lvd->orb_plot[1].y));
   LC->skp->Polyline(iv, ORB_PLOT_COUNT-1);
 
+  if (vdata->burnArmed) {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VP", true));
+  } else {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VL", true));
+  }
   if (lvd->enc_ix >= 0) {
     enc_x = (int)((double)W * lvd->orb_plot_ves_enc.x);
     enc_y = (int)((double)H * lvd->orb_plot_ves_enc.y);
@@ -107,9 +116,22 @@ bool Lagrange::DisplayOrbitMode() {
       iv[i-1].x = (long)((double)W * lod->orb_plot[s][i].x);
       iv[i-1].y = (long)((double)H * lod->orb_plot[s][i].y);
     }
-    LC->skp->SetPen(pen[LP->plotixpen[s]]);
+    if (LP->plotix[s] != -2) {
+      LC->skp->SetPen(GC->LU->draw->GetPen(LU->body[LP->plotix[s]].name));
+
+    } else {
+      LC->skp->SetPen(GC->LU->draw->GetPen("LP"));
+    }
+
     LC->skp->MoveTo((long)((double)W * lod->orb_plot[s][1].x), (long)((double)H * lod->orb_plot[s][1].y));
     LC->skp->Polyline(iv, ORB_PLOT_COUNT-1);
+
+    if (LP->plotix[s] != -2) {
+      LC->skp->SetPen(GC->LU->draw->GetPen(LU->body[LP->plotix[s]].name, true));
+
+    } else {
+      LC->skp->SetPen(GC->LU->draw->GetPen("LP", true));
+    }
 
     if (lvd->enc_ix >= 0) {
       if (abs(lvd->orb_plot_body_enc[s].x - lvd->orb_plot_origin.x) >= 0.00 ||
@@ -209,30 +231,30 @@ bool Lagrange::DisplayPlanMode() {
 
   Lagrange_vdata *vdata = &VC->LU->vdata[VC->LU->act][VC->vix];
 
-  if (vdata->burnArmed) skpFmtColText(0, l, true, CLR_YELLOW, CLR_WHITE, ">");
+  if (vdata->burnArmed) skpFmtColText(0, l, true, CLR_HI, CLR_DEF, ">");
 
   if (!VC->ap.IsBurnFrozen()) {
-    skpFmtColText(0, l++, vdata->burnArmed, CLR_YELLOW, CLR_WHITE, "  Planning Mode:  %s", vdata->burnArmed ? "Active" : "Inactive");
+    skpFmtColText(0, l++, vdata->burnArmed, CLR_HI, CLR_DEF, "  Planning Mode:  %s", vdata->burnArmed ? "Active" : "Inactive");
   } else {
-    skpColor(CLR_RED);
+    skpColor(CLR_WARN);
     skpFormatText(0, l++, "  Planning Mode:  %s", "Frozen");
-    skpColor(CLR_WHITE);
+    skpColor(CLR_DEF);
   }
 
   skpFormatText(0, l++, "  Adjustment:     %s", adjText[VC->burnGranularity[VC->burnVar]]);
   l++;
 
   if (vdata->burnMJD == 0.0) vdata->burnMJD = oapiGetSimMJD() + (1 / (10 * 60 * 24));
-  skpFmtColText(0, VC->burnVar==0? l : l + 1 + VC->burnVar, true,   CLR_YELLOW, CLR_WHITE, ">");
-  skpFmtColText(0, l++, (VC->burnVar == 0), CLR_YELLOW, CLR_WHITE, "  Burn MJD:     %14.6f", vdata->burnMJD);
+  skpFmtColText(0, VC->burnVar==0? l : l + 1 + VC->burnVar, true,   CLR_HI, CLR_DEF, ">");
+  skpFmtColText(0, l++, (VC->burnVar == 0), CLR_HI, CLR_DEF, "  Burn MJD:     %14.6f", vdata->burnMJD);
   skpFmtEngText(0, l++, "  Burn Point:   %11.3f", "s", (vdata->burnMJD-oapiGetSimMJD())*24.0*60.0*60.0);
-  skpFmtColText(0, l++, (VC->burnVar == 1), CLR_YELLOW, CLR_WHITE, "  Prograde dV:  %14.6fm/s", vdata->burndV.x);
-  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_YELLOW, CLR_WHITE, "  Outward dV:   %14.6fm/s", vdata->burndV.y);
-  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_YELLOW, CLR_WHITE, "  Plane Chg dV: %14.6fm/s", vdata->burndV.z);
+  skpFmtColText(0, l++, (VC->burnVar == 1), CLR_HI, CLR_DEF, "  Prograde dV:  %14.6fm/s", vdata->burndV.x);
+  skpFmtColText(0, l++, (VC->burnVar == 2), CLR_HI, CLR_DEF, "  Outward dV:   %14.6fm/s", vdata->burndV.y);
+  skpFmtColText(0, l++, (VC->burnVar == 3), CLR_HI, CLR_DEF, "  Plane Chg dV: %14.6fm/s", vdata->burndV.z);
   if (VC->burnTdV_lock) {
-    skpFmtColText(0, l, (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV Lock:%14.6fm/s", length(vdata->burndV));
+    skpFmtColText(0, l, (VC->burnVar == 4), CLR_HI, CLR_DEF, "  Total dV Lock:%14.6fm/s", length(vdata->burndV));
   } else {
-    skpFmtColText(0, l, (VC->burnVar == 4), CLR_YELLOW, CLR_WHITE, "  Total dV:     %14.6fm/s", length(vdata->burndV));
+    skpFmtColText(0, l, (VC->burnVar == 4), CLR_HI, CLR_DEF, "  Total dV:     %14.6fm/s", length(vdata->burndV));
   }
   l+=2;
   if (!GC->LU->s4i_valid || vdata->enc_ix < 0) return true;
@@ -266,7 +288,7 @@ bool Lagrange::DisplayPlanMode() {
 
   l++; l++;
   if (vdata->burnArmed && vdata->enc_count == 0) {
-    skpColor(CLR_YELLOW);
+    skpColor(CLR_HI);
     skpFormatText(0, l++, "NOTE: Burn Time not in S4I range");
   }
 
@@ -288,7 +310,7 @@ bool Lagrange::DisplayAPMode() {
   bool apBurn = VC->apState == 3;
 
   if (inac) {
-    skpColor(CLR_WHITE);
+    skpColor(CLR_DEF);
     skpFormatText(0, l++, "   AP Mode:      DISARMED");
     l += 12;
     skpFormatText(0, l++, "AP arming conditions:");
@@ -297,12 +319,12 @@ bool Lagrange::DisplayAPMode() {
     return true;
   }
 
-  skpFmtColText(0, l++, apPoint, CLR_RED, CLR_YELLOW,   "   AP Mode:      %s", apPlan ? "Plan" : "Hold LP");
+  skpFmtColText(0, l++, apPoint, CLR_WARN, CLR_HI,   "   AP Mode:      %s", apPlan ? "Plan" : "Hold LP");
   if (VC->apMode == 1) {
-    skpFmtColText(0, l++, apPoint, CLR_RED, CLR_YELLOW, "   AP AutoAlign: %s", apPoint ? "Active" : "Armed");
-    skpFmtColText(0, l++, apBurn, CLR_RED, CLR_YELLOW,  "   AP AutoBurn:  %s", apBurn ? "Active" : "Armed");
+    skpFmtColText(0, l++, apPoint, CLR_WARN, CLR_HI, "   AP AutoAlign: %s", apPoint ? "Active" : "Armed");
+    skpFmtColText(0, l++, apBurn, CLR_WARN, CLR_HI,  "   AP AutoBurn:  %s", apBurn ? "Active" : "Armed");
   } else {
-    skpFmtColText(0, l++, apBurn, CLR_RED, CLR_YELLOW,  "   AP AutoHold:  %s", apBurn ? "Active" : "Armed");
+    skpFmtColText(0, l++, apBurn, CLR_WARN, CLR_HI,  "   AP AutoHold:  %s", apBurn ? "Active" : "Armed");
   }
 
 
@@ -317,7 +339,7 @@ bool Lagrange::DisplayAPMode() {
 
   unsigned char deg[2] = { 0xb0, '\0' };
   unsigned char degs[4] = { 0xb0, '/', 's', '\0' };
-  skpColor(CLR_WHITE);
+  skpColor(CLR_DEF);
   l2 = l;
   if (VC->apMode == 1) {
     skpFormatText(0, l++, "   Alignment Error");
@@ -345,23 +367,23 @@ bool Lagrange::DisplayAPMode() {
     if (VC->apState > 1) {
       skpFmtEngText(0, l++, "   Burn Duration: %8.3f", "s", VC->burnDurn);
       l++;
-      if (burnStart >= 0.0 && burnStart < 30.0 && burnStart != burnEnd) skpColor(CLR_YELLOW);
-      if (burnStart >= 0.0 && burnStart < 10.0 && burnStart != burnEnd) skpColor(CLR_RED);
+      if (burnStart >= 0.0 && burnStart < 30.0 && burnStart != burnEnd) skpColor(CLR_HI);
+      if (burnStart >= 0.0 && burnStart < 10.0 && burnStart != burnEnd) skpColor(CLR_WARN);
       skpFmtEngText(0, l++, "   Burn Start:    %8.3f", "s", VC->burnStart - simT);
-      skpColor(CLR_WHITE);
-      if (burnStart < 0.0 && burnEnd >= 0.0 && burnEnd < 30.0 && burnStart != burnEnd) skpColor(CLR_YELLOW);
-      if (burnStart < 0.0 && burnEnd >= 0.0 && burnEnd < 10.0 && burnStart != burnEnd) skpColor(CLR_RED);
+      skpColor(CLR_DEF);
+      if (burnStart < 0.0 && burnEnd >= 0.0 && burnEnd < 30.0 && burnStart != burnEnd) skpColor(CLR_HI);
+      if (burnStart < 0.0 && burnEnd >= 0.0 && burnEnd < 10.0 && burnStart != burnEnd) skpColor(CLR_WARN);
       skpFmtEngText(0, l++, "   Burn End:      %8.3f", "s", VC->burnEnd - simT);
       l++;
     }
     if (VC->burnStart<simT && VC->burnEnd > simT) {
-      skpColor(CLR_RED);
+      skpColor(CLR_WARN);
       if (VC->apState == 2) {
         skpFormatText(0, l++, "   >>> BURN NOW <<<");
       } else if (VC->apState == 3) {
         skpFormatText(0, l++, "   Auto-Burning");
       }
-      skpColor(CLR_WHITE);
+      skpColor(CLR_DEF);
     }
     return true;
   }
@@ -387,6 +409,7 @@ bool Lagrange::DisplayAPMode() {
 
 
 bool Lagrange::DisplayS4IMode() {
+
   skpTitle("Lagrange: S4I");
   int l = 4;
 
@@ -449,10 +472,10 @@ bool Lagrange::DisplayFrmFocMode() {
     skpTitle("Lagrange: FRAME");
     int l = 4;
     int curRef = GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
-    skpColor(CLR_YELLOW);
+    skpColor(CLR_HI);
     skpFormatText(0, l + curRef, ">");
     for (int i = 0; i<COUNT_BODY; i++) {
-      skpFmtColText(0, l++, (i == curRef), CLR_YELLOW, CLR_WHITE, "  %s", GC->LU->body[i].name);
+      skpFmtColText(0, l++, (i == curRef), CLR_HI, CLR_DEF, "  %s", GC->LU->body[i].name);
     }
   } else if (GC->LU->PrvNxtMode == 2) {
     skpTitle("Lagrange: FOCUS");
@@ -465,10 +488,10 @@ bool Lagrange::DisplayFrmFocMode() {
     strcpy(focusNames[4], "Vessel Burn");
 
     int curFoc = GC->LU->orbFocus;
-    skpColor(CLR_YELLOW);
+    skpColor(CLR_HI);
     skpFormatText(0, l + curFoc, ">");
     for (int i = 0; i<5; i++) {
-      skpFmtColText(0, l++, (i == curFoc), CLR_YELLOW, CLR_WHITE, "  %s", focusNames[i]);
+      skpFmtColText(0, l++, (i == curFoc), CLR_HI, CLR_DEF, "  %s", focusNames[i]);
     }
   }
   return true;
@@ -478,10 +501,10 @@ bool Lagrange::DisplayTgtMode() {
   skpTitle("Lagrange: TGT");
   int l = 4;
   int curLP = GC->LU->getLP();
-  skpColor(CLR_YELLOW);
+  skpColor(CLR_HI);
   skpFormatText(0, l + curLP, ">");
   for (int i = 0; i<COUNT_LP; i++) {
-    skpFmtColText(0, l++, (i == curLP), CLR_YELLOW, CLR_WHITE, "  %s", GC->LU->lptab[i].name);
+    skpFmtColText(0, l++, (i == curLP), CLR_HI, CLR_DEF, "  %s", GC->LU->lptab[i].name);
   }
   return true;
 };
