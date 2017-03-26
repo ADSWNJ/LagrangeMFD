@@ -48,6 +48,9 @@ bool Lagrange::Update(oapi::Sketchpad *skp)
   return true;
 };
 
+/*
+ *   O R B I T   M O D E 
+ */
 bool Lagrange::DisplayOrbitMode() {
   int l = 3;
   Lagrange_vdata *vdata = &GC->LU->vdata[GC->LU->act][VC->vix];
@@ -146,6 +149,9 @@ bool Lagrange::DisplayOrbitMode() {
   return true;
 };
 
+/*
+ *   E N C O U N T E R    M O D E
+ */
 bool Lagrange::DisplayLPMode() {
 
   int l = 4;
@@ -223,6 +229,11 @@ bool Lagrange::DisplayLPMode() {
   skpFormatText(0, l++, "Mass: %10.3fkg", vm);
   return true;
 };
+
+
+/*
+ *   P L A N    M O D E
+ */
 bool Lagrange::DisplayPlanMode() {
   skpTitle("Lagrange: PLAN");
 
@@ -287,7 +298,10 @@ bool Lagrange::DisplayPlanMode() {
   skpFmtEngText(3, rl++, "%9.4f", "m/s", vs4i_e->dP);
 
   l++; l++;
-  if (vdata->burnArmed && vdata->enc_count == 0) {
+
+
+
+  if (vdata->burnArmed && (vdata->burnMJD <  GC->LU->dbg[GC->LU->act][1] || vdata->burnMJD >  GC->LU->dbg[GC->LU->act][2])) {
     skpColor(CLR_HI);
     skpFormatText(0, l++, "NOTE: Burn Time not in S4I range");
   }
@@ -295,6 +309,10 @@ bool Lagrange::DisplayPlanMode() {
   return true;
 };
 
+
+/*
+ *   A U T O P I L O T    M O D E
+ */
 bool Lagrange::DisplayAPMode() {
   skpTitle("Lagrange: AUTOPILOT");
   int l = 4; 
@@ -408,6 +426,9 @@ bool Lagrange::DisplayAPMode() {
 };
 
 
+/*
+ *   S 4 I     M O D E
+ */
 bool Lagrange::DisplayS4IMode() {
 
   skpTitle("Lagrange: S4I");
@@ -497,6 +518,9 @@ bool Lagrange::DisplayFrmFocMode() {
   return true;
 };
 
+/*
+ *   T A R G E T    M O D E
+ */
 bool Lagrange::DisplayTgtMode() {
   skpTitle("Lagrange: TGT");
   int l = 4;
