@@ -84,6 +84,7 @@ public:
   void Button_DME();
   void Button_DMO();
   void Button_HYS();
+  void Button_LCK();
 
   void ButtonHelper_AdjVar(double adj);
   void ButtonHelper_TrimEntBox(char *buf);

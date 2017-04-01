@@ -102,11 +102,16 @@ LagrangeUniverse::LagrangeUniverse() {
   orbFocus = 0;
   orbProj = 0;
   orbZoom = 0;
+  orbPrevZoom = 0;
   for (int i = 0; i < 3; i++) {
     orbPanHoriz[i] = 0.0;
     orbPanVert[i] = 0.0;
+    orbScale[i] = 10000.0;
   }
   orbFocVix = 0;
+  orbFocLock = false;
+  orbFocLockX = 0.5;
+  orbFocLockY = 0.5;
 
   // Initialize the thread control structures
   s4i_mstate = s4i_wstate = 'I';
@@ -1206,6 +1211,8 @@ void LagrangeUniverse::integrateUniverse() {
     int _orbProj = orbProj;
     int _orbFocus = orbFocus;
     int _orbFocVix = orbFocVix;
+    int _orbPrevZoom = orbPrevZoom;
+    int _orbZoom = orbZoom;
 
     for (unsigned int s = 0; s < ORB_MAX_LINES; s++) {
       l_orb[wkg].orb_km[s].resize(ORB_PLOT_COUNT);
@@ -1225,27 +1232,27 @@ void LagrangeUniverse::integrateUniverse() {
     case 1: ax = 0; ay = 1; break;
     case 2: ax = 2; ay = 1; break;
     }
-    double hPan = orbPanHoriz[_orbProj] * pow(1.2, (double)orbZoom) / 1000.0;
-    double vPan = -orbPanVert[_orbProj] * pow(1.2, (double)orbZoom) / 1000.0;
+    double hPan = orbPanHoriz[_orbProj];
+    double vPan = -orbPanVert[_orbProj];
 
     // scan the Q values to generate relatives to the major body (in km)
     for (unsigned int s = 0; s < ORB_PLOT_COUNT; s++) {
       int pix;
       VECTOR2 Q_foc;
       switch (_orbFocus) {
-      case 0:
+      case 0:  // Focus on the MAJOR entity
         Q_foc.x = s4i[wkg][z].body[LP.maj].Q.data[ax];
         Q_foc.y = s4i[wkg][z].body[LP.maj].Q.data[ay];
         break;
-      case 1:
+      case 1:  // Focus on the MINOR entity
         Q_foc.x = s4i[wkg][z].body[LP.min].Q.data[ax];
         Q_foc.y = s4i[wkg][z].body[LP.min].Q.data[ay];
         break;
-      case 2:
+      case 2: // Focus on the Vessel Relative
         Q_foc.x = vdata[wkg][_orbFocVix].vs4i[z].ves.Q.data[ax];
         Q_foc.y = vdata[wkg][_orbFocVix].vs4i[z].ves.Q.data[ay];
         break;
-      case 3:
+      case 3: // Focus on the Vessel Encounter point
         pix = vdata[wkg][_orbFocVix].enc_ix;
         if (pix == -1) {
           if (vdata[wkg][_orbFocVix].vs4i[0].dQ < vdata[wkg][_orbFocVix].vs4i[s4int_count[wkg] - 1].dQ) {
@@ -1257,7 +1264,7 @@ void LagrangeUniverse::integrateUniverse() {
         Q_foc.x = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ax];
         Q_foc.y = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ay];
         break;
-      case 4:
+      case 4: // Focus on the Vessel Burn point
         pix = vdata[wkg][_orbFocVix].burn_ix;
         if (pix == -1) {
           pix = 0;
@@ -1267,7 +1274,7 @@ void LagrangeUniverse::integrateUniverse() {
         break;
       }
       
-      // LP orbit delta from major entity (in km)
+      // LP orbit delta from focus point (in km)
       l_orb[wkg].orb_km[1][s].x = (s4i[wkg][z].LP.Q.data[ax] - Q_foc.x) / 1000.0;
       l_orb[wkg].orb_km[1][s].y = (s4i[wkg][z].LP.Q.data[ay] - Q_foc.y) / 1000.0;
       if (def_Q) {
@@ -1280,7 +1287,7 @@ void LagrangeUniverse::integrateUniverse() {
         def_Q = true;
       }
 
-      // Vessels orbit delta from major entity (in km)
+      // Vessel orbit delta from focus point (in km)
       for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
         vdata[wkg][v].orb_km[s].x = (vdata[wkg][v].vs4i[z].ves.Q.data[ax] - Q_foc.x) / 1000.0;
         vdata[wkg][v].orb_km[s].y = (vdata[wkg][v].vs4i[z].ves.Q.data[ay] - Q_foc.y) / 1000.0;
@@ -1292,7 +1299,7 @@ void LagrangeUniverse::integrateUniverse() {
         }
       }
 
-      // Entities orbit delta from major entity (in km)
+      // Entity orbit delta from focus point (in km)
       for (unsigned int i = 0; i < ORB_MAX_LINES; i++) {
         if (LP.plotix[i] == -1) break;
         if (LP.plotix[i] == -2) continue;
@@ -1303,6 +1310,7 @@ void LagrangeUniverse::integrateUniverse() {
         if (l_orb[wkg].orb_km[i][s].x > max_Q.x) max_Q.x = l_orb[wkg].orb_km[i][s].x;
         if (l_orb[wkg].orb_km[i][s].y > max_Q.y) max_Q.y = l_orb[wkg].orb_km[i][s].y;
       }
+
       if (_dmp_orb) {
 //      fprintf(dump_orb, "OrbIx,S4IIx,FocX,FocY,VX,VY,LPX,LPY,MajX,MajY,MinX,MinY,OthX,OthY,LoX,HiX,LoY,HiY\n");
         fprintf(dump_orb, "%ui,%ui,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
@@ -1324,15 +1332,48 @@ void LagrangeUniverse::integrateUniverse() {
     if ((max_Q.y - min_Q.y) > scale) {
       scale = max_Q.y - min_Q.y;
     }
-    scale *= 1.2 * pow(1.1,(double)orbZoom);
-    double halfway = min_Q.x + (max_Q.x - min_Q.x) / 2.0;
-    min_Q.x = halfway - 0.5 * scale + hPan;
-    max_Q.x = halfway + 0.5 * scale + hPan;
-    l_orb[wkg].origPlot.x = (halfway-min_Q.x) / scale;
-    halfway = min_Q.y + (max_Q.y - min_Q.y) / 2.0;
-    min_Q.y = halfway - 0.5 * scale + vPan;
-    max_Q.y = halfway + 0.5 * scale + vPan;
-    l_orb[wkg].origPlot.y = (max_Q.y-halfway) / scale;
+    double halfway_x = min_Q.x + (max_Q.x - min_Q.x) / 2.0;
+    double halfway_y = min_Q.y + (max_Q.y - min_Q.y) / 2.0;
+    double prevScale = scale * 1.2 * pow(1.1, (double)_orbPrevZoom);
+    scale *= 1.2 * pow(1.1, (double)_orbZoom);
+    orbScale[_orbProj] = scale;
+
+    if (_orbPrevZoom != _orbZoom) {
+      hPan = - (scale / prevScale) * (-halfway_x + 0.5 * prevScale - hPan) - halfway_x + 0.5*scale;
+      vPan = (scale / prevScale) * (halfway_y + 0.5 * prevScale + vPan) - halfway_y - 0.5 * scale;
+      orbPanHoriz[_orbProj] = hPan;
+      orbPanVert[_orbProj] = -vPan;
+      orbPrevZoom = _orbZoom;
+    }
+
+    if (orbFocLock) {
+      hPan = -scale*orbFocLockX - halfway_x + 0.5 * scale;
+      vPan = scale*orbFocLockY - halfway_y - 0.5*scale;
+      orbPanHoriz[_orbProj] = hPan;
+      orbPanVert[_orbProj] = -vPan;
+    }
+
+    double xo = -(halfway_x - 0.5 * scale + hPan) / scale;
+    double yo = (halfway_y + 0.5 * scale + vPan) / scale;
+
+    orbFocLockX = xo;
+    orbFocLockY = yo;
+
+    min_Q.x = halfway_x - 0.5 * scale + hPan;
+    max_Q.x = halfway_x + 0.5 * scale + hPan;
+    min_Q.y = halfway_y - 0.5 * scale + vPan;
+    max_Q.y = halfway_y + 0.5 * scale + vPan;
+
+
+
+    l_orb[wkg].origPlot.x = (halfway_x - min_Q.x) / scale;
+    l_orb[wkg].origPlot.y = (max_Q.y-halfway_y) / scale;
+
+    
+
+
+   // sprintf(oapiDebugString(), "Scale:%.3f, hPan:%.3f, vPan:%.3f, x_orig:%.3f, y_orig: %.3f", scale, hPan, vPan, -min_Q.x / scale, max_Q.y / scale);
+
 
     // Convert km distances into a 0.0-1.0 scale, ready for plotting on the MFD. Note the MFD origin is top left,
     // with the y-axis going positively DOWN the window, so the y calculation is reversed (i.e. (MAX - km)/scale)

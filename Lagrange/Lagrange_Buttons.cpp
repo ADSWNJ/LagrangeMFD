@@ -161,6 +161,21 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_TOK);
     RegisterFunction("PRV", OAPI_KEY_P, &Lagrange::Button_PRV);
     RegisterFunction("NXT", OAPI_KEY_N, &Lagrange::Button_NXT);
+
+    // Focus Mode
+    static const MFDBUTTONMENU mnu8[] =
+    {
+      { "OK", 0, 'K' },
+      { "Previous",0, 'P' },
+      { "Next",0, 'N' },
+      { "Lock Focus",0, 'N' }
+    };
+    RegisterPage(mnu7, sizeof(mnu7) / sizeof(MFDBUTTONMENU));
+    RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_TOK);
+    RegisterFunction("PRV", OAPI_KEY_P, &Lagrange::Button_PRV);
+    RegisterFunction("NXT", OAPI_KEY_N, &Lagrange::Button_NXT);
+    RegisterFunction("LCK", OAPI_KEY_N, &Lagrange::Button_LCK);
+
     return;
 }
 

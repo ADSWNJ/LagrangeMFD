@@ -76,7 +76,9 @@ bool Lagrange::DisplayOrbitMode() {
   char FocTxt[5][32] = { "", "", "Ves Live", "Ves Enc", "Ves Burn"};
   strcpy(FocTxt[0], LU->body[LP->maj].name);
   strcpy(FocTxt[1], LU->body[LP->min].name);
-  skpFormatText(0, 24, "FOC: %s", FocTxt[LU->orbFocus]);
+  char locked[4] = "(L)";
+  if (!LU->orbFocLock) locked[0] = '\0';
+  skpFormatText(0, 24, "FOC: %s %s", FocTxt[LU->orbFocus], locked);
   skpFormatText(4, 24, "PRJ: %s", PrjTxt[LU->orbProj]);
   skpFormatText(0, 25, "ZM: %d", -LU->orbZoom);
   skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
@@ -86,38 +88,14 @@ bool Lagrange::DisplayOrbitMode() {
   if (!GC->LU->s4i_valid) return true;
   if (lvd->orb_plot.size() != ORB_PLOT_COUNT) return true;
 
-  oapi::IVECTOR2 iv[ORB_PLOT_COUNT-1];
-  for (int i = 1; i < ORB_PLOT_COUNT; i++) {
-    iv[i-1].x = (long) ((double) W * lvd->orb_plot[i].x);
-    iv[i-1].y = (long) ((double) H * lvd->orb_plot[i].y);
-  }
+  oapi::IVECTOR2 iv[ORB_PLOT_COUNT];
 
-  if (vdata->burnArmed) {
-    LC->skp->SetPen(GC->LU->draw->GetPen("VP"));
-  } else {
-    LC->skp->SetPen(GC->LU->draw->GetPen("VL"));
-  }
-
-
-  LC->skp->MoveTo((long)((double)W * lvd->orb_plot[1].x), (long)((double)H * lvd->orb_plot[1].y));
-  LC->skp->Polyline(iv, ORB_PLOT_COUNT-1);
-
-  if (vdata->burnArmed) {
-    LC->skp->SetPen(GC->LU->draw->GetPen("VP", true));
-  } else {
-    LC->skp->SetPen(GC->LU->draw->GetPen("VL", true));
-  }
-  if (lvd->enc_ix >= 0) {
-    enc_x = (int)((double)W * lvd->orb_plot_ves_enc.x);
-    enc_y = (int)((double)H * lvd->orb_plot_ves_enc.y);
-    LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
-  }
 
   for (int s = 0; s < ORB_MAX_LINES; s++) {
     if (LP->plotix[s] == -1) break;
-    for (int i = 1; i < ORB_PLOT_COUNT; i++) {
-      iv[i-1].x = (long)((double)W * lod->orb_plot[s][i].x);
-      iv[i-1].y = (long)((double)H * lod->orb_plot[s][i].y);
+    for (int i = 0; i < ORB_PLOT_COUNT; i++) {
+      iv[i].x = (long)((double)W * lod->orb_plot[s][i].x);
+      iv[i].y = (long)((double)H * lod->orb_plot[s][i].y);
     }
     if (LP->plotix[s] != -2) {
       LC->skp->SetPen(GC->LU->draw->GetPen(LU->body[LP->plotix[s]].name));
@@ -127,7 +105,7 @@ bool Lagrange::DisplayOrbitMode() {
     }
 
     LC->skp->MoveTo((long)((double)W * lod->orb_plot[s][1].x), (long)((double)H * lod->orb_plot[s][1].y));
-    LC->skp->Polyline(iv, ORB_PLOT_COUNT-1);
+    LC->skp->Polyline(iv, ORB_PLOT_COUNT);
 
     if (LP->plotix[s] != -2) {
       LC->skp->SetPen(GC->LU->draw->GetPen(LU->body[LP->plotix[s]].name, true));
@@ -144,8 +122,33 @@ bool Lagrange::DisplayOrbitMode() {
         LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
       }
     }     
-
   }
+
+  for (int i = 0; i < ORB_PLOT_COUNT; i++) {
+    iv[i].x = (long)((double)W * lvd->orb_plot[i].x);
+    iv[i].y = (long)((double)H * lvd->orb_plot[i].y);
+  }
+
+  if (vdata->burnArmed) {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VP"));
+  } else {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VL"));
+  }
+
+  LC->skp->MoveTo((long)((double)W * lvd->orb_plot[1].x), (long)((double)H * lvd->orb_plot[1].y));
+  LC->skp->Polyline(iv, ORB_PLOT_COUNT);
+
+  if (vdata->burnArmed) {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VP", true));
+  } else {
+    LC->skp->SetPen(GC->LU->draw->GetPen("VL", true));
+  }
+  if (lvd->enc_ix >= 0) {
+    enc_x = (int)((double)W * lvd->orb_plot_ves_enc.x);
+    enc_y = (int)((double)H * lvd->orb_plot_ves_enc.y);
+    LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
+  }
+
   return true;
 };
 
@@ -514,6 +517,14 @@ bool Lagrange::DisplayFrmFocMode() {
     for (int i = 0; i<5; i++) {
       skpFmtColText(0, l++, (i == curFoc), CLR_HI, CLR_DEF, "  %s", focusNames[i]);
     }
+
+    l = 24;
+    if (GC->LU->orbFocLock) {
+      skpFormatText(0, l++, "Focus Point: Locked");
+    } else {
+      skpFormatText(0, l++, "Focus Point: Unlocked");
+    }
+
   }
   return true;
 };

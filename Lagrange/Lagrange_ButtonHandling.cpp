@@ -227,7 +227,7 @@ void Lagrange::Button_FRM() {
 void Lagrange::Button_FOC() {
   GC->LU->PrvNxtMode = 2;
   LC->mode = 7;
-  LC->B.SelectPage(this, LC->mode);
+  LC->B.SelectPage(this, 8);
   return;
 }
 // LEG = Orbit Mode: Legend off/on
@@ -238,10 +238,12 @@ void Lagrange::Button_FOC() {
 
 // RST = Orbit Mode: Reset Pan/Zoom
 void Lagrange::Button_RST() {
+  GC->LU->orbPrevZoom = 0;
   GC->LU->orbZoom = 0;
   for (int i = 0; i < 3; i++) {
     GC->LU->orbPanHoriz[i] = 0.0;
     GC->LU->orbPanVert[i] = 0.0;
+    GC->LU->orbScale[i] = 10000.0;
   }
   return;
 }
@@ -268,33 +270,31 @@ void Lagrange::Button_ZMD() {
 }
 
 #define OFS_POW 1.05
-#define OFS_INC 0.1
+#define OFS_INC 0.001
 
 // MUP = Orbit Mode: Move Up
 void Lagrange::Button_MUP() {
-  double offset = 1000000.0 * pow(OFS_POW, (double)GC->LU->orbZoom); // 1000 km for Y-plane
-  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
+  double offset = GC->LU->orbScale[GC->LU->orbProj] * OFS_INC;
   double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] - offset;
   GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
   return;
 }
 // MDN = Orbit Mode: Move Down
 void Lagrange::Button_MDN() {
-  double offset = 1000000.0 * pow(OFS_POW, (double)GC->LU->orbZoom); // 1000 km for Y-plane
-  if (GC->LU->orbProj == 0) offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
+  double offset = GC->LU->orbScale[GC->LU->orbProj] * OFS_INC;
   double new_pan = GC->LU->orbPanVert[GC->LU->orbProj] + offset;
   GC->LU->orbPanVert[GC->LU->orbProj] = new_pan;
   return;
 }
 // MLF = Orbit Mode: Move Left
 void Lagrange::Button_MLF() {
-  double offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
+  double offset = GC->LU->orbScale[GC->LU->orbProj] * OFS_INC;
   double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] - offset;
   GC->LU->orbPanHoriz[GC->LU->orbProj] = new_pan;
 }
 // MRG = Orbit Mode: Move Right
 void Lagrange::Button_MRG() {
-  double offset = (GC->LU->LP.mradius / 20.0) * pow(OFS_POW, (double)GC->LU->orbZoom) * OFS_INC;
+  double offset = GC->LU->orbScale[GC->LU->orbProj] * OFS_INC;
   double new_pan = GC->LU->orbPanHoriz[GC->LU->orbProj] + offset;
   GC->LU->orbPanHoriz[GC->LU->orbProj] = new_pan;
 }
@@ -477,5 +477,11 @@ void Lagrange::Button_PMT() {
   vs.vrot = _V(0.0, 0.0, 0.0);
   vs.arot = _V(0.0, 0.0, 0.0);
   v->DefSetState(&vs);
+}
+
+// LCK = Focus Lock Position
+void Lagrange::Button_LCK() {
+  LagrangeUniverse* LU = GC->LU;
+  LU->orbFocLock = !LU->orbFocLock;
 }
 

@@ -240,10 +240,16 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<int> orbFocus;                                   // 0 = Maj, 1 = Min, 2 = Ves, 3 = Enc, 4 = Burn (or Ves if no burn)
     atomic<int> orbProj;                                    // 0 = XZ (i.e. usual ecliptic plot), 1 = XY, 2 = ZY
     atomic<int> orbZoom;                                    // Zoom bias. Zoom is zoom * 1.02^orbZoom
+    atomic<int> orbPrevZoom;                                // Zoom bias. Zoom is zoom * 1.02^orbZoom
+    atomic<double> orbScale[3];                             // Holds the size in KM of the orbit map
     atomic<double> orbPanVert[3];                           // Vertical axis pan
     atomic<double> orbPanHoriz[3];                          // Horizontal axis pan
     atomic<bool> orbLegend;                                 // Plot legend
     atomic<int> orbFocVix;                                  // Focus Vessel's Index
+
+    atomic<bool> orbFocLock;                                // Lock the position of the focus point
+    atomic<double> orbFocLockX;                             // X lock point
+    atomic<double> orbFocLockY;                             // Y lock point
     Lagrange_Drawing* draw;
 
   protected:
