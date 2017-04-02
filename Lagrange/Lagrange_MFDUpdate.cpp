@@ -117,9 +117,29 @@ bool Lagrange::DisplayOrbitMode() {
     if (lvd->enc_ix >= 0) {
       if (abs(lvd->orb_plot_body_enc[s].x - lvd->orb_plot_origin.x) >= 0.00 ||
         abs(lvd->orb_plot_body_enc[s].y - lvd->orb_plot_origin.y) >= 0.00) {
+
         enc_x = (int)((double)W * lvd->orb_plot_body_enc[s].x);
         enc_y = (int)((double)H * lvd->orb_plot_body_enc[s].y);
         LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
+
+        if (LP->plotix[s] != -2) {
+          // Determine Body PROX limit and IMPACT LIMIT
+          double proxLim = GC->LU->body[LP->plotix[s]].proxWarnDist;
+          double impactLim = GC->LU->body[LP->plotix[s]].impactWarnDist;
+          double circradKM = (double)circrad / (double)W * GC->LU->orbScale[GC->LU->orbProj];
+          if (circradKM < impactLim) {
+            int bodyRadPx = (int)((double)W * impactLim / GC->LU->orbScale[GC->LU->orbProj] + 0.5);
+            float rf = bodyRadPx;
+            for (int xscan = 0; xscan <= bodyRadPx; xscan++) {
+              float xf = (float) xscan;
+              float ang = asin(xf / rf);
+              float yf = rf * cos(ang) + 0.5;
+              int yof = (int) yf;
+              LC->skp->Line(enc_x + xscan, enc_y + yof, enc_x + xscan, enc_y - yof);
+              LC->skp->Line(enc_x - xscan, enc_y + yof, enc_x - xscan, enc_y - yof);
+            }
+          }
+        }
       }
     }     
   }

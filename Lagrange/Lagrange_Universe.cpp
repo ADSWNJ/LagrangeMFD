@@ -48,9 +48,9 @@ LagrangeUniverse::LagrangeUniverse() {
   }
   s4int_hysteresis = 10.0;
 
-  defBody(&body[0], 0, "Sun", 750000000, 696700000);
-  defBody(&body[1], 1, "Earth", 6491000, 6381000);
-  defBody(&body[2], 2, "Moon", 1767000, 1747000);
+  defBody(&body[0], 0, "Sun", 750000, 696700);
+  defBody(&body[1], 1, "Earth", 6671, 6491);
+  defBody(&body[2], 2, "Moon", 1787, 1747);
   defBary(&body[3], 3, "E-M B", LU_EARTH, LU_MOON);
 
 
@@ -1165,46 +1165,41 @@ void LagrangeUniverse::integrateUniverse() {
     if (fopen_s(&dump_orb, ".\\Config\\MFD\\Lagrange\\Diags\\OrbPlot.csv", "w") != 0) {
       _dmp_orb = false;
     } else {
-      fprintf(dump_orb, "Orbit Plot Dump at Simulation Time: %.2f\n", oapiGetSimTime());
+      fprintf(dump_orb, "Orbit Plot Dump at Simulation Time:,,, %.2f\n", oapiGetSimTime());
 
-      fprintf(dump_orb, "Plot Count: %d\n", ORB_PLOT_COUNT);
-      fprintf(dump_orb, "LP: %s\n", LP.name);
+      fprintf(dump_orb, "Plot Count:,,, %d\n", ORB_PLOT_COUNT);
+      fprintf(dump_orb, "LP:,,, %s\n", LP.name);
       Lagrange_vdata *lvd = &vdata[wkg][orbFocVix];
-      fprintf(dump_orb, "FRM: %s\n", body[lvd->refEnt].name);
+      fprintf(dump_orb, "FRM:,,, %s\n", body[lvd->refEnt].name);
 
       char *PrjTxt[3] = { "Std", "X-Edge", "Z-Edge" };
       char FocTxt[5][32] = { "", "", "Ves Live", "Ves Enc", "Ves Burn" };
       strcpy(FocTxt[0], body[LP.maj].name);
       strcpy(FocTxt[1], body[LP.min].name);
-      fprintf(dump_orb, "FOC: %s\n", FocTxt[orbFocus]);
-      fprintf(dump_orb, "PRJ: %s\n", PrjTxt[orbProj]);
-      fprintf(dump_orb, "Zoom: %d\n", (int)orbZoom);
-      fprintf(dump_orb, "PanRightLeft:,%f,%f,%f\n",
-        orbPanHoriz[0] / pow(1.1, (double)orbZoom),
-        orbPanHoriz[1] / pow(1.1, (double)orbZoom),
-        orbPanHoriz[2] / pow(1.1, (double)orbZoom)
-      );
-      fprintf(dump_orb, "PanUpDown:,%f,%f,%f\n",
-        orbPanVert[0] / pow(1.1, (double)orbZoom),
-        orbPanVert[1] / pow(1.1, (double)orbZoom),
-        orbPanVert[2] / pow(1.1, (double)orbZoom)
-      );
-
+      fprintf(dump_orb, "FOC:,,, %s\n", FocTxt[orbFocus]);
+      fprintf(dump_orb, "PRJ:,,, %s\n", PrjTxt[orbProj]);
+      fprintf(dump_orb, "Zoom:,,, %d\n", (int)orbZoom);
+      fprintf(dump_orb, "PanRightLeft:,,,%f,%f,%f\n",
+        (double) orbPanHoriz[0],
+        (double)orbPanHoriz[1],
+        (double)orbPanHoriz[2]);
+      fprintf(dump_orb, "PanUpDown:,,,%f,%f,%f\n",
+        (double)orbPanVert[0],
+        (double)orbPanVert[1],
+        (double)orbPanVert[2]);
 
       for (int i = 0; i < ORB_MAX_LINES; i++) {
         if (LP.plotix[i] >= 0) {
-          fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n", i, body[LP.plotix[i]].name, draw->GetPlotColor(body[LP.plotix[i]].name));
+          fprintf(dump_orb, "Plot Line %i:,,, %-12s(%s)\n", i, body[LP.plotix[i]].name, draw->GetPlotColor(body[LP.plotix[i]].name));
         } else if (lptab->plotix[i] == -2) {
-          fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n", i, "LP", draw->GetPlotColor("LP"));
+          fprintf(dump_orb, "Plot Line %i:,,, %-12s(%s)\n", i, "LP", draw->GetPlotColor("LP"));
         }
       }
-      fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n\n", ORB_MAX_LINES, "Vessel Live", draw->GetPlotColor("VL"));
-      fprintf(dump_orb, "Plot Line %i: %-12s(%s)\n\n", ORB_MAX_LINES, "Vessel Plan", draw->GetPlotColor("VP"));
+      fprintf(dump_orb, "Plot Line %i:,,, %-12s(%s)\n", ORB_MAX_LINES, "Vessel Live", draw->GetPlotColor("VL"));
+      fprintf(dump_orb, "Plot Line %i:,,, %-12s(%s)\n\n", ORB_MAX_LINES, "Vessel Plan", draw->GetPlotColor("VP"));
       fprintf(dump_orb, "OrbIx,S4IIx,FocX,FocY,VX,VY,LPX,LPY,MajX,MajY,MinX,MinY,OthX,OthY,LoX,HiX,LoY,HiY\n");
     }
   }
-
-
   
   {
     bool def_Q = false;

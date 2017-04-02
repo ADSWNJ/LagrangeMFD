@@ -50,7 +50,6 @@ bool Lagrange_Drawing::DefColor(const char* key, const int r, const int g, const
   } else {
     return false;
   }
-
 }
 
 bool Lagrange_Drawing::DefPlot(const char* key, const char* col, const bool solid) {
@@ -58,12 +57,14 @@ bool Lagrange_Drawing::DefPlot(const char* key, const char* col, const bool soli
   string solid_key = "\t=" + (string)key;
   if (!_pen.count(key)) {
     _pen[key] = oapiCreatePen(solid? 1 : 2, 1, _color[col]);
-    _plotcol[key] = (solid? "" : "Dashed ") + (string) col;
+    _plotcolBGR[key] = _color[col];
+    _plotcolStr[key] = (solid? "" : "Dashed ") + (string) col;
     if (!solid) {
       _pen[solid_key] = oapiCreatePen(1, 1, _color[col]);
     } else {
       _pen[solid_key] = _pen[key];
     }
+    _plotcolBGR[solid_key] = _color[col];
   } else {
     return false;
   }
@@ -94,8 +95,15 @@ bool Lagrange_Drawing::GoodInit() {
 }
 
 const char* Lagrange_Drawing::GetPlotColor(const char* key) {
-  if (!_plotcol.count(key)) {
+  if (!_plotcolStr.count(key)) {
     throw std::invalid_argument("Color not found");
   }
-  return _plotcol[key].c_str();
+  return _plotcolStr[key].c_str();
+}
+
+const DWORD Lagrange_Drawing::GetPlotBGR(const char* key) {
+  if (!_plotcolBGR.count(key)) {
+    throw std::invalid_argument("Color not found");
+  }
+  return _plotcolBGR[key];
 }

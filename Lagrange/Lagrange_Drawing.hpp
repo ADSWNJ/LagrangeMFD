@@ -27,6 +27,7 @@ public:
   oapi::Pen* GetPen(const char* key, const bool force_solid = false);
   DWORD GetMFDColor(const char* key);
   const char* GetPlotColor(const char* key);
+  const DWORD GetPlotBGR(const char* key);
 
   bool DefColor(const char* key, const int r, const int g, const int b);
   bool DefPlot(const char* key, const char* col, const bool solid);
@@ -38,7 +39,8 @@ protected:
 private:
   map<string, DWORD> _color;
   map<string, oapi::Pen*> _pen;
-  map<string, string> _plotcol;
+  map<string, DWORD> _plotcolBGR;
+  map<string, string> _plotcolStr;
   map<string, string> _mfdcol;
 };
 #endif // _LAGRANGE_DRAWING_CLASS
