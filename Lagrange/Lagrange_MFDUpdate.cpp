@@ -80,10 +80,27 @@ bool Lagrange::DisplayOrbitMode() {
   if (!LU->orbFocLock) locked[0] = '\0';
   skpFormatText(0, 24, "FOC: %s %s", FocTxt[LU->orbFocus], locked);
   skpFormatText(4, 24, "PRJ: %s", PrjTxt[LU->orbProj]);
-  skpFormatText(0, 25, "ZM: %d", -LU->orbZoom);
-  skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
-  skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
-
+  if (lvd->alarm_state == 0) {
+    skpFormatText(0, 25, "ZM: %d", -LU->orbZoom);
+    skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
+    skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
+  } else   if (lvd->alarm_state == 2) {
+    char buf2[256];
+    skpColor(CLR_WARN);
+    if (lvd->alarm_body == 1) {
+      sprintf(buf2, "REENTRY ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    } else {
+      sprintf(buf2, "IMPACT ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    }
+    skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
+    skpColor(CLR_DEF);
+  } else if (lvd->alarm_state == 1) {
+    char buf2[256];
+    skpColor(CLR_HI);
+    sprintf(buf2, "PROX ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
+    skpColor(CLR_DEF);
+  }
 
   if (!GC->LU->s4i_valid) return true;
   if (lvd->orb_plot.size() != ORB_PLOT_COUNT) return true;
@@ -104,7 +121,7 @@ bool Lagrange::DisplayOrbitMode() {
       LC->skp->SetPen(GC->LU->draw->GetPen("LP"));
     }
 
-    LC->skp->MoveTo((long)((double)W * lod->orb_plot[s][1].x), (long)((double)H * lod->orb_plot[s][1].y));
+    LC->skp->MoveTo((int)((double)W * lod->orb_plot[s][1].x), (int)((double)H * lod->orb_plot[s][1].y));
     LC->skp->Polyline(iv, ORB_PLOT_COUNT);
 
     if (LP->plotix[s] != -2) {
@@ -129,11 +146,11 @@ bool Lagrange::DisplayOrbitMode() {
           double circradKM = (double)circrad / (double)W * GC->LU->orbScale[GC->LU->orbProj];
           if (circradKM < impactLim) {
             int bodyRadPx = (int)((double)W * impactLim / GC->LU->orbScale[GC->LU->orbProj] + 0.5);
-            float rf = bodyRadPx;
+            double rf = bodyRadPx;
             for (int xscan = 0; xscan <= bodyRadPx; xscan++) {
-              float xf = (float) xscan;
-              float ang = asin(xf / rf);
-              float yf = rf * cos(ang) + 0.5;
+              double xf = (double) xscan;
+              double ang = asin(xf / rf);
+              double yf = rf * cos(ang) + 0.5;
               int yof = (int) yf;
               LC->skp->Line(enc_x + xscan, enc_y + yof, enc_x + xscan, enc_y - yof);
               LC->skp->Line(enc_x - xscan, enc_y + yof, enc_x - xscan, enc_y - yof);
@@ -155,8 +172,9 @@ bool Lagrange::DisplayOrbitMode() {
     LC->skp->SetPen(GC->LU->draw->GetPen("VL"));
   }
 
-  LC->skp->MoveTo((long)((double)W * lvd->orb_plot[1].x), (long)((double)H * lvd->orb_plot[1].y));
+  LC->skp->MoveTo((long)((double)W * lvd->orb_plot[0].x), (long)((double)H * lvd->orb_plot[0].y));
   LC->skp->Polyline(iv, ORB_PLOT_COUNT);
+  //LC->skp->Line((int)((double)W * lvd->orb_plot_origin.x), (int)((double)H *lvd->orb_plot_origin.y), (int)((double)W * lvd->orb_plot[0].x), (long)((double)H * lvd->orb_plot[0].y));
 
   if (vdata->burnArmed) {
     LC->skp->SetPen(GC->LU->draw->GetPen("VP", true));
@@ -250,6 +268,27 @@ bool Lagrange::DisplayLPMode() {
   l++; 
   double vm = VC->v->GetMass();
   skpFormatText(0, l++, "Mass: %10.3fkg", vm);
+
+  LagrangeUniverse* LU = GC->LU;
+  Lagrange_vdata *lvd = &LU->vdata[GC->LU->act][VC->vix];
+  if (lvd->alarm_state == 2) {
+    char buf2[256];
+    skpColor(CLR_WARN);
+    if (lvd->alarm_body == 1) {
+      sprintf(buf2, "REENTRY ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    } else {
+      sprintf(buf2, "IMPACT ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    }
+    skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
+    skpColor(CLR_DEF);
+  } else if (lvd->alarm_state == 1) {
+    char buf2[256];
+    skpColor(CLR_HI);
+    sprintf(buf2, "PROX ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
+    skpColor(CLR_DEF);
+  }
+
   return true;
 };
 
@@ -329,6 +368,25 @@ bool Lagrange::DisplayPlanMode() {
     skpFormatText(0, l++, "NOTE: Burn Time not in S4I range");
   }
 
+  LagrangeUniverse* LU = GC->LU;
+  Lagrange_vdata *lvd = &LU->vdata[GC->LU->act][VC->vix];
+  if (lvd->alarm_state == 2) {
+    char buf2[256];
+    skpColor(CLR_WARN);
+    if (lvd->alarm_body == 1) {
+      sprintf(buf2, "REENTRY ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    } else {
+      sprintf(buf2, "IMPACT ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    }
+    skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
+    skpColor(CLR_DEF);
+  } else if (lvd->alarm_state == 1) {
+    char buf2[256];
+    skpColor(CLR_HI);
+    sprintf(buf2, "PROX ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
+    skpColor(CLR_DEF);
+  }
   return true;
 };
 

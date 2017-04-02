@@ -48,9 +48,9 @@ LagrangeUniverse::LagrangeUniverse() {
   }
   s4int_hysteresis = 10.0;
 
-  defBody(&body[0], 0, "Sun", 750000, 696700);
-  defBody(&body[1], 1, "Earth", 6671, 6491);
-  defBody(&body[2], 2, "Moon", 1787, 1747);
+  defBody(&body[0], 0, "Sun", 695700 + 10000, 695700 + 2000);
+  defBody(&body[1], 1, "Earth", 6371 + 400, 6371 + 120);
+  defBody(&body[2], 2, "Moon", 1737 + 250, 1737 + 10);
   defBary(&body[3], 3, "E-M B", LU_EARTH, LU_MOON);
 
 
@@ -803,6 +803,7 @@ void LagrangeUniverse::integrateUniverse() {
     vdata[wkg][s].enc_ix = 0;
     vdata[wkg][s].block_scan = 2;
     vdata[wkg][s].burn_ix = -1;
+    vdata[wkg][s].alarm_state = 0;
   }
 
   {
@@ -1592,14 +1593,26 @@ inline VECTOR3 LagrangeUniverse::s4iforce_ves(const int s, const int i) {
   VECTOR3 Qvg;
   double temp;
   double gm;
+  double lenQvgKM;
 
   for (int ix = 0; LP.bodyIx[ix] != -1; ix++) {
     int g = LP.bodyIx[ix];
     Qg = s4i[wkg][i].body[g].Q;
     Qvg = Qv - Qg;
+    lenQvgKM = length(Qvg) / 1000.0;
     temp = pow((Qvg.x*Qvg.x) + (Qvg.y*Qvg.y) + (Qvg.z*Qvg.z), 1.5);
     gm = body[g].gm;
     F -= Qvg * (gm / temp);
+    if (vdata[wkg][s].alarm_state < 2 && lenQvgKM < body[g].impactWarnDist) {
+      vdata[wkg][s].alarm_state = 2;
+      vdata[wkg][s].alarm_body = g;
+      vdata[wkg][s].alarm_ix = i;
+    }
+    if (vdata[wkg][s].alarm_state < 1 && lenQvgKM < body[g].proxWarnDist) {
+      vdata[wkg][s].alarm_state = 1;
+      vdata[wkg][s].alarm_body = g;
+      vdata[wkg][s].alarm_ix = i;
+    }
   }
   return F;
 }

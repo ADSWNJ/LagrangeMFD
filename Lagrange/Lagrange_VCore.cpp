@@ -43,6 +43,7 @@ Lagrange_VCore::Lagrange_VCore(VESSEL *vin, Lagrange_GCore* gcin) {
   LU->vdata[LU->act][s].refEnt = LU->LP.ref;
   LU->vdata[LU->act][s].TransX_CurrentBodyIndex = nullptr;
   LU->vdata[LU->act][s].TransX_PlanMajorIndex = nullptr;
+  LU->vdata[LU->act][s].alarm_state = 0;
   vix = s;
 
   // Figure out the delta mass per +1m/s of dV

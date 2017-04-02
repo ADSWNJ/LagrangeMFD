@@ -108,8 +108,10 @@ public:
   VECTOR2 orb_plot_ves_enc;                                 // X Y positions for the vessel at closest vessel encounter
   vector<VECTOR2> orb_plot_body_enc;                        // X Y positions for each body at closest vessel encounter
   Lagrange_vdata& operator=(const Lagrange_vdata& x);       // Helper function to assign vdata data in the swap function
+  int alarm_state;                                          // 0 if all ok, 1 if proximity warning to a planet, 2 if impact predicted (2 overides 1)
+  int alarm_ix;                                             // point of alarm
+  int alarm_body;                                           // body of alarm
 };
-
 
 struct Lagrange_s4i {                                       // Main symplectic integrator data structure
   QP_struct LP;                                             // 4th order symplectic integration of global position
