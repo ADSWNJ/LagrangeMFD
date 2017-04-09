@@ -80,6 +80,37 @@ bool Lagrange_DialogFunc::clbkRNG(void *id, char *str, void *usrdata) {
   return true;
 }
 
+bool Lagrange_DialogFunc::clbkENC(void *id, char *str, void *usrdata) {
+  float f;
+  float mult = 1.0;
+  if (strlen(str) == 0) return true;
+  char lst = *(str + strlen(str) - 1);
+  if (lst == 'D' || lst == 'd') {
+    mult = 60.0 * 60.0 * 24.0;
+    *(str + strlen(str) - 1) = '\0';
+  } else if (lst == 'H' || lst == 'h') {
+    mult = 60.0 * 60.0;
+    *(str + strlen(str) - 1) = '\0';
+  } else if (lst == 'M' || lst == 'm') {
+    mult = 60.0;
+    *(str + strlen(str) - 1) = '\0';
+  } else if (lst == 'S' || lst == 's') {
+    *(str + strlen(str) - 1) = '\0';
+  }
+  if (sscanf_s(str, "%f", &f) != 1) return true;
+  if (f <= 0.0) return false;
+  f *= mult;
+  Lagrange_LCore* LC = (Lagrange_LCore *)usrdata;
+  double itr = LC->GC->LU->s4int_count[LC->GC->LU->act];
+  double tsp = LC->GC->LU->s4int_timestep[LC->GC->LU->act];
+  double rng = itr * tsp;
+  double ratio = f / rng;
+
+  LC->GC->LU->s4int_timestep[LC->GC->LU->act] *= ratio;
+  return true;
+}
+
+
 bool Lagrange_DialogFunc::clbkRCT(void *id, char *str, void *usrdata) {
   float f;
 

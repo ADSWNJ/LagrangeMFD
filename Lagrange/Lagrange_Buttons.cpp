@@ -22,9 +22,9 @@ Lagrange_Buttons::Lagrange_Buttons()
     {
       {"Mode Select", 0, 'M'},
       {"Set Target", 0, 'T'},
-      {"Ref Frame", 0, 'R'},
-      {"Projection", 0, 'P'},
-      {"Focus Point", 0, 'F' },
+      {"Set Ref Frame", 0, 'R'},
+      {"Set Projection", 0, 'P'},
+      {"Set Focus Point", 0, 'F' },
       {"Reset Zoom/Pan", 0, 'C' },
       {"Zoom In", 0, 'I'},
       {"Zoom Out", 0, 'O'},
@@ -61,7 +61,7 @@ Lagrange_Buttons::Lagrange_Buttons()
     {
       { "Mode Select", 0, 'M' },
       { "Arm/Disarm Plan", 0, 'A' },
-      { "Set Burn MJD", 0, 'D' },
+      { "Set Burn MJD", 0, 'J' },
       { "Set Prograde", 0, 'F' },
       { "Set Outward", 0, 'O' },
       { "Set Plane Change", 0, 'P' },
@@ -75,7 +75,7 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterPage(mnu2, sizeof(mnu2) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
     RegisterFunction("ARM", OAPI_KEY_A, &Lagrange::Button_BURNARM);
-    RegisterFunction("MJD", OAPI_KEY_D, &Lagrange::Button_MJD);
+    RegisterFunction("MJD", OAPI_KEY_J, &Lagrange::Button_MJD);
     RegisterFunction("PRO", OAPI_KEY_F, &Lagrange::Button_PRO);
     RegisterFunction("OUT", OAPI_KEY_O, &Lagrange::Button_OUT);
     RegisterFunction("PLC", OAPI_KEY_P, &Lagrange::Button_PLC);
@@ -84,7 +84,7 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunctionCont("++",  OAPI_KEY_EQUALS, &Lagrange::Button_AUP);
     RegisterFunctionCont("--",  OAPI_KEY_MINUS, &Lagrange::Button_ADN);
     RegisterFunction("ENT", OAPI_KEY_E, &Lagrange::Button_ENT);
-    RegisterFunction("TDV", OAPI_KEY_F, &Lagrange::Button_TDV);
+    RegisterFunction("TDV", OAPI_KEY_T, &Lagrange::Button_TDV);
 
     // Autopilot Mode
     static const MFDBUTTONMENU mnu3[] =
@@ -108,12 +108,13 @@ Lagrange_Buttons::Lagrange_Buttons()
       { "S4I Calc Range", 0, 'R' },
       { "S4I Iterations", 0, 'I' },
       { "S4I Delta Time", 0, 'T' },
-      { "S4I Rq Calc Time", 0, 'T' },
+      { "S4I Rq Calc Time", 0, 'C' },
+//      { "S4I Enc Range", 0, 'E' },
+      { "Set Hysteresis", 0, 'H' },
       { "S4I Itr Wait Time", 0, 'W' },
-      { "Dump Logs", 0, 'L' },
-      { "Dump Encounter", 0, 'E' },
-      { "Dump Orb Plot", 0, 'O' },
-      { "Set Hysteresis", 0, 'H' }
+      { "Dump Logs", 0, '1' },
+      { "Dump Encounter", 0, '2' },
+      { "Dump Orb Plot", 0, '3' }
     };
     RegisterPage(mnu4, sizeof(mnu4) / sizeof(MFDBUTTONMENU));
     RegisterFunction("MOD", OAPI_KEY_M, &Lagrange::Button_MOD);
@@ -122,11 +123,12 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("ITR", OAPI_KEY_I, &Lagrange::Button_ITR);
     RegisterFunction("DT",  OAPI_KEY_T, &Lagrange::Button_TSP);
     RegisterFunction("RCT",  OAPI_KEY_C, &Lagrange::Button_RCT);
-    RegisterFunction("WT",  OAPI_KEY_W, &Lagrange::Button_WT);
-    RegisterFunction("DML", OAPI_KEY_L, &Lagrange::Button_DML);
-    RegisterFunction("DME", OAPI_KEY_E, &Lagrange::Button_DME);
-    RegisterFunction("DMO", OAPI_KEY_E, &Lagrange::Button_DMO);
+//    RegisterFunction("ENC",  OAPI_KEY_E, &Lagrange::Button_ENC);
     RegisterFunction("HYS", OAPI_KEY_H, &Lagrange::Button_HYS);
+    RegisterFunction("WT", OAPI_KEY_W, &Lagrange::Button_WT);
+    RegisterFunction("DML", OAPI_KEY_1, &Lagrange::Button_DML);
+    RegisterFunction("DME", OAPI_KEY_2, &Lagrange::Button_DME);
+    RegisterFunction("DMO", OAPI_KEY_3, &Lagrange::Button_DMO);
 
     // Acknowledge Message Mode
     static const MFDBUTTONMENU mnu5[] =
@@ -148,7 +150,7 @@ Lagrange_Buttons::Lagrange_Buttons()
     RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_TOK);
     RegisterFunction("PRV", OAPI_KEY_P, &Lagrange::Button_PRV);
     RegisterFunction("NXT", OAPI_KEY_N, &Lagrange::Button_NXT);
-    RegisterFunction("PMT", OAPI_KEY_N, &Lagrange::Button_PMT);
+    RegisterFunction("PMT", OAPI_KEY_X, &Lagrange::Button_PMT);
 
     // Frame Mode
     static const MFDBUTTONMENU mnu7[] =

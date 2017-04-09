@@ -56,9 +56,9 @@ bool Lagrange::DisplayOrbitMode() {
   Lagrange_vdata *vdata = &GC->LU->vdata[GC->LU->act][VC->vix];
 
   if (vdata->burnArmed) {
-    skpTitle("Lagrange: ORBIT PLAN");
+    skpTitle("Lagrange: ORBIT (PLAN)");
   } else {
-    skpTitle("Lagrange: ORBIT LIVE");
+    skpTitle("Lagrange: ORBIT (LIVE)");
   }
 
   int circrad = (int)(W / 120);
@@ -73,7 +73,7 @@ bool Lagrange::DisplayOrbitMode() {
   skpFormatText(4, l++, "FRM: %s", LU->body[lvd->refEnt].name);
 
   char *PrjTxt[3] = { "Std", "X-Edge", "Z-Edge" };
-  char FocTxt[5][32] = { "", "", "Ves Live", "Ves Enc", "Ves Burn"};
+  char FocTxt[5][32] = { "", "", "Ves Orbit", "Ves Enc", "Ves Burn"};
   strcpy(FocTxt[0], LU->body[LP->maj].name);
   strcpy(FocTxt[1], LU->body[LP->min].name);
   char locked[4] = "(L)";
@@ -88,16 +88,16 @@ bool Lagrange::DisplayOrbitMode() {
     char buf2[256];
     skpColor(CLR_WARN);
     if (lvd->alarm_body == 1) {
-      sprintf(buf2, "REENTRY ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+      sprintf(buf2, "ALARM: %s reentry in %%.1f", LU->body[lvd->alarm_body].name);
     } else {
-      sprintf(buf2, "IMPACT ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+      sprintf(buf2, "ALARM: %s impact in %%.1f", LU->body[lvd->alarm_body].name);
     }
     skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
     skpColor(CLR_DEF);
   } else if (lvd->alarm_state == 1) {
     char buf2[256];
     skpColor(CLR_HI);
-    sprintf(buf2, "PROX ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    sprintf(buf2, "WARN: %s proximity in %%.1f", LU->body[lvd->alarm_body].name);
     skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
     skpColor(CLR_DEF);
   }
@@ -199,9 +199,9 @@ bool Lagrange::DisplayLPMode() {
   Lagrange_vdata *vdata = &GC->LU->vdata[GC->LU->act][VC->vix];
   
   if (vdata->burnArmed) {
-    skpTitle("Lagrange: ENCOUNTER PLAN");
+    skpTitle("Lagrange: ENCOUNTER (PLAN)");
   } else {
-    skpTitle("Lagrange: ENCOUNTER LIVE");
+    skpTitle("Lagrange: ENCOUNTER (LIVE)");
   }
   
   Lagrange_ves_s4i *vs4i = &vdata->vs4i[0];
@@ -266,25 +266,26 @@ bool Lagrange::DisplayLPMode() {
   }
   if (rl > l) l = rl+1;
   l++; 
-  double vm = VC->v->GetMass();
-  skpFormatText(0, l++, "Mass: %10.3fkg", vm);
+  //double vm = VC->v->GetMass();
+  //skpFormatText(0, l++, "Mass: %10.3fkg", vm);
 
   LagrangeUniverse* LU = GC->LU;
   Lagrange_vdata *lvd = &LU->vdata[GC->LU->act][VC->vix];
+
   if (lvd->alarm_state == 2) {
     char buf2[256];
     skpColor(CLR_WARN);
     if (lvd->alarm_body == 1) {
-      sprintf(buf2, "REENTRY ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+      sprintf(buf2, "ALARM: %s reentry in %%.1f", LU->body[lvd->alarm_body].name);
     } else {
-      sprintf(buf2, "IMPACT ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+      sprintf(buf2, "ALARM: %s impact in %%.1f", LU->body[lvd->alarm_body].name);
     }
     skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
     skpColor(CLR_DEF);
   } else if (lvd->alarm_state == 1) {
     char buf2[256];
     skpColor(CLR_HI);
-    sprintf(buf2, "PROX ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    sprintf(buf2, "WARN: %s proximity in %%.1f", LU->body[lvd->alarm_body].name);
     skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
     skpColor(CLR_DEF);
   }
@@ -370,23 +371,25 @@ bool Lagrange::DisplayPlanMode() {
 
   LagrangeUniverse* LU = GC->LU;
   Lagrange_vdata *lvd = &LU->vdata[GC->LU->act][VC->vix];
+
   if (lvd->alarm_state == 2) {
     char buf2[256];
     skpColor(CLR_WARN);
     if (lvd->alarm_body == 1) {
-      sprintf(buf2, "REENTRY ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+      sprintf(buf2, "ALARM: %s reentry in %%.1f", LU->body[lvd->alarm_body].name);
     } else {
-      sprintf(buf2, "IMPACT ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+      sprintf(buf2, "ALARM: %s impact in %%.1f", LU->body[lvd->alarm_body].name);
     }
     skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
     skpColor(CLR_DEF);
   } else if (lvd->alarm_state == 1) {
     char buf2[256];
     skpColor(CLR_HI);
-    sprintf(buf2, "PROX ALARM: %s in %%.1f", LU->body[lvd->alarm_body].name);
+    sprintf(buf2, "WARN: %s proximity in %%.1f", LU->body[lvd->alarm_body].name);
     skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
     skpColor(CLR_DEF);
   }
+
   return true;
 };
 
@@ -585,7 +588,7 @@ bool Lagrange::DisplayFrmFocMode() {
     char focusNames[5][32];
     strcpy(focusNames[0], GC->LU->body[GC->LU->LP.maj].name);
     strcpy(focusNames[1], GC->LU->body[GC->LU->LP.min].name);
-    strcpy(focusNames[2], "Vessel Rel");
+    strcpy(focusNames[2], "Vessel Orbit");
     strcpy(focusNames[3], "Vessel Enc");
     strcpy(focusNames[4], "Vessel Burn");
 

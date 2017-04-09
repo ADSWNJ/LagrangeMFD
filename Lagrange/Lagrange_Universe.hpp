@@ -111,6 +111,7 @@ public:
   int alarm_state;                                          // 0 if all ok, 1 if proximity warning to a planet, 2 if impact predicted (2 overides 1)
   int alarm_ix;                                             // point of alarm
   int alarm_body;                                           // body of alarm
+  double alarm_alt;                                         // trigger PeA for alarm
 };
 
 struct Lagrange_s4i {                                       // Main symplectic integrator data structure
@@ -162,6 +163,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       int b_e[COUNT_BODY+1];                                // If barycenter, composed of these bodies
       double proxWarnDist;                                  // Distance for proximity alarms (e.g. rad + 120k for Earth)
       double impactWarnDist;                                // Distance for impact alarms (e.g. rad + 10K for Earth)
+      double avgRadius;                                     // Distance for PeA display
     } body[COUNT_BODY];
 
 
@@ -212,6 +214,12 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
 
     unsigned int s4int_count[2];                            // Iteration count for inegrator
     double s4int_timestep[2];                               // Iteration timestep for integrator
+    atomic<double> s4int_enc_spct;                          // Encounter start percent
+    atomic<double> s4int_enc_epct;                          // Encounter end percent
+    atomic<double> s4int_enc_ssimt;                         // Encounter start simT
+    atomic<double> s4int_enc_esimt;                         // Encounter end simT
+    atomic<bool> s4int_enc_spct_lock;                       // Encounter start percent locked (float the simT), or unlocked (float the pct)
+    atomic<bool> s4int_enc_epct_lock;                       // Encounter end percent locked
 
     vector<Lagrange_s4i> s4i[2];                            // 4th Order symplectic integrator (vector = number of steps)
     vector<Lagrange_vdata> vdata[2];                        // Vessel 4th order integrator data (vector = number of vessels)
@@ -257,8 +265,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
   protected:
   private:
 
-
-    void defBody(LagrangeUniverse_Body *body, int p0, char* p1, double proxDist, double impactDist);        // Sets initial constants for selected body
+    void defBody(LagrangeUniverse_Body * pbodyinst, int p0, char * p1, double avgRadius, double proxDist, double impactDist); // Sets initial constants for selected body
     void defBary(LagrangeUniverse_Body *bary, int p0, char* p1, int maj, int min);                         // Sets initial constants for 2-body barycenter
     void defLP(LagrangeUniverse_LP_Def *lpdef, int p0, char *p1, int Lnum, double mr, double a, int ref, int maj, int min,
                                                int oth1=-1,int oth2=-1);     // Sets initial constants for selected LP

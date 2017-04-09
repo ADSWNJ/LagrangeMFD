@@ -79,6 +79,7 @@ public:
   void Button_RNG();
   void Button_RCT();
   void Button_TSP();
+  void Button_ENC();
   void Button_WT();
   void Button_DML();
   void Button_DME();

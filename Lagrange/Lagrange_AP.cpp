@@ -136,7 +136,7 @@ void Lagrange_AP::Update_PlanMode(VESSEL* v, const int apState, const double Sim
     if (!m_burnFrozen) GetVesselBurnData(v, burnSimT);
     if (apState > 2) { // burn enabled
       if (!m_burnFrozen) {
-        if (SimT <= m_startBurnTime && (SimT + 10.0 > m_startBurnTime)) {
+        if (SimT <= m_startBurnTime && (SimT + 2.5 > m_startBurnTime)) {
           m_burnFrozen = true;
         }
       }
@@ -324,7 +324,7 @@ void Lagrange_AP::Enable(VESSEL* v)
     fprintf(m_dumpFile, "\n");
   }
   for (int i = 0; i < 6; i++) {
-    one_ap[i].Enable(v, i, true);
+    one_ap[i].Enable(v, i, false);    // Set true for AP debug
   }
 }
 

@@ -436,6 +436,13 @@ void Lagrange::Button_RNG() {
   return;
 }
 
+// ENC = Adjust S4I Encounter Range
+void Lagrange::Button_ENC() {
+  sprintf(GC->LU->buf, "");
+  oapiOpenInputBox("Enter S4I Encounter Start% End% (add + suffix to float) (e.g. 23 100+)", Lagrange_DialogFunc::clbkENC, GC->LU->buf, 20, LC);
+  return;
+}
+
 // RCT = Adjust S4I Calc Time
 void Lagrange::Button_RCT() {
   sprintf(GC->LU->buf, "");

@@ -21,6 +21,7 @@ class Lagrange_DialogFunc
       static bool clbkITR(void *id, char *str, void *usrdata);
       static bool clbkTSP(void *id, char *str, void *usrdata);
       static bool clbkRNG(void *id, char *str, void *usrdata);
+      static bool clbkENC(void *id, char *str, void *usrdata);
       static bool clbkRCT(void *id, char *str, void *usrdata);
       static bool clbkHYS(void *id, char *str, void *usrdata);
       static bool clbkENT(void *id, char *str, void *usrdata);

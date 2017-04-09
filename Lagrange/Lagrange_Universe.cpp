@@ -48,9 +48,12 @@ LagrangeUniverse::LagrangeUniverse() {
   }
   s4int_hysteresis = 10.0;
 
-  defBody(&body[0], 0, "Sun", 695700 + 10000, 695700 + 2000);
-  defBody(&body[1], 1, "Earth", 6371 + 400, 6371 + 120);
-  defBody(&body[2], 2, "Moon", 1737 + 250, 1737 + 10);
+  s4int_enc_spct = 0.0;
+  s4int_enc_epct = 0.0;
+
+  defBody(&body[0], 0, "Sun", 695700, 10000, 2000);
+  defBody(&body[1], 1, "Earth", 6371, 400, 120);
+  defBody(&body[2], 2, "Moon", 1737, 250, 10);
   defBary(&body[3], 3, "E-M B", LU_EARTH, LU_MOON);
 
 
@@ -137,7 +140,7 @@ int getMilliSpan(int nTimeStart){   // Credit http://www.firstobject.com/getmill
 	return nSpan;
 }
 
-void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p1, double proxDist, double impactDist) {
+void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p1, double avgRadius, double proxDist, double impactDist) {
   // Initialize each celestial body
   pbodyinst->ix = p0;
   pbodyinst->pen = draw->GetPen(p1);
@@ -147,8 +150,9 @@ void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   pbodyinst->gm = pbodyinst->mass * GGRAV;
   pbodyinst->isBary = false;
   pbodyinst->b_e[0] = -1;
-  pbodyinst->proxWarnDist = proxDist;
-  pbodyinst->impactWarnDist = impactDist;
+  pbodyinst->avgRadius = avgRadius;
+  pbodyinst->proxWarnDist = proxDist + avgRadius;
+  pbodyinst->impactWarnDist = impactDist + avgRadius;
   return;
 }
 
@@ -163,6 +167,7 @@ void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   pbodyinst->b_e[0] = maj;
   pbodyinst->b_e[1] = min;
   pbodyinst->b_e[2] = -1;
+  pbodyinst->avgRadius = 0.0;
   pbodyinst->proxWarnDist = -1.0; // Can't crash into a barycenter!
   pbodyinst->impactWarnDist = -1.0;
   return;
@@ -679,6 +684,8 @@ void LagrangeUniverse::threadCtrlMain() {
     }
     s4i_finished = false;
     s4i_mstate = '0' + wkg;
+
+
   }
   /*
   * Thread Data Buffer Swapover end
@@ -1603,15 +1610,20 @@ inline VECTOR3 LagrangeUniverse::s4iforce_ves(const int s, const int i) {
     temp = pow((Qvg.x*Qvg.x) + (Qvg.y*Qvg.y) + (Qvg.z*Qvg.z), 1.5);
     gm = body[g].gm;
     F -= Qvg * (gm / temp);
-    if (vdata[wkg][s].alarm_state < 2 && lenQvgKM < body[g].impactWarnDist) {
-      vdata[wkg][s].alarm_state = 2;
-      vdata[wkg][s].alarm_body = g;
-      vdata[wkg][s].alarm_ix = i;
-    }
-    if (vdata[wkg][s].alarm_state < 1 && lenQvgKM < body[g].proxWarnDist) {
-      vdata[wkg][s].alarm_state = 1;
-      vdata[wkg][s].alarm_body = g;
-      vdata[wkg][s].alarm_ix = i;
+    if (lenQvgKM < body[g].impactWarnDist) {
+      if (vdata[wkg][s].alarm_state < 2) {
+        vdata[wkg][s].alarm_state = 2;
+        vdata[wkg][s].alarm_body = g;
+        vdata[wkg][s].alarm_ix = i;
+        vdata[wkg][s].alarm_alt = lenQvgKM - body[g].avgRadius;
+      }
+    } else if (lenQvgKM < body[g].proxWarnDist) {
+      if (vdata[wkg][s].alarm_state < 1) {
+        vdata[wkg][s].alarm_state = 1;
+        vdata[wkg][s].alarm_body = g;
+        vdata[wkg][s].alarm_ix = i;
+        vdata[wkg][s].alarm_alt = lenQvgKM - body[g].avgRadius;
+      }
     }
   }
   return F;
