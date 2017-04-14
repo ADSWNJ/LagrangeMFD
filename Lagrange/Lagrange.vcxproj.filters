@@ -127,5 +127,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+    <None Include="Lagrange MFD.docx">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Lagrange MFD.pdf">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

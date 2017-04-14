@@ -1316,7 +1316,7 @@ void LagrangeUniverse::integrateUniverse() {
 
       if (_dmp_orb) {
 //      fprintf(dump_orb, "OrbIx,S4IIx,FocX,FocY,VX,VY,LPX,LPY,MajX,MajY,MinX,MinY,OthX,OthY,LoX,HiX,LoY,HiY\n");
-        fprintf(dump_orb, "%ui,%ui,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
+        fprintf(dump_orb, "%u,%u,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
           s, z, 
           Q_foc.x / 1000.0, Q_foc.y / 1000.0,
           vdata[wkg][_orbFocVix].orb_km[s].x / 1000.0, vdata[wkg][_orbFocVix].orb_km[s].y / 1000.0,
