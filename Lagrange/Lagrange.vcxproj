@@ -201,6 +201,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+    <None Include="Lagrange MFD for Orbiter 2010.docx" />
+    <None Include="Lagrange MFD for Orbiter 2010.pdf" />
     <None Include="Lagrange MFD.docx" />
     <None Include="Lagrange MFD.pdf" />
   </ItemGroup>
