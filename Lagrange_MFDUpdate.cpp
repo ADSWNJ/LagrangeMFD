@@ -68,16 +68,25 @@ bool Lagrange::DisplayOrbitMode() {
   LagrangeUniverse::LagrangeUniverse_LP* LP = &LU->LP;
   Lagrange_vdata *lvd = &LU->vdata[GC->LU->act][VC->vix];
   Lagrange_orb_disp *lod = &LU->l_orb[GC->LU->act];
+  if (LU->orbScale[LU->orbProj] == 0.0) return true;
 
   skpFormatText(0, l, "LP: %s", LP->name);
   skpFormatText(4, l++, "FRM: %s", LU->body[lvd->refEnt].name);
+  skpFmtEngText(0, l++, "SC: %.0f", "m", LU->orbScale[LU->orbProj], 1);
 
   char *PrjTxt[3] = { "Std", "X-Edge", "Z-Edge" };
-  char FocTxt[5][32] = { "", "", "Ves Orbit", "Ves Enc", "Ves Burn"};
+  char FocTxt[7][32] = { "", "", "Ves Orbit", "Ves Enc", "Ves Burn", "LP", "Rot"};
   strcpy(FocTxt[0], LU->body[LP->maj].name);
   strcpy(FocTxt[1], LU->body[LP->min].name);
-  char locked[4] = "(L)";
-  if (!LU->orbFocLock) locked[0] = '\0';
+  char locked[6] = "";
+  if (LU->orbFocRot || LU->orbFocLock || LU->orbFocCtr || LU->orbFocSca) {
+    strcat(locked, "(");
+    if (LU->orbFocRot) strcat(locked, "R");
+    if (LU->orbFocLock) strcat(locked, "L");
+    if (LU->orbFocCtr) strcat(locked, "C");
+    if (LU->orbFocSca) strcat(locked, "S");
+    strcat(locked, ")");
+  }
   skpFormatText(0, 24, "FOC: %s %s", FocTxt[LU->orbFocus], locked);
   skpFormatText(4, 24, "PRJ: %s", PrjTxt[LU->orbProj]);
   if (lvd->alarm_state == 0) {
@@ -103,14 +112,14 @@ bool Lagrange::DisplayOrbitMode() {
   }
 
   if (!GC->LU->s4i_valid) return true;
-  if (lvd->orb_plot.size() != ORB_PLOT_COUNT) return true;
+  if (lvd->orb_plot.size() != GC->LU->orbPlotCount[GC->LU->act]) return true;
 
-  oapi::IVECTOR2 iv[ORB_PLOT_COUNT];
+
 
 
   for (int s = 0; s < ORB_MAX_LINES; s++) {
     if (LP->plotix[s] == -1) break;
-    for (int i = 0; i < ORB_PLOT_COUNT; i++) {
+    for (unsigned int i = 0; i < GC->LU->orbPlotCount[GC->LU->act]; i++) {
       iv[i].x = (long)((double)W * lod->orb_plot[s][i].x);
       iv[i].y = (long)((double)H * lod->orb_plot[s][i].y);
     }
@@ -122,7 +131,7 @@ bool Lagrange::DisplayOrbitMode() {
     }
 
     LC->skp->MoveTo((int)((double)W * lod->orb_plot[s][1].x), (int)((double)H * lod->orb_plot[s][1].y));
-    LC->skp->Polyline(iv, ORB_PLOT_COUNT);
+    LC->skp->Polyline(iv, GC->LU->orbPlotCount[GC->LU->act]);
 
     if (LP->plotix[s] != -2) {
       LC->skp->SetPen(GC->LU->draw->GetPen(LU->body[LP->plotix[s]].name, true));
@@ -161,7 +170,7 @@ bool Lagrange::DisplayOrbitMode() {
     }     
   }
 
-  for (int i = 0; i < ORB_PLOT_COUNT; i++) {
+  for (unsigned int i = 0; i < GC->LU->orbPlotCount[GC->LU->act]; i++) {
     iv[i].x = (long)((double)W * lvd->orb_plot[i].x);
     iv[i].y = (long)((double)H * lvd->orb_plot[i].y);
   }
@@ -173,7 +182,7 @@ bool Lagrange::DisplayOrbitMode() {
   }
 
   LC->skp->MoveTo((long)((double)W * lvd->orb_plot[0].x), (long)((double)H * lvd->orb_plot[0].y));
-  LC->skp->Polyline(iv, ORB_PLOT_COUNT);
+  LC->skp->Polyline(iv, GC->LU->orbPlotCount[GC->LU->act]);
   //LC->skp->Line((int)((double)W * lvd->orb_plot_origin.x), (int)((double)H *lvd->orb_plot_origin.y), (int)((double)W * lvd->orb_plot[0].x), (long)((double)H * lvd->orb_plot[0].y));
 
   if (vdata->burnArmed) {
@@ -585,27 +594,42 @@ bool Lagrange::DisplayFrmFocMode() {
   } else if (GC->LU->PrvNxtMode == 2) {
     skpTitle("Lagrange: FOCUS");
     int l = 4;
-    char focusNames[5][32];
+    char focusNames[6][32];
     strcpy(focusNames[0], GC->LU->body[GC->LU->LP.maj].name);
     strcpy(focusNames[1], GC->LU->body[GC->LU->LP.min].name);
     strcpy(focusNames[2], "Vessel Orbit");
     strcpy(focusNames[3], "Vessel Enc");
     strcpy(focusNames[4], "Vessel Burn");
+    strcpy(focusNames[5], "Lagrange Point");
+
 
     int curFoc = GC->LU->orbFocus;
     skpColor(CLR_HI);
     skpFormatText(0, l + curFoc, ">");
-    for (int i = 0; i<5; i++) {
+    for (int i = 0; i<6; i++) {
       skpFmtColText(0, l++, (i == curFoc), CLR_HI, CLR_DEF, "  %s", focusNames[i]);
     }
+    l = 22;
 
-    l = 24;
-    if (GC->LU->orbFocLock) {
+
+    if (GC->LU->orbFocCtr) {
+      skpFormatText(0, l++, "Focus Point: Centered");
+    } else if (GC->LU->orbFocLock) {
       skpFormatText(0, l++, "Focus Point: Locked");
     } else {
       skpFormatText(0, l++, "Focus Point: Unlocked");
     }
+    if (GC->LU->orbFocSca) {
+      skpFormatText(0, l++, "Prj Scale:   Locked");
+    } else {
+      skpFormatText(0, l++, "Prj Scale:   Unlocked");
+    }
 
+    if (GC->LU->orbFocRot) {
+      skpFormatText(0, l++, "Maj-Min Rot: Locked");
+    } else {
+      skpFormatText(0, l++, "Maj-Min Rot: Unlocked");
+    }
   }
   return true;
 };

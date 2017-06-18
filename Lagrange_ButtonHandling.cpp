@@ -238,15 +238,20 @@ void Lagrange::Button_FOC() {
 
 // RST = Orbit Mode: Reset Pan/Zoom
 void Lagrange::Button_RST() {
-  GC->LU->orbPrevZoom = 0;
-  GC->LU->orbZoom = 0;
+  LagrangeUniverse* LU = GC->LU;
+  LU->orbPrevZoom = 0;
+  LU->orbZoom = 0;
   for (int i = 0; i < 3; i++) {
-    GC->LU->orbPanHoriz[i] = 0.0;
-    GC->LU->orbPanVert[i] = 0.0;
-    GC->LU->orbScale[i] = 10000.0;
+    LU->orbPanHoriz[i] = 0.0;
+    LU->orbPanVert[i] = 0.0;
+    //LU->orbScale[i] = 10000.0;
   }
+  LU->orbFocLock = false;
+  LU->orbFocCtr = false;
+  LU->orbFocRot = false;
   return;
 }
+
 
 
 
@@ -260,13 +265,13 @@ void Lagrange::Button_PRJ() {
   return;
 }
 // ZMU = Orbit Mode: Zoom Up
-void Lagrange::Button_ZMU() {
-  GC->LU->orbZoom--;
+void Lagrange::Button_ZMU() { 
+  if (!GC->LU->orbFocSca) GC->LU->orbZoom--;
   return ;
 }
 // ZMD = Orbit Mode: Zoom Down
 void Lagrange::Button_ZMD() {
-  GC->LU->orbZoom++;
+  if (!GC->LU->orbFocSca) GC->LU->orbZoom++;
   return;
 }
 
@@ -356,16 +361,16 @@ void Lagrange::Button_S4IARM() {
 void Lagrange::Button_NXT() {
   int *prefEnt;
   switch (GC->LU->PrvNxtMode) {
-  case 0:
+  case 0: // LP
     GC->LU->selectNextLP();
     break;
-  case 1:
+  case 1: // FRM
     prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
     (*prefEnt)++;
     if (*prefEnt == COUNT_BODY) *prefEnt = 0;
     break;
-  case 2:
-    if (GC->LU->orbFocus == 4) {
+  case 2: // Focus
+    if (GC->LU->orbFocus == 5) {
       GC->LU->orbFocus = 0;
     } else {
       GC->LU->orbFocus++;
@@ -379,17 +384,17 @@ void Lagrange::Button_NXT() {
 void Lagrange::Button_PRV() {
   int *prefEnt;
   switch (GC->LU->PrvNxtMode) {
-  case 0:
+  case 0: // LP
     GC->LU->selectPrevLP();
     break;
-  case 1:
+  case 1: // FRM
     prefEnt = &GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
     (*prefEnt)--;
     if (*prefEnt < 0) *prefEnt = COUNT_BODY - 1;
     break;
-  case 2:
+  case 2: // Focus
     if (GC->LU->orbFocus == 0) {
-      GC->LU->orbFocus = 4;
+      GC->LU->orbFocus = 5;
     } else {
       GC->LU->orbFocus--;
     }
@@ -491,5 +496,31 @@ void Lagrange::Button_PMT() {
 void Lagrange::Button_LCK() {
   LagrangeUniverse* LU = GC->LU;
   LU->orbFocLock = !LU->orbFocLock;
+  if (LU->orbFocLock) LU->orbFocCtr = false;
 }
 
+// CTR = Center Focus
+void Lagrange::Button_CTR() {
+  LagrangeUniverse* LU = GC->LU;
+  LU->orbFocCtr = !LU->orbFocCtr;
+  if (LU->orbFocCtr) LU->orbFocLock = false;
+}
+
+// ROT = Rotating Ref Frame - rotate on Maj-Min axis
+void Lagrange::Button_ROT() {
+  LagrangeUniverse* LU = GC->LU;
+  LU->orbFocRot = !LU->orbFocRot;
+}
+
+// SCA = Lock/unlock scale
+void Lagrange::Button_SCA() {
+  LagrangeUniverse* LU = GC->LU;
+  LU->orbFocSca = !LU->orbFocSca;
+}
+
+// OPC = Adjust Orb Plot Count
+void Lagrange::Button_OPC() {
+  sprintf(GC->LU->buf, "%u", GC->LU->orbPlotCountReq);
+  oapiOpenInputBox("Enter Orb Plot Count (e.g. 10-10000)", Lagrange_DialogFunc::clbkOPC, GC->LU->buf, 20, LC);
+  return;
+}

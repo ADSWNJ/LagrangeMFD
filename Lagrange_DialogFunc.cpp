@@ -39,6 +39,17 @@ bool Lagrange_DialogFunc::clbkITR(void *id, char *str, void *usrdata) {
   return true;
 }
 
+bool Lagrange_DialogFunc::clbkOPC(void *id, char *str, void *usrdata) {
+  unsigned int i;
+
+  if (strlen(str) == 0) return true;
+  if (sscanf_s(str, "%u", &i) != 1) return true;
+  if (i < 10 || i > 10000) return false;
+  Lagrange_LCore* LC = (Lagrange_LCore *)usrdata;
+  LC->GC->LU->orbPlotCountReq = i;
+  return true;
+}
+
 bool Lagrange_DialogFunc::clbkTSP(void *id, char *str, void *usrdata) {
   float f;
 

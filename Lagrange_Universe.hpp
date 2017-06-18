@@ -29,7 +29,6 @@ using namespace std;
 #include "Lagrange_Drawing.hpp"
 
 #define S4INT_ENTITIES 5
-#define ORB_PLOT_COUNT 1000
 #define ORB_MAX_LINES 4
 #define ORB_PEN_WHITE 0
 #define ORB_PEN_YELLOW 1
@@ -233,6 +232,8 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     double next_s4i_time;
 
     int PrvNxtMode;                                         // = 0 for LP, 1 for frame, 2 = focus
+    unsigned int orbPlotCountReq;
+    unsigned int orbPlotCount[2];                           // Plot Count for the last iteration run
 
     // Public thread interface vars
     atomic<int> act;
@@ -260,6 +261,9 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<bool> orbFocLock;                                // Lock the position of the focus point
     atomic<double> orbFocLockX;                             // X lock point
     atomic<double> orbFocLockY;                             // Y lock point
+    atomic<bool> orbFocCtr;                                 // Lock the focus point in the center
+    atomic<bool> orbFocRot;                                 // Lock the position of the focus point
+    atomic<bool> orbFocSca;                                 // Lock the scale
     Lagrange_Drawing* draw;
 
   protected:
@@ -285,5 +289,8 @@ VECTOR3 unit_s(const VECTOR3 &a);
 
 VECTOR3 crossp_s (const VECTOR3 &a, const VECTOR3 &b);
 
+void rot2D(VECTOR2 &p, const double rotA); 
+
+void minMaxCheck(const VECTOR2 &pt, VECTOR2 &min, VECTOR2 &max);
 
 #endif // _LAGRANGE_UNIVERSE

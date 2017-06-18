@@ -86,6 +86,10 @@ public:
   void Button_DMO();
   void Button_HYS();
   void Button_LCK();
+  void Button_CTR();
+  void Button_ROT();
+  void Button_SCA();
+  void Button_OPC();
 
   void ButtonHelper_AdjVar(double adj);
   void ButtonHelper_TrimEntBox(char *buf);
@@ -102,7 +106,7 @@ protected:
   Lagrange_LCore* LC;
   Lagrange_VCore* VC;
 
-
+  oapi::IVECTOR2 iv[10000];
 
   int _Line(const int row );
   int _Col(const int pos );

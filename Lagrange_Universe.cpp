@@ -39,6 +39,9 @@ extern Lagrange_GCore *g_SC;    // points to the static persistence core
 
 LagrangeUniverse::LagrangeUniverse() {
 
+  orbPlotCountReq = 1000;
+  orbPlotCount[0] = 0;
+  orbPlotCount[1] = 0;
   draw = &(g_SC->draw);
 
   s4i_canstart = false;
@@ -109,10 +112,13 @@ LagrangeUniverse::LagrangeUniverse() {
   for (int i = 0; i < 3; i++) {
     orbPanHoriz[i] = 0.0;
     orbPanVert[i] = 0.0;
-    orbScale[i] = 10000.0;
+    orbScale[i] = 0.0;
   }
   orbFocVix = 0;
   orbFocLock = false;
+  orbFocCtr = false;
+  orbFocRot = false;
+  orbFocSca = false;
   orbFocLockX = 0.5;
   orbFocLockY = 0.5;
 
@@ -676,6 +682,7 @@ void LagrangeUniverse::threadCtrlMain() {
 
     s4i[wkg][0].sec = oapiGetSimTime();            // Initialize the working buffers at current time and MJD
     s4i[wkg][0].MJD = oapiGetSimMJD();
+    orbPlotCount[wkg] = orbPlotCountReq;
 
     if (s4int_count[act] != s4int_count[wkg] || s4int_timestep[act] != s4int_timestep[wkg]) {  // If the iteration params changed, burn the last cycle and reset
       s4int_count[act] = s4int_count[wkg];
@@ -1165,7 +1172,7 @@ void LagrangeUniverse::integrateUniverse() {
 
 
   // Generate the orb_plots
-  VECTOR2 max_Q, min_Q;
+  VECTOR2 max_Q = { 0.0, 0.0 }, min_Q = { 0.0, 0.0 };
   double scale; 
   bool _dmp_orb = dmp_orb;
   FILE *dump_orb = NULL;
@@ -1175,13 +1182,13 @@ void LagrangeUniverse::integrateUniverse() {
     } else {
       fprintf(dump_orb, "Orbit Plot Dump at Simulation Time:,,, %.2f\n", oapiGetSimTime());
 
-      fprintf(dump_orb, "Plot Count:,,, %d\n", ORB_PLOT_COUNT);
+      fprintf(dump_orb, "Plot Count:,,, %u\n", orbPlotCount[wkg]);
       fprintf(dump_orb, "LP:,,, %s\n", LP.name);
       Lagrange_vdata *lvd = &vdata[wkg][orbFocVix];
       fprintf(dump_orb, "FRM:,,, %s\n", body[lvd->refEnt].name);
 
       char *PrjTxt[3] = { "Std", "X-Edge", "Z-Edge" };
-      char FocTxt[5][32] = { "", "", "Ves Live", "Ves Enc", "Ves Burn" };
+      char FocTxt[7][32] = { "", "", "Ves Live", "Ves Enc", "Ves Burn", "LP", "Rot" };
       strcpy(FocTxt[0], body[LP.maj].name);
       strcpy(FocTxt[1], body[LP.min].name);
       fprintf(dump_orb, "FOC:,,, %s\n", FocTxt[orbFocus]);
@@ -1209,6 +1216,7 @@ void LagrangeUniverse::integrateUniverse() {
     }
   }
   
+  // Orbit plot code
   {
     bool def_Q = false;
     int _orbProj = orbProj;
@@ -1216,20 +1224,24 @@ void LagrangeUniverse::integrateUniverse() {
     int _orbFocVix = orbFocVix;
     int _orbPrevZoom = orbPrevZoom;
     int _orbZoom = orbZoom;
+    int _orbFocLock = orbFocLock;
+    int _orbFocCtr = orbFocCtr;
+    int _orbFocRot = orbFocRot;
+    int _orbFocSca = orbFocSca;
 
     for (unsigned int s = 0; s < ORB_MAX_LINES; s++) {
-      l_orb[wkg].orb_km[s].resize(ORB_PLOT_COUNT);
-      l_orb[wkg].orb_plot[s].resize(ORB_PLOT_COUNT);
+      l_orb[wkg].orb_km[s].resize(orbPlotCount[wkg]);
+      l_orb[wkg].orb_plot[s].resize(orbPlotCount[wkg]);
     }
     for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
-      vdata[wkg][v].orb_km.resize(ORB_PLOT_COUNT);
-      vdata[wkg][v].orb_plot.resize(ORB_PLOT_COUNT);
+      vdata[wkg][v].orb_km.resize(orbPlotCount[wkg]);
+      vdata[wkg][v].orb_plot.resize(orbPlotCount[wkg]);
       vdata[wkg][v].orb_plot_body_enc.resize(ORB_MAX_LINES);
     }
-    unsigned int zd = (s4int_count[wkg] - 1) / (ORB_PLOT_COUNT - 1);
-    unsigned int z = 0;
+    unsigned int zd = (s4int_count[wkg] - 1) / (orbPlotCount[wkg] - 1); // z-delta, step rate through the s4i table
+    unsigned int z = 0; // z ... this s4i item for the orb plot (e.g. 1000 orb plots for 50000 s4i, zd = 50, z = 0, 50, 100 ...) 
 
-    int ax, ay;
+    int ax, ay;                            // Axes for the projection: this plots X-Z, X-Y, Y-Z as preferred
     switch (_orbProj) {
     case 0: ax = 0; ay = 2; break;
     case 1: ax = 0; ay = 1; break;
@@ -1238,9 +1250,18 @@ void LagrangeUniverse::integrateUniverse() {
     double hPan = orbPanHoriz[_orbProj];
     double vPan = -orbPanVert[_orbProj];
 
-    // scan the Q values to generate relatives to the major body (in km)
-    for (unsigned int s = 0; s < ORB_PLOT_COUNT; s++) {
+    // scan the Q values to generate relatives to the desired focus point (in km)
+    for (unsigned int s = 0; s < orbPlotCount[wkg]; s++) {
       int pix;
+      double rotA = 0.0;
+      if (_orbFocRot) {
+        VECTOR2 Q_major, Q_minor;
+        Q_major.x = s4i[wkg][z].body[LP.maj].Q.data[ax];
+        Q_major.y = s4i[wkg][z].body[LP.maj].Q.data[ay];
+        Q_minor.x = s4i[wkg][z].body[LP.min].Q.data[ax];
+        Q_minor.y = s4i[wkg][z].body[LP.min].Q.data[ay];
+        rotA = atan2(Q_minor.y - Q_major.y, Q_minor.x - Q_major.x);        // This rotates the plot to bring the major and minor entities into horizontal alignment (i.e. rotating frame)
+      }
       VECTOR2 Q_foc;
       switch (_orbFocus) {
       case 0:  // Focus on the MAJOR entity
@@ -1275,43 +1296,42 @@ void LagrangeUniverse::integrateUniverse() {
         Q_foc.x = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ax];
         Q_foc.y = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ay];
         break;
+      case 5: // Focus on the LP
+        Q_foc.x = s4i[wkg][z].LP.Q.data[ax];
+        Q_foc.y = s4i[wkg][z].LP.Q.data[ay];
+
       }
       
       // LP orbit delta from focus point (in km)
       l_orb[wkg].orb_km[1][s].x = (s4i[wkg][z].LP.Q.data[ax] - Q_foc.x) / 1000.0;
       l_orb[wkg].orb_km[1][s].y = (s4i[wkg][z].LP.Q.data[ay] - Q_foc.y) / 1000.0;
+      rot2D(l_orb[wkg].orb_km[1][s], rotA);
       if (def_Q) {
-        if (l_orb[wkg].orb_km[1][s].x < min_Q.x) min_Q.x = l_orb[wkg].orb_km[1][s].x;
-        if (l_orb[wkg].orb_km[1][s].y < min_Q.y) min_Q.y = l_orb[wkg].orb_km[1][s].y;
-        if (l_orb[wkg].orb_km[1][s].x > max_Q.x) max_Q.x = l_orb[wkg].orb_km[1][s].x;
-        if (l_orb[wkg].orb_km[1][s].y > max_Q.y) max_Q.y = l_orb[wkg].orb_km[1][s].y;
+        minMaxCheck(l_orb[wkg].orb_km[1][s], min_Q, max_Q);
       } else {
         min_Q = max_Q = l_orb[wkg].orb_km[1][s];
         def_Q = true;
       }
+      
 
       // Vessel orbit delta from focus point (in km)
       for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
         vdata[wkg][v].orb_km[s].x = (vdata[wkg][v].vs4i[z].ves.Q.data[ax] - Q_foc.x) / 1000.0;
         vdata[wkg][v].orb_km[s].y = (vdata[wkg][v].vs4i[z].ves.Q.data[ay] - Q_foc.y) / 1000.0;
+        rot2D(vdata[wkg][v].orb_km[s], rotA);
         if (v == _orbFocVix) {
-          if (vdata[wkg][v].orb_km[s].x < min_Q.x) min_Q.x = vdata[wkg][v].orb_km[s].x;
-          if (vdata[wkg][v].orb_km[s].y < min_Q.y) min_Q.y = vdata[wkg][v].orb_km[s].y;
-          if (vdata[wkg][v].orb_km[s].x > max_Q.x) max_Q.x = vdata[wkg][v].orb_km[s].x;
-          if (vdata[wkg][v].orb_km[s].y > max_Q.y) max_Q.y = vdata[wkg][v].orb_km[s].y;
+          minMaxCheck(vdata[wkg][v].orb_km[s], min_Q, max_Q);
         }
       }
 
       // Entity orbit delta from focus point (in km)
       for (unsigned int i = 0; i < ORB_MAX_LINES; i++) {
-        if (LP.plotix[i] == -1) break;
-        if (LP.plotix[i] == -2) continue;
+        if (LP.plotix[i] == -1) break;    // end of plots
+        if (LP.plotix[i] == -2) continue; // skip LP
         l_orb[wkg].orb_km[i][s].x = (s4i[wkg][z].body[LP.plotix[i]].Q.data[ax] - Q_foc.x) / 1000.0;
         l_orb[wkg].orb_km[i][s].y = (s4i[wkg][z].body[LP.plotix[i]].Q.data[ay] - Q_foc.y) / 1000.0;
-        if (l_orb[wkg].orb_km[i][s].x < min_Q.x) min_Q.x = l_orb[wkg].orb_km[i][s].x;
-        if (l_orb[wkg].orb_km[i][s].y < min_Q.y) min_Q.y = l_orb[wkg].orb_km[i][s].y;
-        if (l_orb[wkg].orb_km[i][s].x > max_Q.x) max_Q.x = l_orb[wkg].orb_km[i][s].x;
-        if (l_orb[wkg].orb_km[i][s].y > max_Q.y) max_Q.y = l_orb[wkg].orb_km[i][s].y;
+        rot2D(l_orb[wkg].orb_km[i][s], rotA);
+        minMaxCheck(l_orb[wkg].orb_km[i][s], min_Q, max_Q);
       }
 
       if (_dmp_orb) {
@@ -1330,16 +1350,23 @@ void LagrangeUniverse::integrateUniverse() {
 
       z += zd;
     }
+    // At this point, the orb_km data is loaded for l_orb[wkg].orb_km (all entites) and vdata[wkg][*].orb_km (all vessels)
 
-    scale = max_Q.x - min_Q.x;
-    if ((max_Q.y - min_Q.y) > scale) {
-      scale = max_Q.y - min_Q.y;
+    if (_orbFocSca) {
+      scale = orbScale[_orbProj];
+      for (int k = 0; k < 3; k++) orbScale[k] = scale;
+    } else {
+      scale = max_Q.x - min_Q.x;
+      if ((max_Q.y - min_Q.y) > scale) {
+        scale = max_Q.y - min_Q.y;
+      }
+      scale *= 1.2 * pow(1.1, (double)_orbZoom);
+      orbScale[_orbProj] = scale;
     }
+
     double halfway_x = min_Q.x + (max_Q.x - min_Q.x) / 2.0;
     double halfway_y = min_Q.y + (max_Q.y - min_Q.y) / 2.0;
     double prevScale = scale * 1.2 * pow(1.1, (double)_orbPrevZoom);
-    scale *= 1.2 * pow(1.1, (double)_orbZoom);
-    orbScale[_orbProj] = scale;
 
     if (_orbPrevZoom != _orbZoom) {
       hPan = - (scale / prevScale) * (-halfway_x + 0.5 * prevScale - hPan) - halfway_x + 0.5*scale;
@@ -1349,15 +1376,22 @@ void LagrangeUniverse::integrateUniverse() {
       orbPrevZoom = _orbZoom;
     }
 
-    if (orbFocLock) {
+    if (_orbFocLock) {
       hPan = -scale*orbFocLockX - halfway_x + 0.5 * scale;
       vPan = scale*orbFocLockY - halfway_y - 0.5*scale;
       orbPanHoriz[_orbProj] = hPan;
       orbPanVert[_orbProj] = -vPan;
     }
 
+    if (_orbFocCtr) {
+      hPan = -halfway_x;
+      vPan = -halfway_y;
+      orbPanHoriz[_orbProj] = hPan;
+      orbPanVert[_orbProj] = -vPan;
+    }
+
     double xo = -(halfway_x - 0.5 * scale + hPan) / scale;
-    double yo = (halfway_y + 0.5 * scale + vPan) / scale;
+    double yo =  (halfway_y + 0.5 * scale + vPan) / scale;
 
     orbFocLockX = xo;
     orbFocLockY = yo;
@@ -1368,11 +1402,8 @@ void LagrangeUniverse::integrateUniverse() {
     max_Q.y = halfway_y + 0.5 * scale + vPan;
 
 
-
     l_orb[wkg].origPlot.x = (halfway_x - min_Q.x) / scale;
-    l_orb[wkg].origPlot.y = (max_Q.y-halfway_y) / scale;
-
-    
+    l_orb[wkg].origPlot.y = (max_Q.y - halfway_y) / scale;
 
 
    // sprintf(oapiDebugString(), "Scale:%.3f, hPan:%.3f, vPan:%.3f, x_orig:%.3f, y_orig: %.3f", scale, hPan, vPan, -min_Q.x / scale, max_Q.y / scale);
@@ -1381,7 +1412,7 @@ void LagrangeUniverse::integrateUniverse() {
     // Convert km distances into a 0.0-1.0 scale, ready for plotting on the MFD. Note the MFD origin is top left,
     // with the y-axis going positively DOWN the window, so the y calculation is reversed (i.e. (MAX - km)/scale)
     z = 0;
-    for (unsigned int s = 0; s < ORB_PLOT_COUNT; s++) {
+    for (unsigned int s = 0; s < orbPlotCount[wkg]; s++) {
 
       // Vessels orbit plots
       for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
@@ -1416,6 +1447,18 @@ void LagrangeUniverse::integrateUniverse() {
     };
     VECTOR2 Q_foc;
     int pix;
+
+    // Rotating frame angle calc
+    double rotA = 0.0;
+    if (_orbFocRot) {
+      VECTOR2 Q_major, Q_minor;
+      Q_major.x = s4i[wkg][enc_ix].body[LP.maj].Q.data[ax];
+      Q_major.y = s4i[wkg][enc_ix].body[LP.maj].Q.data[ay];
+      Q_minor.x = s4i[wkg][enc_ix].body[LP.min].Q.data[ax];
+      Q_minor.y = s4i[wkg][enc_ix].body[LP.min].Q.data[ay];
+      rotA = atan2(Q_minor.y - Q_major.y, Q_minor.x - Q_major.x);
+    }
+
     switch (_orbFocus) {
     case 0:
       Q_foc.x = s4i[wkg][enc_ix].body[LP.maj].Q.data[ax];
@@ -1441,6 +1484,10 @@ void LagrangeUniverse::integrateUniverse() {
       Q_foc.x = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ax];
       Q_foc.y = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ay];
       break;
+    case 5:
+      Q_foc.x = s4i[wkg][enc_ix].LP.Q.data[ax];
+      Q_foc.y = s4i[wkg][enc_ix].LP.Q.data[ay];
+      break;
     }
 
     // Finish up the encounter X Y plots
@@ -1462,20 +1509,26 @@ void LagrangeUniverse::integrateUniverse() {
         vdata[wkg][v].enc_typ = 0;
       };
 
+      vdata[wkg][v].orb_plot_ves_enc.x = (vdata[wkg][v].vs4i[enc_ix].ves.Q.data[ax] - Q_foc.x) / 1000.0;
+      vdata[wkg][v].orb_plot_ves_enc.y = (vdata[wkg][v].vs4i[enc_ix].ves.Q.data[ay] - Q_foc.y) / 1000.0;
+      rot2D(vdata[wkg][v].orb_plot_ves_enc, rotA);
+      vdata[wkg][v].orb_plot_ves_enc.x = (vdata[wkg][v].orb_plot_ves_enc.x - min_Q.x) / scale;
+      vdata[wkg][v].orb_plot_ves_enc.y = (max_Q.y - vdata[wkg][v].orb_plot_ves_enc.y) / scale;
 
-
-
-      vdata[wkg][v].orb_plot_ves_enc.x = ((vdata[wkg][v].vs4i[enc_ix].ves.Q.data[ax] - Q_foc.x) / 1000.0 - min_Q.x) / scale;
-      vdata[wkg][v].orb_plot_ves_enc.y = (max_Q.y - ((vdata[wkg][v].vs4i[enc_ix].ves.Q.data[ay] - Q_foc.y) / 1000.0)) / scale;
-
-      vdata[wkg][v].orb_plot_body_enc[1].x = ((s4i[wkg][enc_ix].LP.Q.data[ax] - Q_foc.x) / 1000.0 - min_Q.x) / scale;
-      vdata[wkg][v].orb_plot_body_enc[1].y = (max_Q.y - ((s4i[wkg][enc_ix].LP.Q.data[ay] - Q_foc.y) / 1000.0)) / scale;
+      vdata[wkg][v].orb_plot_body_enc[1].x = (s4i[wkg][enc_ix].LP.Q.data[ax] - Q_foc.x) / 1000.0;
+      vdata[wkg][v].orb_plot_body_enc[1].y = (s4i[wkg][enc_ix].LP.Q.data[ay] - Q_foc.y) / 1000.0;
+      rot2D(vdata[wkg][v].orb_plot_body_enc[1], rotA);
+      vdata[wkg][v].orb_plot_body_enc[1].x = (vdata[wkg][v].orb_plot_body_enc[1].x - min_Q.x) / scale;
+      vdata[wkg][v].orb_plot_body_enc[1].y = (max_Q.y - vdata[wkg][v].orb_plot_body_enc[1].y) / scale;
 
       for (unsigned int i = 0; i < ORB_MAX_LINES; i++) {
         if (LP.plotix[i] == -1) break;
         if (LP.plotix[i] == -2) continue;
-        vdata[wkg][v].orb_plot_body_enc[i].x = ((s4i[wkg][enc_ix].body[LP.plotix[i]].Q.data[ax] - Q_foc.x) / 1000.0 - min_Q.x) / scale;
-        vdata[wkg][v].orb_plot_body_enc[i].y = (max_Q.y - ((s4i[wkg][enc_ix].body[LP.plotix[i]].Q.data[ay] - Q_foc.y) / 1000.0)) / scale;
+        vdata[wkg][v].orb_plot_body_enc[i].x = (s4i[wkg][enc_ix].body[LP.plotix[i]].Q.data[ax] - Q_foc.x) / 1000.0;
+        vdata[wkg][v].orb_plot_body_enc[i].y = (s4i[wkg][enc_ix].body[LP.plotix[i]].Q.data[ay] - Q_foc.y) / 1000.0;
+        rot2D(vdata[wkg][v].orb_plot_body_enc[i], rotA);
+        vdata[wkg][v].orb_plot_body_enc[i].x = (vdata[wkg][v].orb_plot_body_enc[i].x - min_Q.x) / scale;
+        vdata[wkg][v].orb_plot_body_enc[i].y = (max_Q.y - vdata[wkg][v].orb_plot_body_enc[i].y) / scale;
       }
     }
   }
@@ -1494,7 +1547,7 @@ void LagrangeUniverse::integrateUniverse() {
   dbg[wkg][4] = s4int_count[wkg];
   dbg[wkg][5] = s4int_timestep[wkg];
   dbg[wkg][6] = ((double) ms_elap)/1000.0;
-  dbg[wkg][7] = ORB_PLOT_COUNT;
+  dbg[wkg][7] = orbPlotCount[wkg];
 
 
   {
@@ -1640,4 +1693,25 @@ inline VECTOR3 crossp_s (const VECTOR3 &a, const VECTOR3 &b)
   if (abs(a.y*b.z - b.y*a.z)>1e-9 || abs(a.z*b.x - b.z*a.x)>1e-9 || abs(a.x*b.y - b.x*a.y)>1e-9) return _V(a.y*b.z - b.y*a.z, a.z*b.x - b.z*a.x, a.x*b.y - b.x*a.y);
   VECTOR3 c = b + _V(0.6, 0.8, 0.0); // Collinear vectors: add a 1.0m length bias in the X-Y plane to force a non-zero cross product
   return _V(a.y*c.z - c.y*a.z, a.z*c.x - c.z*a.x, a.x*c.y - c.x*a.y);
+}
+
+
+inline void rot2D(VECTOR2 &p, const double a) {
+  double _x = p.x;
+  double _y = p.y;
+  double ca = cos(a);
+  double sa = sin(a);
+  _x = ca*p.x + sa*p.y;
+  _y = -sa*p.x + ca*p.y;
+  p.x = _x;
+  p.y = _y;
+  return;
+}
+
+
+inline void minMaxCheck(const VECTOR2 &pt, VECTOR2 &min, VECTOR2 &max) {
+  if (pt.x < min.x) min.x = pt.x;
+  if (pt.y < min.y) min.y = pt.y;
+  if (pt.x > max.x) max.x = pt.x;
+  if (pt.y > max.y) max.y = pt.y;
 }
