@@ -74,7 +74,7 @@ bool Lagrange::DisplayOrbitMode() {
   skpFormatText(4, l++, "FRM: %s", LU->body[lvd->refEnt].name);
   skpFmtEngText(0, l++, "SC: %.0f", "m", LU->orbScale[LU->orbProj], 1);
 
-  char *PrjTxt[3] = { "Std", "X-Edge", "Z-Edge" };
+  char *PrjTxt[3] = { "Std X-Z", "X-Y", "Z-Y" };
   char FocTxt[7][32] = { "", "", "Ves Orbit", "Ves Enc", "Ves Burn", "LP", "Rot"};
   strcpy(FocTxt[0], LU->body[LP->maj].name);
   strcpy(FocTxt[1], LU->body[LP->min].name);
@@ -582,7 +582,7 @@ bool Lagrange::DisplayS4IMode() {
 };
 
 bool Lagrange::DisplayFrmFocMode() {
-  if (GC->LU->PrvNxtMode == 1) {
+  if (LC->PrvNxtMode == 1) {
     skpTitle("Lagrange: FRAME");
     int l = 4;
     int curRef = GC->LU->vdata[GC->LU->act][VC->vix].refEnt;
@@ -591,7 +591,7 @@ bool Lagrange::DisplayFrmFocMode() {
     for (int i = 0; i<COUNT_BODY; i++) {
       skpFmtColText(0, l++, (i == curRef), CLR_HI, CLR_DEF, "  %s", GC->LU->body[i].name);
     }
-  } else if (GC->LU->PrvNxtMode == 2) {
+  } else {
     skpTitle("Lagrange: FOCUS");
     int l = 4;
     char focusNames[6][32];

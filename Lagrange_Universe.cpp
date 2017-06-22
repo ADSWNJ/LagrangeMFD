@@ -1241,7 +1241,7 @@ void LagrangeUniverse::integrateUniverse() {
     unsigned int zd = (s4int_count[wkg] - 1) / (orbPlotCount[wkg] - 1); // z-delta, step rate through the s4i table
     unsigned int z = 0; // z ... this s4i item for the orb plot (e.g. 1000 orb plots for 50000 s4i, zd = 50, z = 0, 50, 100 ...) 
 
-    int ax, ay;                            // Axes for the projection: this plots X-Z, X-Y, Y-Z as preferred
+    int ax, ay;                            // Axes for the projection: this plots X-Z, X-Y, Z-Y as preferred
     switch (_orbProj) {
     case 0: ax = 0; ay = 2; break;
     case 1: ax = 0; ay = 1; break;

@@ -131,8 +131,9 @@ void Lagrange::ReadStatus(FILEHANDLE scn) {
       break;
     } else if (!_stricmp(line, "LA_MFD")) {
       if (sscanf(val, "%u %d", &p_ui1, &p_i2) == 2) {
-        if (this->LC->m == p_ui1) {
-          this->LC->mode = p_i2;
+        if (LC->m == p_ui1) {
+          LC->mode = p_i2;
+          LC->PrvNxtMode = 1;
           LC->B.SelectPage(this, this->LC->mode);
         }
       }

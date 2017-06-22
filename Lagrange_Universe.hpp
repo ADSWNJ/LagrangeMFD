@@ -231,7 +231,6 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     char buf[80];
     double next_s4i_time;
 
-    int PrvNxtMode;                                         // = 0 for LP, 1 for frame, 2 = focus
     unsigned int orbPlotCountReq;
     unsigned int orbPlotCount[2];                           // Plot Count for the last iteration run
 

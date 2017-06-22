@@ -211,21 +211,21 @@ void Lagrange::ButtonHelper_TrimEntBox(char *buf) {
 
 // TGT = Orbit Mode: Select Target - e.g. Sun Earth L2
 void Lagrange::Button_TGT() {
-  GC->LU->PrvNxtMode = 0;
+  LC->PrvNxtMode = 0;
   LC->mode = 6;
   LC->B.SelectPage(this, LC->mode);
   return;
 }
 // FRM = Orbit Mode: Select Frame of Reference for PROGRADE calcs
 void Lagrange::Button_FRM() {
-  GC->LU->PrvNxtMode = 1;
+  LC->PrvNxtMode = 1;
   LC->mode = 7;
   LC->B.SelectPage(this, LC->mode);
   return;
 }
 // FOC = Orbit Mode: Select Focus - 0 = Major, 1 = Minor, 2 = Vessel, 3 = Enc, 4 = Burn
 void Lagrange::Button_FOC() {
-  GC->LU->PrvNxtMode = 2;
+  LC->PrvNxtMode = 2;
   LC->mode = 7;
   LC->B.SelectPage(this, 8);
   return;
@@ -360,7 +360,7 @@ void Lagrange::Button_S4IARM() {
 // NXT = Lagrange Next LP, FrameRef, Focus Mode
 void Lagrange::Button_NXT() {
   int *prefEnt;
-  switch (GC->LU->PrvNxtMode) {
+  switch (LC->PrvNxtMode) {
   case 0: // LP
     GC->LU->selectNextLP();
     break;
@@ -383,7 +383,7 @@ void Lagrange::Button_NXT() {
 // PRV = Lagrange Prev LP, FrameRef, Focus Mode
 void Lagrange::Button_PRV() {
   int *prefEnt;
-  switch (GC->LU->PrvNxtMode) {
+  switch (LC->PrvNxtMode) {
   case 0: // LP
     GC->LU->selectPrevLP();
     break;
