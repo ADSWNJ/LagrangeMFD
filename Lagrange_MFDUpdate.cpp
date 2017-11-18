@@ -63,6 +63,7 @@ bool Lagrange::DisplayOrbitMode() {
 
   int circrad = (int)(W / 120);
   int enc_x, enc_y;
+  double z_dep;
 
   LagrangeUniverse* LU = GC->LU;
   LagrangeUniverse::LagrangeUniverse_LP* LP = &LU->LP;
@@ -146,15 +147,22 @@ bool Lagrange::DisplayOrbitMode() {
 
         enc_x = (int)((double)W * lvd->orb_plot_body_enc[s].x);
         enc_y = (int)((double)H * lvd->orb_plot_body_enc[s].y);
+        z_dep = lvd->orb_plot_body_depth[s];
         LC->skp->Ellipse(enc_x - circrad, enc_y - circrad, enc_x + circrad, enc_y + circrad);
 
         if (LP->plotix[s] != -2) {
           // Determine Body PROX limit and IMPACT LIMIT
           double proxLim = GC->LU->body[LP->plotix[s]].proxWarnDist;
           double impactLim = GC->LU->body[LP->plotix[s]].impactWarnDist;
+
           double circradKM = (double)circrad / (double)W * GC->LU->orbScale[GC->LU->orbProj];
-          if (circradKM < impactLim) {
-            int bodyRadPx = (int)((double)W * impactLim / GC->LU->orbScale[GC->LU->orbProj] + 0.5);
+          if (circradKM < impactLim && z_dep > -10.0) {
+            double body_ang = atan2(impactLim, z_dep / 1000.0);
+            double body_ang_deg = DEG * body_ang;
+            double z_scale = body_ang_deg / 30.0;
+            if (z_dep < 100.0) z_scale = 1.0;
+            int bodyRadPx = (int)((double)W * z_scale * impactLim / GC->LU->orbScale[GC->LU->orbProj] + 0.5);
+            if (bodyRadPx < circrad) bodyRadPx = circrad; 
             double rf = bodyRadPx;
             for (int xscan = 0; xscan <= bodyRadPx; xscan++) {
               double xf = (double) xscan;

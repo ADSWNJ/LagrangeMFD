@@ -106,6 +106,7 @@ public:
   VECTOR2 orb_plot_origin;                                  // location of major entity on the screen 
   VECTOR2 orb_plot_ves_enc;                                 // X Y positions for the vessel at closest vessel encounter
   vector<VECTOR2> orb_plot_body_enc;                        // X Y positions for each body at closest vessel encounter
+  vector<double> orb_plot_body_depth;                       // "Depth" into the screen for each orb plot, for scaling body size (e.g. when sun is far away)
   Lagrange_vdata& operator=(const Lagrange_vdata& x);       // Helper function to assign vdata data in the swap function
   int alarm_state;                                          // 0 if all ok, 1 if proximity warning to a planet, 2 if impact predicted (2 overides 1)
   int alarm_ix;                                             // point of alarm
@@ -274,7 +275,11 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
                                                int oth1=-1,int oth2=-1);     // Sets initial constants for selected LP
 
     void defOrbPlot(LagrangeUniverse_LP_Def *lptab, int b1 = -1, int b2 = -1, int b3 = -1);     // Sets plot lines and colors for each LP
-                                         
+                    
+    void findRotFrame(const VECTOR3 &majQ, const VECTOR3 &majP, const VECTOR3 &minQ, const VECTOR3 &minP, MATRIX3 *rotM, double *rotS);
+    VECTOR2 pullOrbProjection(const VECTOR3 &majQ, const VECTOR3 &Q, const int ax, const int ay, const int az, const MATRIX3 &rotM, double *orb_depth = nullptr);
+
+
     // Private thread interface vars
     atomic<bool> s4i_finished;
     atomic<bool> s4i_wkill;

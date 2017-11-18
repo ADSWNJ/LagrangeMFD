@@ -1237,15 +1237,16 @@ void LagrangeUniverse::integrateUniverse() {
       vdata[wkg][v].orb_km.resize(orbPlotCount[wkg]);
       vdata[wkg][v].orb_plot.resize(orbPlotCount[wkg]);
       vdata[wkg][v].orb_plot_body_enc.resize(ORB_MAX_LINES);
+      vdata[wkg][v].orb_plot_body_depth.resize(ORB_MAX_LINES);
     }
     unsigned int zd = (s4int_count[wkg] - 1) / (orbPlotCount[wkg] - 1); // z-delta, step rate through the s4i table
     unsigned int z = 0; // z ... this s4i item for the orb plot (e.g. 1000 orb plots for 50000 s4i, zd = 50, z = 0, 50, 100 ...) 
 
-    int ax, ay;                            // Axes for the projection: this plots X-Z, X-Y, Z-Y as preferred
+    int ax, ay, az;                            // Axes for the projection: this plots X-Z, X-Y, Z-Y as preferred
     switch (_orbProj) {
-    case 0: ax = 0; ay = 2; break;
-    case 1: ax = 0; ay = 1; break;
-    case 2: ax = 2; ay = 1; break;
+    case 0: ax = 0; ay = 2; az = 1; break;
+    case 1: ax = 0; ay = 1; az = 2; break;
+    case 2: ax = 2; ay = 1; az = 0; break;
     }
     double hPan = orbPanHoriz[_orbProj];
     double vPan = -orbPanVert[_orbProj];
@@ -1253,28 +1254,28 @@ void LagrangeUniverse::integrateUniverse() {
     // scan the Q values to generate relatives to the desired focus point (in km)
     for (unsigned int s = 0; s < orbPlotCount[wkg]; s++) {
       int pix;
-      double rotA = 0.0;
+
+      // Determine Rotating Frame rotation matrix
+      MATRIX3 rotM = { 1.0, 0.0, 0.0,    0.0, 1.0, 0.0,    0.0, 0.0, 1.0 };
+      double rotS = 0.0;
+      VECTOR3 majQ = s4i[wkg][z].body[LP.maj].Q;
+      VECTOR3 minQ = s4i[wkg][z].body[LP.min].Q;
+
       if (_orbFocRot) {
-        VECTOR2 Q_major, Q_minor;
-        Q_major.x = s4i[wkg][z].body[LP.maj].Q.data[ax];
-        Q_major.y = s4i[wkg][z].body[LP.maj].Q.data[ay];
-        Q_minor.x = s4i[wkg][z].body[LP.min].Q.data[ax];
-        Q_minor.y = s4i[wkg][z].body[LP.min].Q.data[ay];
-        rotA = atan2(Q_minor.y - Q_major.y, Q_minor.x - Q_major.x);        // This rotates the plot to bring the major and minor entities into horizontal alignment (i.e. rotating frame)
+        VECTOR3 majP = s4i[wkg][z].body[LP.maj].P;
+        VECTOR3 minP = s4i[wkg][z].body[LP.min].P;
+        findRotFrame(majQ, majP, minQ, minP, &rotM, &rotS);
       }
       VECTOR2 Q_foc;
       switch (_orbFocus) {
       case 0:  // Focus on the MAJOR entity
-        Q_foc.x = s4i[wkg][z].body[LP.maj].Q.data[ax];
-        Q_foc.y = s4i[wkg][z].body[LP.maj].Q.data[ay];
+        Q_foc = pullOrbProjection(majQ, majQ, ax, ay, az, rotM);
         break;
       case 1:  // Focus on the MINOR entity
-        Q_foc.x = s4i[wkg][z].body[LP.min].Q.data[ax];
-        Q_foc.y = s4i[wkg][z].body[LP.min].Q.data[ay];
+        Q_foc = pullOrbProjection(majQ, minQ, ax, ay, az, rotM);
         break;
       case 2: // Focus on the Vessel Relative
-        Q_foc.x = vdata[wkg][_orbFocVix].vs4i[z].ves.Q.data[ax];
-        Q_foc.y = vdata[wkg][_orbFocVix].vs4i[z].ves.Q.data[ay];
+        Q_foc = pullOrbProjection(majQ, vdata[wkg][_orbFocVix].vs4i[z].ves.Q, ax, ay, az, rotM);
         break;
       case 3: // Focus on the Vessel Encounter point
         pix = vdata[wkg][_orbFocVix].enc_ix;
@@ -1285,27 +1286,24 @@ void LagrangeUniverse::integrateUniverse() {
             pix = s4int_count[wkg] - 1;
           }
         }
-        Q_foc.x = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ax];
-        Q_foc.y = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ay];
+        Q_foc = pullOrbProjection(majQ, vdata[wkg][_orbFocVix].vs4i[pix].ves.Q, ax, ay, az, rotM);
         break;
       case 4: // Focus on the Vessel Burn point
         pix = vdata[wkg][_orbFocVix].burn_ix;
         if (pix == -1) {
           pix = 0;
         }
-        Q_foc.x = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ax];
-        Q_foc.y = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ay];
+        Q_foc = pullOrbProjection(majQ, vdata[wkg][_orbFocVix].vs4i[pix].ves.Q, ax, ay, az, rotM);
         break;
       case 5: // Focus on the LP
-        Q_foc.x = s4i[wkg][z].LP.Q.data[ax];
-        Q_foc.y = s4i[wkg][z].LP.Q.data[ay];
+        Q_foc = pullOrbProjection(majQ, s4i[wkg][z].LP.Q, ax, ay, az, rotM);
 
       }
       
       // LP orbit delta from focus point (in km)
-      l_orb[wkg].orb_km[1][s].x = (s4i[wkg][z].LP.Q.data[ax] - Q_foc.x) / 1000.0;
-      l_orb[wkg].orb_km[1][s].y = (s4i[wkg][z].LP.Q.data[ay] - Q_foc.y) / 1000.0;
-      rot2D(l_orb[wkg].orb_km[1][s], rotA);
+      VECTOR2 rotLP = pullOrbProjection(majQ, s4i[wkg][z].LP.Q, ax, ay, az, rotM);
+      l_orb[wkg].orb_km[1][s].x = (rotLP.x - Q_foc.x) / 1000.0;
+      l_orb[wkg].orb_km[1][s].y = (rotLP.y - Q_foc.y) / 1000.0;
       if (def_Q) {
         minMaxCheck(l_orb[wkg].orb_km[1][s], min_Q, max_Q);
       } else {
@@ -1316,9 +1314,9 @@ void LagrangeUniverse::integrateUniverse() {
 
       // Vessel orbit delta from focus point (in km)
       for (unsigned int v = 0; v < vdata[wkg].size(); v++) {
-        vdata[wkg][v].orb_km[s].x = (vdata[wkg][v].vs4i[z].ves.Q.data[ax] - Q_foc.x) / 1000.0;
-        vdata[wkg][v].orb_km[s].y = (vdata[wkg][v].vs4i[z].ves.Q.data[ay] - Q_foc.y) / 1000.0;
-        rot2D(vdata[wkg][v].orb_km[s], rotA);
+        VECTOR2 rotV = pullOrbProjection(majQ, vdata[wkg][v].vs4i[z].ves.Q, ax, ay, az, rotM);
+        vdata[wkg][v].orb_km[s].x = (rotV.x - Q_foc.x) / 1000.0;
+        vdata[wkg][v].orb_km[s].y = (rotV.y - Q_foc.y) / 1000.0;
         if (v == _orbFocVix) {
           minMaxCheck(vdata[wkg][v].orb_km[s], min_Q, max_Q);
         }
@@ -1328,9 +1326,9 @@ void LagrangeUniverse::integrateUniverse() {
       for (unsigned int i = 0; i < ORB_MAX_LINES; i++) {
         if (LP.plotix[i] == -1) break;    // end of plots
         if (LP.plotix[i] == -2) continue; // skip LP
-        l_orb[wkg].orb_km[i][s].x = (s4i[wkg][z].body[LP.plotix[i]].Q.data[ax] - Q_foc.x) / 1000.0;
-        l_orb[wkg].orb_km[i][s].y = (s4i[wkg][z].body[LP.plotix[i]].Q.data[ay] - Q_foc.y) / 1000.0;
-        rot2D(l_orb[wkg].orb_km[i][s], rotA);
+        VECTOR2 rotE = pullOrbProjection(majQ, s4i[wkg][z].body[LP.plotix[i]].Q, ax, ay, az, rotM);
+        l_orb[wkg].orb_km[i][s].x = (rotE.x - Q_foc.x) / 1000.0;
+        l_orb[wkg].orb_km[i][s].y = (rotE.y - Q_foc.y) / 1000.0;
         minMaxCheck(l_orb[wkg].orb_km[i][s], min_Q, max_Q);
       }
 
@@ -1448,45 +1446,41 @@ void LagrangeUniverse::integrateUniverse() {
     VECTOR2 Q_foc;
     int pix;
 
-    // Rotating frame angle calc
-    double rotA = 0.0;
+    // Determine Rotating Frame rotation matrix
+    MATRIX3 rotM = { 1.0, 0.0, 0.0,    0.0, 1.0, 0.0,    0.0, 0.0, 1.0 };
+    double rotS = 0.0;
+    VECTOR3 majQ = s4i[wkg][enc_ix].body[LP.maj].Q;
+    VECTOR3 minQ = s4i[wkg][enc_ix].body[LP.min].Q;
+
     if (_orbFocRot) {
-      VECTOR2 Q_major, Q_minor;
-      Q_major.x = s4i[wkg][enc_ix].body[LP.maj].Q.data[ax];
-      Q_major.y = s4i[wkg][enc_ix].body[LP.maj].Q.data[ay];
-      Q_minor.x = s4i[wkg][enc_ix].body[LP.min].Q.data[ax];
-      Q_minor.y = s4i[wkg][enc_ix].body[LP.min].Q.data[ay];
-      rotA = atan2(Q_minor.y - Q_major.y, Q_minor.x - Q_major.x);
+      VECTOR3 majP = s4i[wkg][enc_ix].body[LP.maj].P;
+      VECTOR3 minP = s4i[wkg][enc_ix].body[LP.min].P;
+      findRotFrame(majQ, majP, minQ, minP, &rotM, &rotS);
     }
 
+    double foc_depth = 0.0;
     switch (_orbFocus) {
     case 0:
-      Q_foc.x = s4i[wkg][enc_ix].body[LP.maj].Q.data[ax];
-      Q_foc.y = s4i[wkg][enc_ix].body[LP.maj].Q.data[ay];
+      Q_foc = pullOrbProjection(majQ, majQ, ax, ay, az, rotM, &foc_depth);
       break;
     case 1:
-      Q_foc.x = s4i[wkg][enc_ix].body[LP.min].Q.data[ax];
-      Q_foc.y = s4i[wkg][enc_ix].body[LP.min].Q.data[ay];
+      Q_foc = pullOrbProjection(majQ, minQ, ax, ay, az, rotM, &foc_depth);
       break;
     case 2:
-      Q_foc.x = vdata[wkg][_orbFocVix].vs4i[enc_ix].ves.Q.data[ax];
-      Q_foc.y = vdata[wkg][_orbFocVix].vs4i[enc_ix].ves.Q.data[ay];
+      Q_foc = pullOrbProjection(majQ, vdata[wkg][_orbFocVix].vs4i[enc_ix].ves.Q, ax, ay, az, rotM, &foc_depth);
       break;
     case 3:
-      Q_foc.x = vdata[wkg][_orbFocVix].vs4i[enc_ix].ves.Q.data[ax];
-      Q_foc.y = vdata[wkg][_orbFocVix].vs4i[enc_ix].ves.Q.data[ay];
+      Q_foc = pullOrbProjection(majQ, vdata[wkg][_orbFocVix].vs4i[enc_ix].ves.Q, ax, ay, az, rotM, &foc_depth);
       break;
     case 4:
       pix = vdata[wkg][_orbFocVix].burn_ix;
       if (pix == -1) {
         pix = 0;
       }
-      Q_foc.x = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ax];
-      Q_foc.y = vdata[wkg][_orbFocVix].vs4i[pix].ves.Q.data[ay];
+      Q_foc = pullOrbProjection(majQ, vdata[wkg][_orbFocVix].vs4i[pix].ves.Q, ax, ay, az, rotM, &foc_depth);
       break;
     case 5:
-      Q_foc.x = s4i[wkg][enc_ix].LP.Q.data[ax];
-      Q_foc.y = s4i[wkg][enc_ix].LP.Q.data[ay];
+      Q_foc = pullOrbProjection(majQ, s4i[wkg][enc_ix].LP.Q, ax, ay, az, rotM, &foc_depth);
       break;
     }
 
@@ -1509,29 +1503,34 @@ void LagrangeUniverse::integrateUniverse() {
         vdata[wkg][v].enc_typ = 0;
       };
 
-      vdata[wkg][v].orb_plot_ves_enc.x = (vdata[wkg][v].vs4i[enc_ix].ves.Q.data[ax] - Q_foc.x) / 1000.0;
-      vdata[wkg][v].orb_plot_ves_enc.y = (vdata[wkg][v].vs4i[enc_ix].ves.Q.data[ay] - Q_foc.y) / 1000.0;
-      rot2D(vdata[wkg][v].orb_plot_ves_enc, rotA);
+      VECTOR2 rotP = pullOrbProjection(majQ, vdata[wkg][v].vs4i[enc_ix].ves.Q, ax, ay, az, rotM);
+      double orb_depth = 0.0; 
+
+      vdata[wkg][v].orb_plot_ves_enc.x = (rotP.x - Q_foc.x) / 1000.0;
+      vdata[wkg][v].orb_plot_ves_enc.y = (rotP.y - Q_foc.y) / 1000.0;
       vdata[wkg][v].orb_plot_ves_enc.x = (vdata[wkg][v].orb_plot_ves_enc.x - min_Q.x) / scale;
       vdata[wkg][v].orb_plot_ves_enc.y = (max_Q.y - vdata[wkg][v].orb_plot_ves_enc.y) / scale;
 
-      vdata[wkg][v].orb_plot_body_enc[1].x = (s4i[wkg][enc_ix].LP.Q.data[ax] - Q_foc.x) / 1000.0;
-      vdata[wkg][v].orb_plot_body_enc[1].y = (s4i[wkg][enc_ix].LP.Q.data[ay] - Q_foc.y) / 1000.0;
-      rot2D(vdata[wkg][v].orb_plot_body_enc[1], rotA);
+      rotP = pullOrbProjection(majQ, s4i[wkg][enc_ix].LP.Q, ax, ay, az, rotM, &orb_depth);
+      vdata[wkg][v].orb_plot_body_enc[1].x = (rotP.x - Q_foc.x) / 1000.0;
+      vdata[wkg][v].orb_plot_body_enc[1].y = (rotP.y - Q_foc.y) / 1000.0;
       vdata[wkg][v].orb_plot_body_enc[1].x = (vdata[wkg][v].orb_plot_body_enc[1].x - min_Q.x) / scale;
       vdata[wkg][v].orb_plot_body_enc[1].y = (max_Q.y - vdata[wkg][v].orb_plot_body_enc[1].y) / scale;
+      vdata[wkg][v].orb_plot_body_depth[1] = foc_depth - orb_depth;
 
       for (unsigned int i = 0; i < ORB_MAX_LINES; i++) {
         if (LP.plotix[i] == -1) break;
         if (LP.plotix[i] == -2) continue;
-        vdata[wkg][v].orb_plot_body_enc[i].x = (s4i[wkg][enc_ix].body[LP.plotix[i]].Q.data[ax] - Q_foc.x) / 1000.0;
-        vdata[wkg][v].orb_plot_body_enc[i].y = (s4i[wkg][enc_ix].body[LP.plotix[i]].Q.data[ay] - Q_foc.y) / 1000.0;
-        rot2D(vdata[wkg][v].orb_plot_body_enc[i], rotA);
+        rotP = pullOrbProjection(majQ, s4i[wkg][enc_ix].body[LP.plotix[i]].Q, ax, ay, az, rotM, &orb_depth);
+        vdata[wkg][v].orb_plot_body_enc[i].x = (rotP.x - Q_foc.x) / 1000.0;
+        vdata[wkg][v].orb_plot_body_enc[i].y = (rotP.y - Q_foc.y) / 1000.0;
         vdata[wkg][v].orb_plot_body_enc[i].x = (vdata[wkg][v].orb_plot_body_enc[i].x - min_Q.x) / scale;
         vdata[wkg][v].orb_plot_body_enc[i].y = (max_Q.y - vdata[wkg][v].orb_plot_body_enc[i].y) / scale;
+        vdata[wkg][v].orb_plot_body_depth[i] = foc_depth - orb_depth;
       }
     }
-  }
+  } // end orb plot code
+
   if (_dmp_orb) {
     fclose(dump_orb);
     dmp_orb = false;
@@ -1611,7 +1610,7 @@ void LagrangeUniverse::integrateUniverse() {
   }
   if (_dmp_enc) {
     fclose(dump_enc);
-    dmp_enc = false;
+    dmp_enc = nullptr;
   }
   return;
 }
@@ -1681,6 +1680,57 @@ inline VECTOR3 LagrangeUniverse::s4iforce_ves(const int s, const int i) {
   }
   return F;
 }
+
+
+void LagrangeUniverse::findRotFrame(const VECTOR3 &majQ, const VECTOR3 &majP, const VECTOR3 &minQ, const VECTOR3 &minP, MATRIX3 *rotM, double *rotS) {
+
+  VECTOR3 minRQ = minQ - majQ; // minor entity position relative to major
+  VECTOR3 minRPlQ = minRQ + minP - majP; // Want to rotate the plane into the -x axis relative to major, so find a plane point on that plane using the relative velocity vector
+
+  double a = atan2(minRQ.x, minRQ.z); // Rotate around Y axis to align minor onto [0 y z]
+  MATRIX3 rotA = {cos(a), 0.0, -sin(a),   0.0, 1.0, 0.0,   sin(a), 0.0, cos(a)};
+
+  VECTOR3 minRQp = mul(rotA, minRQ);   // Minor entity, relative to Major, Position (Q), Prime after the rotation
+  VECTOR3 minRPlQp = mul(rotA, minRPlQ);   // Minor entity plane point, relative to Major, Position (Q), Prime after the rotation
+
+  double b = atan2(-minRQp.y, minRQp.z); // Rotate the part-transformed vector around X axis to align minor onto [0 0 z]
+  MATRIX3 rotB = { 1.0, 0.0, 0.0,   0.0, cos(b), sin(b),   0.0, -sin(b), cos(b) };
+
+  VECTOR3 minRQpp = mul(rotB, minRQp);  // prime prime after 2 rotations ... check it is [0 0 z]
+  VECTOR3 minRPlQpp = mul(rotB, minRPlQp);
+
+  double c = atan2(-minRPlQpp.y, -minRPlQpp.x); // Rotate the plane point onto [x 0 z]
+  MATRIX3 rotC = { cos(c), sin(c), 0.0,   -sin(c), cos(c), 0.0,   0.0, 0.0, 1.0 };
+  MATRIX3 rotBA = mul(rotB, rotA);
+  MATRIX3 rotCBA = mul(rotC, rotBA);
+  MATRIX3 rotFinal;
+
+  VECTOR3 minRQppp = mul(rotC, minRQpp);  // triple prime ... check still [0 0 +z]
+  if (*rotS != 0.0) {
+    rotFinal = rotCBA * (*rotS / minRQpp.z);
+  } else {
+    rotFinal = rotCBA;
+    *rotS = minRQpp.z;
+  }
+
+//  VECTOR3 minRPlQppp = mul(rotC, minRPlQpp); /// check this is [x 0 z]
+//  VECTOR3 minRQpCheck = mul(rotCBA, minRQ);  // check the rot matrix does its job ... this should be [0,0, +z]
+//  VECTOR3 minRPlQpCheck = mul(rotCBA, minRPlQ); // check the rot matrix does its job ... this should be [-x, 0, +-z]
+
+  *rotM = rotCBA; 
+  return;
+}
+
+VECTOR2 LagrangeUniverse::pullOrbProjection(const VECTOR3 &majQ, const VECTOR3 &Q, const int ax, const int ay, const int az, const MATRIX3 &rotM, double *orb_depth) {
+  VECTOR3 RQ = Q - majQ;
+  VECTOR3 RQp = mul(rotM, RQ);
+  if (orb_depth != nullptr) *orb_depth = RQp.data[az];
+  VECTOR3 Qp = RQp + majQ;
+
+  VECTOR2 v = { Qp.data[ax], Qp.data[ay] };
+  return v;
+}
+
 
 
 inline VECTOR3 unit_s (const VECTOR3 &a)
