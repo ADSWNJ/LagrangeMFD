@@ -90,11 +90,16 @@ LagrangeUniverse::LagrangeUniverse() {
 
   for (int i = 0; i < 2; i++) {
     s4i[i].resize(s4int_count[0]);
+    orbZoom[i][0] = 0;
+    orbZoom[i][1] = 0;
+    orbZoomAct[i][0] = 0;
+    orbZoomAct[i][1] = 0;
+    orbPrevZoom[i] = 0;
   }
 
   wkg = 0;
   act = 1;
-  s4i_valid = false;
+  s4i_valid = s4i_validA = s4i_validB = false;
   s4i_waitrel = false;
   next_s4i_time = -100.0;
   LP = lptab[0];
@@ -107,8 +112,6 @@ LagrangeUniverse::LagrangeUniverse() {
   orbLegend = false;
   orbFocus = 0;
   orbProj = 0;
-  orbZoom = 0;
-  orbPrevZoom = 0;
   for (int i = 0; i < 3; i++) {
     orbPanHoriz[i] = 0.0;
     orbPanVert[i] = 0.0;
@@ -119,8 +122,13 @@ LagrangeUniverse::LagrangeUniverse() {
   orbFocCtr = false;
   orbFocRot = false;
   orbFocSca = false;
+  orbFocScaOnce = false;
   orbFocLockX = 0.5;
   orbFocLockY = 0.5;
+  orbRfAngDelta = _V(0.0, 0.0, 0.0);
+  orbRfAng[0] = _V(0.0, 0.0, 0.0);
+  orbRfAng[1] = _V(0.0, 0.0, 0.0);
+  orbRfRqReset = false;
 
   // Initialize the thread control structures
   s4i_mstate = s4i_wstate = 'I';
@@ -159,6 +167,7 @@ void LagrangeUniverse::defBody(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   pbodyinst->avgRadius = avgRadius;
   pbodyinst->proxWarnDist = proxDist + avgRadius;
   pbodyinst->impactWarnDist = impactDist + avgRadius;
+  pbodyinst->drawBody = true;
   return;
 }
 
@@ -176,6 +185,7 @@ void LagrangeUniverse::defBary(LagrangeUniverse_Body *pbodyinst, int p0, char* p
   pbodyinst->avgRadius = 0.0;
   pbodyinst->proxWarnDist = -1.0; // Can't crash into a barycenter!
   pbodyinst->impactWarnDist = -1.0;
+  pbodyinst->drawBody = false;
   return;
 }
 
@@ -252,10 +262,12 @@ void LagrangeUniverse::defOrbPlot(LagrangeUniverse_LP_Def *lptab, int b1, int b2
 }
 
 int LagrangeUniverse::selectNextLP() {
+  s4i_valid = s4i_validA = s4i_validB = false;
   selectLP(LP.nxix+1);
   return LP.nxix;
 }
 int LagrangeUniverse::selectPrevLP() {
+  s4i_valid = s4i_validA = s4i_validB = false;
   selectLP(LP.nxix-1);
   return LP.nxix;
 }
@@ -627,7 +639,7 @@ void LagrangeUniverse::threadCtrlMain() {
       for (auto e = vdata[wkg].begin(); e != vdata[wkg].end(); e++) {
         vdata[act].push_back(*e);
       }
-      s4i_valid = false;
+      s4i_valid = s4i_validA = s4i_validB = false;
     }
 
     for (unsigned int k = 0; k < vdata[act].size(); k++) {
@@ -636,7 +648,7 @@ void LagrangeUniverse::threadCtrlMain() {
         for (auto e = vdata[wkg].begin(); e != vdata[wkg].end(); e++) {
           vdata[act].push_back(*e);
         }
-        s4i_valid = false;
+        s4i_valid = s4i_validA = s4i_validB = false;
         break;
       }
     }
@@ -679,6 +691,7 @@ void LagrangeUniverse::threadCtrlMain() {
         vdata[act][e].TransX_PlanMajorIndex = false;
       }
     }
+    for (int k=0; k<3; k++) orbZoom[k][act] = orbZoom[k][wkg];
 
     s4i[wkg][0].sec = oapiGetSimTime();            // Initialize the working buffers at current time and MJD
     s4i[wkg][0].MJD = oapiGetSimMJD();
@@ -687,8 +700,21 @@ void LagrangeUniverse::threadCtrlMain() {
     if (s4int_count[act] != s4int_count[wkg] || s4int_timestep[act] != s4int_timestep[wkg]) {  // If the iteration params changed, burn the last cycle and reset
       s4int_count[act] = s4int_count[wkg];
       s4int_timestep[act] = s4int_timestep[wkg];
-      s4i_valid = false;
+      s4i_valid = s4i_validA = s4i_validB = false;
     }
+
+    if (orbRfAngDelta.x != 0.0 || orbRfAngDelta.y != 0.0 || orbRfAngDelta.z != 0.0) {
+      orbRfAng[wkg] = orbRfAng[act] + orbRfAngDelta * dbg[act][6];   // dbg act 6 is the last iteration time. Use this to calculate rate per second
+      for (int k = 0; k < 3; k++) {
+        if (orbRfAng[wkg].data[k] >= 360.0) orbRfAng[wkg].data[k] -= 360.0;
+        if (orbRfAng[wkg].data[k] < 0.0) orbRfAng[wkg].data[k] += 360.0;
+      }
+    }
+    if (orbRfRqReset) {
+      orbRfAng[wkg] = _V(0.0, 0.0, 0.0);
+      orbRfRqReset = false;
+    }
+
     s4i_finished = false;
     s4i_mstate = '0' + wkg;
 
@@ -713,7 +739,7 @@ void LagrangeUniverse::threadCtrlMain() {
 void LagrangeUniverse::threadCtrlPauseToggle() {
   if (s4i_pause) {
     s4i_pause = false;
-    s4i_valid = false;
+    s4i_valid = s4i_validA = s4i_validB = false;
     s4i_pauselight.unlock();
   } else {
     if (s4i_wstate == 'P') return; //edge-case if you try to toggle too fast
@@ -738,6 +764,8 @@ void LagrangeUniverse::threadCtrlWorker() {
     s4i_wstate = 'A';
     integrateUniverse();
     s4i_trafficlight[0].unlock();
+    s4i_validA = true;
+    if (s4i_validA && s4i_validB) s4i_valid = true;
     s4i_finished = true;
     if (s4i_wkill) break;
     if (s4i_pause) {
@@ -750,7 +778,8 @@ void LagrangeUniverse::threadCtrlWorker() {
     s4i_wstate = 'B';
     integrateUniverse();
     s4i_trafficlight[1].unlock();
-    s4i_valid = true;
+    s4i_validB = true;
+    if (s4i_validA && s4i_validB) s4i_valid = true;
     s4i_finished = true;
     if (s4i_wkill) break;
   }
@@ -1193,7 +1222,7 @@ void LagrangeUniverse::integrateUniverse() {
       strcpy(FocTxt[1], body[LP.min].name);
       fprintf(dump_orb, "FOC:,,, %s\n", FocTxt[orbFocus]);
       fprintf(dump_orb, "PRJ:,,, %s\n", PrjTxt[orbProj]);
-      fprintf(dump_orb, "Zoom:,,, %d\n", (int)orbZoom);
+      fprintf(dump_orb, "Zoom:,,, %d\n", (int)orbZoom[orbProj][wkg]);
       fprintf(dump_orb, "PanRightLeft:,,,%f,%f,%f\n",
         (double) orbPanHoriz[0],
         (double)orbPanHoriz[1],
@@ -1222,8 +1251,6 @@ void LagrangeUniverse::integrateUniverse() {
     int _orbProj = orbProj;
     int _orbFocus = orbFocus;
     int _orbFocVix = orbFocVix;
-    int _orbPrevZoom = orbPrevZoom;
-    int _orbZoom = orbZoom;
     int _orbFocLock = orbFocLock;
     int _orbFocCtr = orbFocCtr;
     int _orbFocRot = orbFocRot;
@@ -1350,28 +1377,36 @@ void LagrangeUniverse::integrateUniverse() {
     }
     // At this point, the orb_km data is loaded for l_orb[wkg].orb_km (all entites) and vdata[wkg][*].orb_km (all vessels)
 
-    if (_orbFocSca) {
+    if (_orbFocSca && !orbFocScaOnce) {
       scale = orbScale[_orbProj];
-      for (int k = 0; k < 3; k++) orbScale[k] = scale;
+      for (int k = 0; k < 3; k++) {
+        orbScale[k] = scale;
+      }
     } else {
       scale = max_Q.x - min_Q.x;
       if ((max_Q.y - min_Q.y) > scale) {
         scale = max_Q.y - min_Q.y;
       }
-      scale *= 1.2 * pow(1.1, (double)_orbZoom);
+      scale *= 1.2 * pow(1.1, (double)orbZoom[_orbProj][wkg]);
       orbScale[_orbProj] = scale;
+      if (orbFocScaOnce) {
+        orbFocScaOnce = false;
+        for (int k = 0; k < 3; k++) {
+          orbScale[k] = scale;
+        }
+      }
     }
 
     double halfway_x = min_Q.x + (max_Q.x - min_Q.x) / 2.0;
     double halfway_y = min_Q.y + (max_Q.y - min_Q.y) / 2.0;
-    double prevScale = scale * 1.2 * pow(1.1, (double)_orbPrevZoom);
+    double prevScale = scale * 1.2 * pow(1.1, (double)orbPrevZoom[_orbProj]);
 
-    if (_orbPrevZoom != _orbZoom) {
+    if (orbPrevZoom[_orbProj] != orbZoom[_orbProj][wkg]) {
       hPan = - (scale / prevScale) * (-halfway_x + 0.5 * prevScale - hPan) - halfway_x + 0.5*scale;
       vPan = (scale / prevScale) * (halfway_y + 0.5 * prevScale + vPan) - halfway_y - 0.5 * scale;
       orbPanHoriz[_orbProj] = hPan;
       orbPanVert[_orbProj] = -vPan;
-      orbPrevZoom = _orbZoom;
+      orbPrevZoom[_orbProj] = orbZoom[_orbProj][wkg];
     }
 
     if (_orbFocLock) {
@@ -1529,6 +1564,9 @@ void LagrangeUniverse::integrateUniverse() {
         vdata[wkg][v].orb_plot_body_depth[i] = foc_depth - orb_depth;
       }
     }
+
+    for (int k=0; k<3; k++) orbZoomAct[k][wkg] = orbZoom[k][wkg];
+
   } // end orb plot code
 
   if (_dmp_orb) {
@@ -1704,6 +1742,26 @@ void LagrangeUniverse::findRotFrame(const VECTOR3 &majQ, const VECTOR3 &majP, co
   MATRIX3 rotBA = mul(rotB, rotA);
   MATRIX3 rotCBA = mul(rotC, rotBA);
   MATRIX3 rotFinal;
+
+  // Visualization mode ... add in rotation of the orbits to visualize in 3D
+  if (orbRfAng[wkg].y != 0.0) {
+    double ang = orbRfAng[wkg].y * RAD;
+    MATRIX3 tRotM = { cos(ang), 0.0, -sin(ang),   0.0, 1.0, 0.0,   sin(ang), 0.0, cos(ang) };
+    MATRIX3 tmpM = mul(tRotM, rotCBA);
+    rotCBA = tmpM;
+  }
+  if (orbRfAng[wkg].z != 0.0) {
+    double ang = orbRfAng[wkg].z * RAD;
+    MATRIX3 tRotM = { 1.0, 0.0, 0.0,   0.0, cos(ang), sin(ang),   0.0, -sin(ang), cos(ang) };
+    MATRIX3 tmpM = mul(tRotM, rotCBA);
+    rotCBA = tmpM;
+  }
+  if (orbRfAng[wkg].x != 0.0) {
+    double ang = orbRfAng[wkg].x * RAD;
+    MATRIX3 tRotM = { cos(ang), sin(ang), 0.0,   -sin(ang), cos(ang), 0.0,   0.0, 0.0, 1.0 };
+    MATRIX3 tmpM = mul(tRotM, rotCBA);
+    rotCBA = tmpM;
+  }
 
   VECTOR3 minRQppp = mul(rotC, minRQpp);  // triple prime ... check still [0 0 +z]
   if (*rotS != 0.0) {

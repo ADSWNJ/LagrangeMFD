@@ -215,3 +215,21 @@ bool Lagrange_DialogFunc::clbkENT(void *id, char *str, void *usrdata) {
   }
   return true;
 }
+
+bool Lagrange_DialogFunc::clbkRVA(void *id, char *str, void *usrdata) {
+  Lagrange_LCore* LC = (Lagrange_LCore *)usrdata;
+  Lagrange_VCore* VC = LC->VC;
+  LagrangeUniverse* LU = LC->GC->LU;
+
+  float f0, f1, f2;
+  if (strlen(str) == 0) return true;
+  if (sscanf_s(str, "%f %f %f", &f0, &f1, &f2) != 3) return true;
+
+  VECTOR3 tmpV = { (double)f0, (double)f1, (double)f2 };
+  for (int k = 0; k < 3; k++) {
+    if (tmpV.data[k] <= -360.0 || tmpV.data[k] >= 360.0) return false;
+  }
+  LU->orbRfAngDelta = tmpV;
+  LU->orbRfRqReset = true;
+  return true;
+}

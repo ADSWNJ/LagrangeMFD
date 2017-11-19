@@ -164,6 +164,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
       double proxWarnDist;                                  // Distance for proximity alarms (e.g. rad + 120k for Earth)
       double impactWarnDist;                                // Distance for impact alarms (e.g. rad + 10K for Earth)
       double avgRadius;                                     // Distance for PeA display
+      bool drawBody;                                        // Toggle display of body on Orbit plot
     } body[COUNT_BODY];
 
 
@@ -221,6 +222,7 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<bool> s4int_enc_spct_lock;                       // Encounter start percent locked (float the simT), or unlocked (float the pct)
     atomic<bool> s4int_enc_epct_lock;                       // Encounter end percent locked
 
+
     vector<Lagrange_s4i> s4i[2];                            // 4th Order symplectic integrator (vector = number of steps)
     vector<Lagrange_vdata> vdata[2];                        // Vessel 4th order integrator data (vector = number of vessels)
     Lagrange_orb_disp l_orb[2];                             // Lagrange orbit display structure (holds the plots of the bodies to plot)
@@ -241,6 +243,8 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<bool> s4i_pause;
     atomic<bool> s4i_canstart;
     atomic<bool> s4i_valid;
+    atomic<bool> s4i_validA;
+    atomic<bool> s4i_validB;
     atomic<bool> s4i_waitrel;
     atomic<bool> dmp_log;
     atomic<bool> dmp_enc;
@@ -250,13 +254,16 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     // Orb Plot Controls
     atomic<int> orbFocus;                                   // 0 = Maj, 1 = Min, 2 = Ves, 3 = Enc, 4 = Burn (or Ves if no burn)
     atomic<int> orbProj;                                    // 0 = XZ (i.e. usual ecliptic plot), 1 = XY, 2 = ZY
-    atomic<int> orbZoom;                                    // Zoom bias. Zoom is zoom * 1.02^orbZoom
-    atomic<int> orbPrevZoom;                                // Zoom bias. Zoom is zoom * 1.02^orbZoom
+    int orbZoomAct[3][2];                                   // Zoom Actual (post calc). Makes sure the display shows the actual zoom for the plot, not the requested
+    int orbZoom[3][2];                                      // Zoom bias per projection and active/working. Zoom is zoom * 1.02^orbZoom
+    int orbPrevZoom[3];                                      // Zoom bias per projection. (Only accessed in worker thread so no need for act/wkg buffers). Zoom is zoom * 1.02^orbZoom
     atomic<double> orbScale[3];                             // Holds the size in KM of the orbit map
     atomic<double> orbPanVert[3];                           // Vertical axis pan
     atomic<double> orbPanHoriz[3];                          // Horizontal axis pan
     atomic<bool> orbLegend;                                 // Plot legend
     atomic<int> orbFocVix;                                  // Focus Vessel's Index
+    VECTOR3 orbRfAngDelta;                                  // Delta Request for the Orbit Plot Rotating Frame Visualization Mode
+    VECTOR3 orbRfAng[2];                                    // Orbit Plot Rotating Frame Visualization Mode Current Offsets
 
     atomic<bool> orbFocLock;                                // Lock the position of the focus point
     atomic<double> orbFocLockX;                             // X lock point
@@ -264,7 +271,11 @@ class LagrangeUniverse : public EnjoLib::ModuleMessagingExtPut
     atomic<bool> orbFocCtr;                                 // Lock the focus point in the center
     atomic<bool> orbFocRot;                                 // Lock the position of the focus point
     atomic<bool> orbFocSca;                                 // Lock the scale
+    atomic<bool> orbFocScaOnce;                             // Allow one-off unlock (for zoom on scale lock)
+    bool orbRfRqReset;                                      // Request a reset of the angles 
+
     Lagrange_Drawing* draw;
+
 
   protected:
   private:

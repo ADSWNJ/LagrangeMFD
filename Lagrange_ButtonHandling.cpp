@@ -239,9 +239,9 @@ void Lagrange::Button_FOC() {
 // RST = Orbit Mode: Reset Pan/Zoom
 void Lagrange::Button_RST() {
   LagrangeUniverse* LU = GC->LU;
-  LU->orbPrevZoom = 0;
-  LU->orbZoom = 0;
   for (int i = 0; i < 3; i++) {
+    LU->orbZoom[i][GC->LU->act] = 0;
+    LU->orbPrevZoom[i] = 0;
     LU->orbPanHoriz[i] = 0.0;
     LU->orbPanVert[i] = 0.0;
     //LU->orbScale[i] = 10000.0;
@@ -252,9 +252,6 @@ void Lagrange::Button_RST() {
   return;
 }
 
-
-
-
 // PRJ = Orbit Mode: Select Projection
 void Lagrange::Button_PRJ() {
   if (GC->LU->orbProj == 2) {
@@ -264,14 +261,34 @@ void Lagrange::Button_PRJ() {
   }
   return;
 }
+
 // ZMU = Orbit Mode: Zoom Up
-void Lagrange::Button_ZMU() { 
-  if (!GC->LU->orbFocSca) GC->LU->orbZoom--;
+void Lagrange::Button_ZMU() {
+  if (!GC->LU->orbFocSca) {
+    GC->LU->orbZoom[GC->LU->orbProj][GC->LU->act]--;
+  } else {
+    GC->LU->orbZoom[0][GC->LU->act]--;
+    GC->LU->orbZoom[1][GC->LU->act]--;
+    GC->LU->orbZoom[2][GC->LU->act]--;
+    GC->LU->orbFocScaOnce = true;
+  }
   return ;
 }
 // ZMD = Orbit Mode: Zoom Down
 void Lagrange::Button_ZMD() {
-  if (!GC->LU->orbFocSca) GC->LU->orbZoom++;
+  if (!GC->LU->orbFocSca) {
+    GC->LU->orbZoom[GC->LU->orbProj][GC->LU->act]++;
+  } else {
+    GC->LU->orbZoom[0][GC->LU->act]++;
+    GC->LU->orbZoom[1][GC->LU->act]++;
+    GC->LU->orbZoom[2][GC->LU->act]++;
+    GC->LU->orbFocScaOnce = true;
+  }
+  return;
+}
+
+// NUL = Null button ... just for spacing
+void Lagrange::Button_NUL() {
   return;
 }
 
@@ -493,7 +510,7 @@ void Lagrange::Button_PMT() {
 }
 
 // LCK = Focus Lock Position
-void Lagrange::Button_LCK() {
+void Lagrange::Button_FLK() {
   LagrangeUniverse* LU = GC->LU;
   LU->orbFocLock = !LU->orbFocLock;
   if (LU->orbFocLock) LU->orbFocCtr = false;
@@ -510,17 +527,55 @@ void Lagrange::Button_CTR() {
 void Lagrange::Button_ROT() {
   LagrangeUniverse* LU = GC->LU;
   LU->orbFocRot = !LU->orbFocRot;
+  if (!LU->orbFocRot) LU->orbRfRqReset = true;
 }
 
 // SCA = Lock/unlock scale
 void Lagrange::Button_SCA() {
   LagrangeUniverse* LU = GC->LU;
   LU->orbFocSca = !LU->orbFocSca;
+  if (LU->orbFocSca) {
+    int tmpZoom = LU->orbZoom[LU->orbProj][LU->act];
+    for (int k = 0; k < 3; k++) LU->orbZoom[k][LU->act] = tmpZoom;
+  }
 }
 
 // OPC = Adjust Orb Plot Count
 void Lagrange::Button_OPC() {
   sprintf(GC->LU->buf, "%u", GC->LU->orbPlotCountReq);
   oapiOpenInputBox("Enter Orb Plot Count (e.g. 10-10000)", Lagrange_DialogFunc::clbkOPC, GC->LU->buf, 20, LC);
+  return;
+}
+
+// TDS = Toggle Draw Sun
+void Lagrange::Button_PLS() {
+  GC->LU->body[0].drawBody = !GC->LU->body[0].drawBody;
+  return;
+}
+
+// TDE = Toggle Draw Earth
+void Lagrange::Button_PLE() {
+  GC->LU->body[1].drawBody = !GC->LU->body[1].drawBody;
+  return;
+}
+
+// TDM = Toggle Draw Moon
+void Lagrange::Button_PLM() {
+  GC->LU->body[2].drawBody = !GC->LU->body[2].drawBody;
+  return;
+}
+
+// RVA = update Rot Frame Visualization Angle Rates
+void Lagrange::Button_RVA() {
+  VECTOR3 tmpV = GC->LU->orbRfAngDelta;
+  for (int k = 0; k < 3; k++) if (tmpV.data[k] > 180.0) tmpV.data[k] -= 360.0;
+  sprintf(GC->LU->buf, "%.0f %.0f %.0f", tmpV.x, tmpV.y, tmpV.z);
+  oapiOpenInputBox("Enter Rot Frame Visualization Angle Deltas", Lagrange_DialogFunc::clbkRVA, GC->LU->buf, 30, LC);
+  return;
+}
+
+// RVR = Reset Rot Frame Visualization Angle
+void Lagrange::Button_RVR() {
+  GC->LU->orbRfRqReset = true;
   return;
 }

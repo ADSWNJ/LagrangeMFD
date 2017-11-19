@@ -85,11 +85,17 @@ public:
   void Button_DME();
   void Button_DMO();
   void Button_HYS();
-  void Button_LCK();
+  void Button_FLK();
   void Button_CTR();
   void Button_ROT();
   void Button_SCA();
   void Button_OPC();
+  void Button_NUL();
+  void Button_PLS();
+  void Button_PLE();
+  void Button_PLM();
+  void Button_RVA();
+  void Button_RVR();
 
   void ButtonHelper_AdjVar(double adj);
   void ButtonHelper_TrimEntBox(char *buf);

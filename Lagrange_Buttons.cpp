@@ -172,19 +172,29 @@ Lagrange_Buttons::Lagrange_Buttons()
       { "OK", 0, 'K' },
       { "Previous",0, 'P' },
       { "Next",0, 'N' },
-      { "Lock Focus Point",0, 'L' },
+      { "Plot Sun",0, 'S' },
+      { "Plot Earth",0, 'E' },
+      { "Plot Moon",0, 'M' },
+      { "Lock Focus Point",0, 'F' },
       { "Center Focus Point",0, 'C' },
-      { "Lock Scale",0, 'S' },
-      { "Rotating Frame",0, 'R' },
+      { "Lock Scale",0, 'X' },
+      { "Lock Frame Rotation",0, 'R' },
+      { "Rot Fr Vis Angles",0, 'V' },
+      { "Rot Fr Vis Ang Reset",0, 'Z' }
     };
     RegisterPage(mnu8, sizeof(mnu8) / sizeof(MFDBUTTONMENU));
     RegisterFunction("OK", OAPI_KEY_K, &Lagrange::Button_TOK);
     RegisterFunction("PRV", OAPI_KEY_P, &Lagrange::Button_PRV);
     RegisterFunction("NXT", OAPI_KEY_N, &Lagrange::Button_NXT);
-    RegisterFunction("LCK", OAPI_KEY_L, &Lagrange::Button_LCK);
+    RegisterFunction("PLS", OAPI_KEY_S, &Lagrange::Button_PLS);
+    RegisterFunction("PLE", OAPI_KEY_E, &Lagrange::Button_PLE);
+    RegisterFunction("PLM", OAPI_KEY_M, &Lagrange::Button_PLM);
+    RegisterFunction("FOC", OAPI_KEY_F, &Lagrange::Button_FLK);
     RegisterFunction("CTR", OAPI_KEY_C, &Lagrange::Button_CTR);
-    RegisterFunction("SCA", OAPI_KEY_R, &Lagrange::Button_SCA);
+    RegisterFunction("SCA", OAPI_KEY_X, &Lagrange::Button_SCA);
     RegisterFunction("ROT", OAPI_KEY_R, &Lagrange::Button_ROT);
+    RegisterFunction("RVA", OAPI_KEY_V, &Lagrange::Button_RVA);
+    RegisterFunction("RVR", OAPI_KEY_Z, &Lagrange::Button_RVR);
     return;
 }
 

@@ -27,6 +27,7 @@ class Lagrange_DialogFunc
       static bool clbkHYS(void *id, char *str, void *usrdata);
       static bool clbkENT(void *id, char *str, void *usrdata);
       static bool clbkWT(void *id, char *str, void *usrdata);
+      static bool clbkRVA(void *id, char *str, void *usrdata);
 protected:
     private:
       static bool skipWS(char **p);

@@ -69,11 +69,15 @@ bool Lagrange::DisplayOrbitMode() {
   LagrangeUniverse::LagrangeUniverse_LP* LP = &LU->LP;
   Lagrange_vdata *lvd = &LU->vdata[GC->LU->act][VC->vix];
   Lagrange_orb_disp *lod = &LU->l_orb[GC->LU->act];
-  if (LU->orbScale[LU->orbProj] == 0.0) return true;
 
   skpFormatText(0, l, "LP: %s", LP->name);
   skpFormatText(4, l++, "FRM: %s", LU->body[lvd->refEnt].name);
   skpFmtEngText(0, l++, "SC: %.0f", "m", LU->orbScale[LU->orbProj], 1);
+  if ((LU->orbScale[LU->orbProj] == 0.0) || (!LU->s4i_valid)) {
+    l++;
+    skpFormatText(0, l, "Waiting for S4I...");
+    return true;
+  }
 
   char *PrjTxt[3] = { "Std X-Z", "X-Y", "Z-Y" };
   char FocTxt[7][32] = { "", "", "Ves Orbit", "Ves Enc", "Ves Burn", "LP", "Rot"};
@@ -88,12 +92,17 @@ bool Lagrange::DisplayOrbitMode() {
     if (LU->orbFocSca) strcat(locked, "S");
     strcat(locked, ")");
   }
+  if (LU->orbFocRot) {
+    if (LU->orbRfAngDelta.x != 0.0 || LU->orbRfAngDelta.y != 0.0 || LU->orbRfAngDelta.z != 0.0) {
+      skpFormatText(0, 23, "ROT: %.0f %.0f %.0f", LU->orbRfAng[LU->act].x, LU->orbRfAng[LU->act].y, LU->orbRfAng[LU->act].z);
+    }
+  }
   skpFormatText(0, 24, "FOC: %s %s", FocTxt[LU->orbFocus], locked);
   skpFormatText(4, 24, "PRJ: %s", PrjTxt[LU->orbProj]);
   if (lvd->alarm_state == 0) {
-    skpFormatText(0, 25, "ZM: %d", -LU->orbZoom);
-    skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
-    skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.1, (double)LU->orbZoom), 1);
+    skpFormatText(0, 25, "ZM: %d", -LU->orbZoomAct[LU->orbProj][LU->act]);
+    skpFmtEngText(2, 25, "H: %.0f", "m", LU->orbPanHoriz[LU->orbProj] * pow(1.1, (double)LU->orbZoomAct[LU->orbProj][LU->act]), 1);
+    skpFmtEngText(4, 25, "V: %.0f", "m", LU->orbPanVert[LU->orbProj] * pow(1.1, (double)LU->orbZoomAct[LU->orbProj][LU->act]), 1);
   } else   if (lvd->alarm_state == 2) {
     char buf2[256];
     skpColor(CLR_WARN);
@@ -111,8 +120,11 @@ bool Lagrange::DisplayOrbitMode() {
     skpFmtEngText(0, 25, buf2, "s", LU->s4i[GC->LU->act][lvd->alarm_ix].sec - oapiGetSimTime());
     skpColor(CLR_DEF);
   }
-
-  if (!GC->LU->s4i_valid) return true;
+  if (!GC->LU->s4i_valid) {
+    l++;
+    skpFormatText(0, l, "Waiting for S4I...");
+    return true;
+  }
   if (lvd->orb_plot.size() != GC->LU->orbPlotCount[GC->LU->act]) return true;
 
 
@@ -120,6 +132,9 @@ bool Lagrange::DisplayOrbitMode() {
 
   for (int s = 0; s < ORB_MAX_LINES; s++) {
     if (LP->plotix[s] == -1) break;
+    if (LP->plotix[s] >= 0) {
+      if (!LU->body[LP->plotix[s]].drawBody) continue;
+    }
     for (unsigned int i = 0; i < GC->LU->orbPlotCount[GC->LU->act]; i++) {
       iv[i].x = (long)((double)W * lod->orb_plot[s][i].x);
       iv[i].y = (long)((double)H * lod->orb_plot[s][i].y);
@@ -537,10 +552,16 @@ bool Lagrange::DisplayS4IMode() {
 
   switch (GC->LU->threadWorkerState()) {
   case 'A':
+    skpFormatText(0, l++, "S4I State                  Active (A)");
+    break;
   case 'a':
+    skpFormatText(0, l++, "S4I State                 Waiting (A)");
+    break;
   case 'B':
+    skpFormatText(0, l++, "S4I State                  Active (B)");
+    break;
   case 'b':
-    skpFormatText(0,l++,  "S4I State                  Active");
+    skpFormatText(0,l++,  "S4I State                 Waiting (B)");
     break;
   case 'P':
     skpFormatText(0, l++, "S4I State                  Paused");
@@ -551,7 +572,11 @@ bool Lagrange::DisplayS4IMode() {
   default:
     skpFormatText(0, l++, "S4I State");
   }
-  if (!GC->LU->s4i_valid) return true;
+  if (!GC->LU->s4i_valid) {
+    l++;
+    skpFormatText(0, l, "Waiting for S4I...");
+    return true;
+  }
   l++;
   char *DiagText[12] = { "Last S4I Run     ",
                         "MJD From         ",
@@ -617,26 +642,34 @@ bool Lagrange::DisplayFrmFocMode() {
     for (int i = 0; i<6; i++) {
       skpFmtColText(0, l++, (i == curFoc), CLR_HI, CLR_DEF, "  %s", focusNames[i]);
     }
-    l = 22;
 
+    l = 15;
+    bool noSun = !GC->LU->body[0].drawBody;
+    bool noEarth = !GC->LU->body[1].drawBody;
+    bool noMoon = !GC->LU->body[2].drawBody;
 
+    if (noSun || noEarth || noMoon) {
+      skpFormatText(0, l, "  No Plot:    %s%s%s", (noSun ? " Sun" : ""), (noEarth ? " Earth" : ""), (noMoon ? " Moon" : ""));
+    }
+
+    l++;
     if (GC->LU->orbFocCtr) {
-      skpFormatText(0, l++, "Focus Point: Centered");
+      skpFormatText(0, l++, "  Focus Point: Centered");
     } else if (GC->LU->orbFocLock) {
-      skpFormatText(0, l++, "Focus Point: Locked");
+      skpFormatText(0, l++, "  Focus Point: Locked");
     } else {
-      skpFormatText(0, l++, "Focus Point: Unlocked");
+      skpFormatText(0, l++, "  Focus Point: Unlocked");
     }
     if (GC->LU->orbFocSca) {
-      skpFormatText(0, l++, "Prj Scale:   Locked");
+      skpFormatText(0, l++, "  Prj Scale:   Locked");
     } else {
-      skpFormatText(0, l++, "Prj Scale:   Unlocked");
+      skpFormatText(0, l++, "  Prj Scale:   Unlocked");
     }
 
     if (GC->LU->orbFocRot) {
-      skpFormatText(0, l++, "Maj-Min Rot: Locked");
+      skpFormatText(0, l++, "  Maj-Min Rot: Locked");
     } else {
-      skpFormatText(0, l++, "Maj-Min Rot: Unlocked");
+      skpFormatText(0, l++, "  Maj-Min Rot: Unlocked");
     }
   }
   return true;
